@@ -1,0 +1,775 @@
+{
+  "name": "Gmail Renewal & Recovery",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "89f11cb2-80bb-4b66-b1f5-6e5fdbe973ee",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, sync_cursor, subscription_id, last_successful_sync FROM accounts WHERE provider = 'gmail' LIMIT 1",
+        "options": {}
+      },
+      "id": "bf603d93-c511-486d-849e-9ba7d884ae06",
+      "name": "Read account state",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1360,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/watch",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"topicName\": \"projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications\", \"labelIds\": [\"INBOX\"] } }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2"
+      },
+      "id": "d922c28f-a96c-4af1-8004-9c79b671ac73",
+      "name": "Call watch()",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1100,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_GMAIL_OAUTH2_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "Gmail's watch() has no separate renew-vs-register endpoint - calling it always both sets and extends the subscription. This node runs every scheduled tick (see design.md); the OUTCOME logged depends on whether this call, or the retry below, succeeds. onError=continueRegularOutput so a failure flows into 'Watch succeeded?' instead of halting the workflow. topicName is a placeholder - replace REPLACE_WITH_GCP_PROJECT_ID once the Pub/Sub topic exists.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b352b2f3-44e0-4e60-888b-74a99a110f5f-cond",
+              "leftValue": "={{ $json.historyId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "any",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b352b2f3-44e0-4e60-888b-74a99a110f5f",
+      "name": "Watch succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -840,
+        300
+      ],
+      "notes": "Checks for the historyId field Gmail's watch() returns on success, rather than trusting node execution status alone - works whether the HTTP node's onError setting is continueRegularOutput (failure payload has no historyId) or the node actually threw.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE accounts SET subscription_id = $1, subscription_expires_at = to_timestamp($2::bigint / 1000.0), sync_cursor = $3, last_successful_sync = now() WHERE id = $4; INSERT INTO sync_outcomes (account_id, outcome) VALUES ($4, 'renewed');",
+        "options": {
+          "queryReplacement": "={{ [\"projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications\", $('Call watch()').item.json.expiration, $('Call watch()').item.json.historyId, $('Read account state').item.json.id] }}"
+        }
+      },
+      "id": "0a42420d-f09a-400b-9df7-d4aaedfdf778",
+      "name": "Record renewed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -560,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/watch",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"topicName\": \"projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications\", \"labelIds\": [\"INBOX\"] } }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2"
+      },
+      "id": "d44204e4-3e25-4f2c-a85c-73449b502ae7",
+      "name": "Re-register watch()",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -560,
+        460
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_GMAIL_OAUTH2_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "Single retry of the same watch() call, per design.md - a failed first attempt is retried once before falling back to catch-up recovery.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "7d10108b-b1ba-41c2-9189-5e672ed9a3d4-cond",
+              "leftValue": "={{ $json.historyId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "any",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7d10108b-b1ba-41c2-9189-5e672ed9a3d4",
+      "name": "Re-registration succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -300,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sync_outcomes (account_id, outcome) VALUES ($1, 'failed');",
+        "options": {
+          "queryReplacement": "={{ [$('Read account state').item.json.id] }}"
+        }
+      },
+      "id": "21b45b2f-3147-48c7-a54e-3e148bd3db66",
+      "name": "Record failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -40,
+        620
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Both the initial watch() call and its single retry failed outright - logged as failed. Terminal node, no catch-up attempted (nothing was re-registered to catch up from).",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const oldState = $('Read account state').item.json;\nconst reReg = $('Re-register watch()').item.json;\n\nconst oldLastSuccessfulSync = oldState.last_successful_sync || null;\n// Gmail's messages.list `after:` search operator accepts a Unix timestamp in seconds.\nconst afterEpochSeconds = oldLastSuccessfulSync\n  ? Math.floor(new Date(oldLastSuccessfulSync).getTime() / 1000)\n  : 0;\n\nreturn [{\n  json: {\n    accountId: oldState.id,\n    oldSyncCursor: oldState.sync_cursor,\n    oldLastSuccessfulSync,\n    afterEpochSeconds,\n    newSubscriptionId: 'projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications',\n    newHistoryId: reReg.historyId,\n    newExpiration: reReg.expiration,\n  },\n}];"
+      },
+      "id": "3ff40949-a51b-4c9d-9998-11278b2a8047",
+      "name": "Prepare catch-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        300
+      ],
+      "notes": "Carries the OLD sync_cursor / last_successful_sync (from the Read account state node, BEFORE this run) plus the NEW subscription info (from the successful Re-register watch() call) forward. Downstream nodes reference this node by name via $('Prepare catch-up') rather than relying on data pass-through, since the catch-up loop below reshapes the item stream.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/history",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "startHistoryId",
+              "value": "={{ $('Prepare catch-up').item.json.oldSyncCursor }}"
+            },
+            {
+              "name": "historyTypes",
+              "value": "messageAdded"
+            }
+          ]
+        }
+      },
+      "id": "3cd01b87-41d7-48bd-af6f-550ee50ea580",
+      "name": "history.list catch-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        220
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "BEST-EFFORT, not live-tested: this call is expected to fail with an error when startHistoryId is out of Gmail's retention range (\"history expired\"). We do not know Gmail's exact error shape for that case without a live account, so this workflow does NOT try to distinguish \"expired history\" from any other history.list failure - the 'History.list succeeded?' IF below treats ANY failure (missing historyId in the response) as the trigger for the messages.list fallback. This is a safe superset: worst case we run the fallback when the failure was for some other transient reason, which is acceptable since the fallback is itself just another read-only Gmail API call.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "625a3657-ddaa-45a2-bad5-0de60e99de43-cond",
+              "leftValue": "={{ $json.historyId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "any",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "625a3657-ddaa-45a2-bad5-0de60e99de43",
+      "name": "History.list succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ 'after:' + $('Prepare catch-up').item.json.afterEpochSeconds }}"
+            }
+          ]
+        }
+      },
+      "id": "f69e41ba-58d1-439d-9f28-008dfd6295c9",
+      "name": "messages.list fallback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Fallback per design.md: messages.list filtered to after:<old last_successful_sync>, used only when history.list could not resume from the old cursor.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "ef72e6f8-337a-413f-b393-8d3e0b97d43d-cond",
+              "leftValue": "={{ $json.resultSizeEstimate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "any",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ef72e6f8-337a-413f-b393-8d3e0b97d43d",
+      "name": "messages.list fallback succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        740,
+        460
+      ],
+      "notes": "resultSizeEstimate is present on every valid messages.list response (even zero results), so its presence - not the messages array, which is omitted when there are zero matches - is the success signal here.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first().json;\nlet ids = [];\n\nif (Array.isArray(input.history)) {\n  // history.list response\n  for (const h of input.history) {\n    for (const added of h.messagesAdded || []) {\n      if (added.message && added.message.id) ids.push(added.message.id);\n    }\n  }\n} else if (Array.isArray(input.messages)) {\n  // messages.list fallback response\n  for (const m of input.messages) {\n    if (m.id) ids.push(m.id);\n  }\n}\n\nids = [...new Set(ids)];\nreturn ids.map((id) => ({ json: { id } }));"
+      },
+      "id": "3352bd46-6d06-44ad-ab9a-62834470fe16",
+      "name": "Extract message IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        220
+      ],
+      "notes": "Normalizes the two possible upstream shapes (history.list's history[].messagesAdded[].message.id, or messages.list's messages[].id) into one flat, de-duplicated list of {id} items for the loop below.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d3137119-572d-47fc-a3d9-ce069354af65",
+      "name": "Loop Over Message IDs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1240,
+        220
+      ],
+      "notes": "BEST-EFFORT, not live-verified: assumes n8n's Split In Batches output order is [0]=done, [1]=loop (current n8n convention). Verify against the live editor on import and swap connections if the running version orders them the other way.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "full"
+            }
+          ]
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2"
+      },
+      "id": "e8d6907c-5ce1-4b6a-971d-010322efd1d9",
+      "name": "messages.get",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1480,
+        120
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_GMAIL_OAUTH2_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Email Normaliser"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Prepare catch-up').item.json.accountId }}",
+            "raw_message": "={{ $json }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "c530f114-e741-488c-9f48-45138f688b80",
+      "name": "Call Email Normaliser",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1720,
+        120
+      ],
+      "onError": "continueErrorOutput",
+      "notes": "References the 'Email Normaliser' sub-workflow BY NAME (cachedResultName) since no live n8n instance/workflow ID exists yet - workflowId.value is left blank as a placeholder. Once 'Email Normaliser' (T3's file) is imported, re-point this node at it via the resource picker (n8n's Execute Workflow node resolves by ID internally, not by name, so this link must be completed by hand on first import). Passes { account_id, raw_message } matching the contract T3 is building against.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE accounts SET subscription_id = $1, subscription_expires_at = to_timestamp($2::bigint / 1000.0), sync_cursor = $3, resync_gap_start = $4, resync_gap_end = now() WHERE id = $5; INSERT INTO sync_outcomes (account_id, outcome) VALUES ($5, 're-registered');",
+        "options": {
+          "queryReplacement": "={{ [$('Prepare catch-up').item.json.newSubscriptionId, $('Prepare catch-up').item.json.newExpiration, $('Prepare catch-up').item.json.newHistoryId, $('Prepare catch-up').item.json.oldLastSuccessfulSync, $('Prepare catch-up').item.json.accountId] }}"
+        }
+      },
+      "id": "02560a57-197c-4036-a4e3-3f4ed00cab0c",
+      "name": "Record re-registered",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1240,
+        -60
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Reached only when the Loop Over Message IDs node reports \"done\" with no errors along the way - i.e. the catch-up fetch (history.list or its messages.list fallback) succeeded AND every message in it was fetched and normalized. sync_cursor is set to the NEW historyId from the re-registration watch() call (proposal.md: a fresh watch() returns a new historyId uncorrelated with the old one), not to anything from history.list/messages.list.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sync_outcomes (account_id, outcome) VALUES ($1, 'failed');",
+        "options": {
+          "queryReplacement": "={{ [$('Prepare catch-up').item.json.accountId] }}"
+        }
+      },
+      "id": "79519989-7e97-432a-af8f-52ce2fbe6b6f",
+      "name": "Record failed — catch-up incomplete",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1000,
+        620
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Per design.md: 'a re-registration without a completed catch-up counts as a failed run, not a recovered one.' Reached when (a) both history.list and the messages.list fallback fail, or (b) messages.get or the Email Normaliser call errors mid-loop. Deliberately logs 'failed', never 're-registered', even though the watch() re-registration itself succeeded.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "content": "## Gmail Renewal & Recovery\n\nRuns every 6 hours (comfortably inside Gmail's ~7-day watch() expiry). Gmail's watch() API has no separate renew-vs-register endpoint, so this workflow calls watch() every run regardless of stored expiry - the *outcome logged* depends on whether that call succeeds first try (`renewed`), needs the retry + a completed catch-up (`re-registered`), or fails outright (`failed`).\n\nSee `.specclaw/changes/002-ingestion/proposal.md` §\"Subscription renewal and outage recovery\" and `design.md` §Architecture.",
+        "height": 300,
+        "width": 480,
+        "color": 4
+      },
+      "id": "218c288b-e39a-4f12-a3c9-caa64f5378de",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1620,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Assumption: \"history expired\" detection\n\nGmail returns an error for an out-of-range `startHistoryId`, but its exact shape (status code / error reason string) is undocumented here without a live account. This workflow treats **any** history.list failure as the expired-history case and always falls back to messages.list - it does not attempt to distinguish expired-history errors from other transient failures. Refine this IF condition once a real expired-history error response has been observed.",
+        "height": 260,
+        "width": 420,
+        "color": 5
+      },
+      "id": "01343b83-3490-44b5-87a6-56f4c350a336",
+      "name": "Sticky Note - history expiry assumption",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Placeholders to fill in on import\n\n- **Gmail OAuth2** credential (referenced generically here) must be created in n8n and attached to every Gmail HTTP Request node.\n- **Supabase Postgres** credential must be created and attached to every Postgres node.\n- `topicName` sent to `watch()` hardcodes `REPLACE_WITH_GCP_PROJECT_ID` - replace with the real Pub/Sub topic once provisioned (see `docs/setup/gmail-ingestion-setup.md`).\n- Gmail's `watch()` response has no distinct \"subscription ID\" field (only `historyId` + `expiration`) - this workflow uses the Pub/Sub `topicName` itself as `accounts.subscription_id`, since that's the stable identifier for \"which subscription is active\".",
+        "height": 260,
+        "width": 480,
+        "color": 7
+      },
+      "id": "70bcf5aa-1551-4e71-99f4-e92f5ae7aca5",
+      "name": "Sticky Note - credential + topic placeholders",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1620,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Read account state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read account state": {
+      "main": [
+        [
+          {
+            "node": "Call watch()",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call watch()": {
+      "main": [
+        [
+          {
+            "node": "Watch succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Watch succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Record renewed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Re-register watch()",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-register watch()": {
+      "main": [
+        [
+          {
+            "node": "Re-registration succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-registration succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Prepare catch-up",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare catch-up": {
+      "main": [
+        [
+          {
+            "node": "history.list catch-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "history.list catch-up": {
+      "main": [
+        [
+          {
+            "node": "History.list succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "History.list succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Extract message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "messages.list fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "messages.list fallback": {
+      "main": [
+        [
+          {
+            "node": "messages.list fallback succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "messages.list fallback succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Extract message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record failed — catch-up incomplete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract message IDs": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Message IDs": {
+      "main": [
+        [
+          {
+            "node": "Record re-registered",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "messages.get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "messages.get": {
+      "main": [
+        [
+          {
+            "node": "Call Email Normaliser",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record failed — catch-up incomplete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Email Normaliser": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record failed — catch-up incomplete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

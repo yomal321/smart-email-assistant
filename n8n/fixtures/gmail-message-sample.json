@@ -1,0 +1,92 @@
+{
+  "id": "18f2a4b3c5d6e7f8",
+  "threadId": "18f2a4b3c5d6e7f0",
+  "labelIds": [
+    "INBOX",
+    "IMPORTANT",
+    "CATEGORY_PERSONAL",
+    "Label_15"
+  ],
+  "snippet": "Hi team, Just confirming our sync is still on for 3 PM tomorrow. Let me know if that no longer works for anyone.",
+  "historyId": "9876543",
+  "internalDate": "1757089930000",
+  "sizeEstimate": 4213,
+  "payload": {
+    "partId": "",
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+      {
+        "name": "Delivered-To",
+        "value": "yomal@bistecglobal.com"
+      },
+      {
+        "name": "Received",
+        "value": "by 2002:a05:6512:abcd:b0:1a2:3b4c:5d6e with SMTP id x10csp1234567abc; Sat, 5 Sep 2026 11:32:12 -0700 (PDT)"
+      },
+      {
+        "name": "From",
+        "value": "Alex Rivera <alex.rivera@example.com>"
+      },
+      {
+        "name": "To",
+        "value": "Priya Nair <priya.nair@example.com>, Sam Chen <sam.chen@example.com>, morgan.lee@example.com"
+      },
+      {
+        "name": "Cc",
+        "value": "Jordan Kim <jordan.kim@example.com>"
+      },
+      {
+        "name": "Subject",
+        "value": "Re: Weekly sync – 3 PM tomorrow?"
+      },
+      {
+        "name": "Date",
+        "value": "Sat, 5 Sep 2026 14:32:10 -0400"
+      },
+      {
+        "name": "Message-ID",
+        "value": "<CAF8y7Z1abcdEFGhijKLmnoPQRstuv@mail.gmail.com>"
+      },
+      {
+        "name": "Content-Type",
+        "value": "multipart/alternative; boundary=\"000000000000abc123def456\""
+      }
+    ],
+    "body": {
+      "size": 0
+    },
+    "parts": [
+      {
+        "partId": "0",
+        "mimeType": "text/plain",
+        "filename": "",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/plain; charset=\"UTF-8\""
+          }
+        ],
+        "body": {
+          "size": 127,
+          "data": "SGkgdGVhbSwKCkp1c3QgY29uZmlybWluZyBvdXIgc3luYyBpcyBzdGlsbCBvbiBmb3IgMyBQTSB0b21vcnJvdy4gTGV0IG1lIGtub3cgaWYgdGhhdCBubyBsb25nZXIgd29ya3MgZm9yIGFueW9uZS4KClRoYW5rcywKQWxleA"
+        }
+      },
+      {
+        "partId": "1",
+        "mimeType": "text/html",
+        "filename": "",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "text/html; charset=\"UTF-8\""
+          }
+        ],
+        "body": {
+          "size": 168,
+          "data": "PGRpdiBkaXI9Imx0ciI-SGkgdGVhbSw8YnI-PGJyPkp1c3QgY29uZmlybWluZyBvdXIgc3luYyBpcyBzdGlsbCBvbiBmb3IgMyZuYnNwO1BNIHRvbW9ycm93LiBMZXQgbWUga25vdyBpZiB0aGF0IG5vIGxvbmdlciB3b3JrcyBmb3IgYW55b25lLjxicj48YnI-VGhhbmtzLDxicj5BbGV4PC9kaXY-"
+        }
+      }
+    ]
+  }
+}

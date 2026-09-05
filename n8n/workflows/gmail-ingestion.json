@@ -1,0 +1,493 @@
+{
+  "name": "Gmail Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gmail-pubsub",
+        "responseMode": "onReceived",
+        "responseData": "success",
+        "options": {}
+      },
+      "id": "f1a10001-1111-4a1a-9a1a-000000000001",
+      "name": "Gmail Pub/Sub Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1600, 300],
+      "notes": "responseMode=onReceived (n8n default): n8n acks the HTTP request to Google's Pub/Sub push service immediately on receipt, before any of the verification/fetch logic below runs. This satisfies Pub/Sub's need for a fast ack regardless of how verification turns out downstream - the 'Drop - invalid token' branch does not need to (and cannot, under this mode) send its own distinct HTTP status back to Google.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Pub/Sub push (with an OIDC push auth token configured on the subscription)\n// delivers the token as a Bearer token in the Authorization header.\nconst headers = $json.headers || {};\nconst authHeader = headers['authorization'] || headers['Authorization'] || '';\nconst idToken = authHeader.replace(/^Bearer\\s+/i, '').trim();\n\nreturn {\n  json: {\n    id_token: idToken,\n  },\n};"
+      },
+      "id": "f1a10002-2222-4a1a-9a1a-000000000002",
+      "name": "Extract OIDC token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1360, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://oauth2.googleapis.com/tokeninfo",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id_token",
+              "value": "={{ $json.id_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a10003-3333-4a1a-9a1a-000000000003",
+      "name": "Verify via tokeninfo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1120, 300],
+      "onError": "continueRegularOutput",
+      "notes": "No JWT/JWKS library is available in n8n's Code node sandbox, so verification is delegated to Google's lightweight tokeninfo endpoint rather than implementing signature verification here - the pragmatic, documented way to validate a Pub/Sub push OIDC token without a crypto library. onError=continueRegularOutput so a non-200 (invalid/expired token) flows into 'Token valid?' as a non-matching payload instead of halting the workflow.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "f1a10004-cond-1",
+              "leftValue": "={{ $json.aud }}",
+              "rightValue": "REPLACE_WITH_WEBHOOK_PUBLIC_URL",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "f1a10004-cond-2",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "gmail-api-push@system.gserviceaccount.com",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f1a10004-4444-4a1a-9a1a-000000000004",
+      "name": "Token valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-880, 300],
+      "notes": "A verified push is: HTTP 200 from tokeninfo AND aud equals this webhook's own public URL AND email equals gmail-api-push@system.gserviceaccount.com. On a failed/invalid token call (previous node's onError=continueRegularOutput), $json.aud/$json.email are absent, so both 'equals' checks fail naturally - no separate error-field check is needed. 'aud' rightValue is a placeholder (REPLACE_WITH_WEBHOOK_PUBLIC_URL) - fill in with this workflow's actual public webhook URL once n8n is deployed and the URL is known (this is also the audience value registered when this endpoint is configured as the Pub/Sub push subscription's OIDC audience).",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {},
+      "id": "f1a10005-5555-4a1a-9a1a-000000000005",
+      "name": "Drop — invalid token",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-620, 460],
+      "notes": "Terminal. The HTTP ack to Google already went out via the webhook's onReceived response mode, so nothing more is sent here - this node only marks the branch as intentionally ending without fetch/write, per FR2/AC2 ('discarded... never fetched, normalized, or written'). The drop is observable via this node's presence in n8n's execution log.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, sync_cursor FROM accounts WHERE provider = 'gmail' LIMIT 1",
+        "options": {}
+      },
+      "id": "f1a10006-6666-4a1a-9a1a-000000000006",
+      "name": "Read account cursor",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-620, 140],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/history",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "startHistoryId",
+              "value": "={{ $json.sync_cursor }}"
+            },
+            {
+              "name": "historyTypes",
+              "value": "messageAdded"
+            }
+          ]
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "id": "f1a10007-7777-4a1a-9a1a-000000000007",
+      "name": "history.list fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-360, 140],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_GMAIL_OAUTH2_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "notes": "Fetches by cursor, not by trusting the push payload (FR3): startHistoryId is the account's stored sync_cursor. onError=continueRegularOutput so a failure (e.g. history expired) still lets 'Extract new message IDs + new cursor' run and fall back to the old cursor rather than halting the whole notification.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Input: the history.list response (or an error-shaped payload if that call failed).\n// Output: one item carrying the account id, the deduped list of newly-added message\n// ids, and the new cursor value to write regardless of message count (FR3, edge case:\n// a label-only notification with zero new messages must still advance the cursor).\nconst historyResp = $input.first().json;\nconst account = $('Read account cursor').item.json;\n\nconst historyRecords = Array.isArray(historyResp.history) ? historyResp.history : [];\nconst idsSet = new Set();\nfor (const record of historyRecords) {\n  for (const added of record.messagesAdded || []) {\n    if (added.message && added.message.id) {\n      idsSet.add(added.message.id);\n    }\n  }\n}\n\n// history.list's own top-level historyId is the new cursor. If the call itself\n// failed (no historyId present), fall back to leaving the cursor unchanged rather\n// than advancing it to something undefined.\nconst newCursor = historyResp.historyId || account.sync_cursor;\n\nreturn [{\n  json: {\n    account_id: account.id,\n    message_ids: Array.from(idsSet),\n    new_cursor: newCursor,\n  },\n}];"
+      },
+      "id": "f1a10008-8888-4a1a-9a1a-000000000008",
+      "name": "Extract new message IDs + new cursor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-100, 140],
+      "notes": "Downstream nodes reference this node by name via $('Extract new message IDs + new cursor') rather than relying on data pass-through, since the loop below reshapes the item stream into one item per message id. This is also why 'Advance cursor' can be reached safely from either branch below and still know the right account_id/new_cursor.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "f1a10009-cond-1",
+              "leftValue": "={{ $json.message_ids.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f1a10009-9999-4a1a-9a1a-000000000009",
+      "name": "Any new messages?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [160, 140],
+      "notes": "Edge case (spec.md): a notification for a non-new-mail change (e.g. a label-only change) yields zero messagesAdded. The false branch skips straight to 'Advance cursor' - no emails row is written, but the cursor still advances so the next fetch doesn't re-process the same history range.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Splits the single upstream item's message_ids array into one item per id,\n// so the loop below can fetch + normalize each message individually.\nconst data = $input.first().json;\nreturn (data.message_ids || []).map((id) => ({ json: { message_id: id } }));"
+      },
+      "id": "f1a1000a-aaaa-4a1a-9a1a-00000000000a",
+      "name": "Split message IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 20]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "f1a1000b-bbbb-4a1a-9a1a-00000000000b",
+      "name": "Loop message IDs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 20],
+      "notes": "BEST-EFFORT, not live-verified: assumes n8n's Split In Batches output order is [0]=done, [1]=loop (current n8n convention, matching gmail-renewal-recovery.json's 'Loop Over Message IDs'). Verify against the live editor on import and swap connections if the running version orders them the other way.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.message_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "full"
+            }
+          ]
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "id": "f1a1000c-cccc-4a1a-9a1a-00000000000c",
+      "name": "messages.get fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, -100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_GMAIL_OAUTH2_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Email Normaliser"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Extract new message IDs + new cursor').item.json.account_id }}",
+            "raw_message": "={{ $json }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "f1a1000d-dddd-4a1a-9a1a-00000000000d",
+      "name": "Call Email Normaliser",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [1180, -100],
+      "notes": "References the 'Email Normaliser' sub-workflow BY NAME (cachedResultName) since no live n8n instance/workflow ID exists yet - workflowId.value is left blank as a placeholder, matching the pattern gmail-renewal-recovery.json already uses. Once email-normaliser.json (T3) is imported, re-point this node at the real workflow via n8n's resource picker (it resolves by ID internally, not by name). Passes { account_id, raw_message } matching the Email Normaliser contract.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE accounts SET sync_cursor = $1, last_successful_sync = now() WHERE id = $2;",
+        "options": {
+          "queryReplacement": "={{ [$('Extract new message IDs + new cursor').item.json.new_cursor, $('Extract new message IDs + new cursor').item.json.account_id] }}"
+        }
+      },
+      "id": "f1a1000e-eeee-4a1a-9a1a-00000000000e",
+      "name": "Advance cursor",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [940, 140],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Reached from BOTH 'Any new messages?' (false branch: zero messages, cursor-only advance) AND 'Loop message IDs' done output (true branch: after every fetched message has been normalized). Runs exactly once per workflow execution either way, since the two branches are mutually exclusive and the loop's done output fires once. Values are read via $('Extract new message IDs + new cursor') by name, not via item pass-through, so this works regardless of which branch (or how many loop iterations) preceded it.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "content": "## Gmail Ingestion\n\nPub/Sub push webhook -> OIDC token verification (drop if invalid) -> cursor-based history.list fetch -> Email Normaliser per new message -> cursor advance (always, exactly once per execution, even when zero new messages resulted).\n\nThis workflow - not Email Normaliser - owns advancing accounts.sync_cursor, per design.md's key decision that a notification can legitimately yield no new mail but the cursor must still move forward.\n\nSee .specclaw/changes/002-ingestion/spec.md (FR1-FR3) and design.md (Technical Approach, Architecture).",
+        "height": 300,
+        "width": 480,
+        "color": 4
+      },
+      "id": "f1a1000f-ffff-4a1a-9a1a-00000000000f",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-1620, -160]
+    },
+    {
+      "parameters": {
+        "content": "### Placeholders to fill in on import\n\n- **Gmail OAuth2** credential (referenced generically here) must be created in n8n and attached to every Gmail HTTP Request node.\n- **Supabase Postgres** credential must be created and attached to every Postgres node.\n- 'Token valid?' compares aud to REPLACE_WITH_WEBHOOK_PUBLIC_URL - replace with this workflow's actual public webhook URL once deployed (also the value to register as the Pub/Sub push subscription's OIDC audience).\n- 'Call Email Normaliser' targets the 'Email Normaliser' sub-workflow by name only (workflowId.value is blank) - re-point it at the real workflow via the resource picker once email-normaliser.json is imported.",
+        "height": 260,
+        "width": 480,
+        "color": 7
+      },
+      "id": "f1a10010-0010-4a1a-9a1a-000000000010",
+      "name": "Sticky Note - placeholders",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-1620, 480]
+    }
+  ],
+  "connections": {
+    "Gmail Pub/Sub Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract OIDC token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract OIDC token": {
+      "main": [
+        [
+          {
+            "node": "Verify via tokeninfo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify via tokeninfo": {
+      "main": [
+        [
+          {
+            "node": "Token valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token valid?": {
+      "main": [
+        [
+          {
+            "node": "Read account cursor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Drop — invalid token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read account cursor": {
+      "main": [
+        [
+          {
+            "node": "history.list fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "history.list fetch": {
+      "main": [
+        [
+          {
+            "node": "Extract new message IDs + new cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract new message IDs + new cursor": {
+      "main": [
+        [
+          {
+            "node": "Any new messages?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any new messages?": {
+      "main": [
+        [
+          {
+            "node": "Split message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Advance cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split message IDs": {
+      "main": [
+        [
+          {
+            "node": "Loop message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop message IDs": {
+      "main": [
+        [
+          {
+            "node": "Advance cursor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "messages.get fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "messages.get fetch": {
+      "main": [
+        [
+          {
+            "node": "Call Email Normaliser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Email Normaliser": {
+      "main": [
+        [
+          {
+            "node": "Loop message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}
