@@ -1,0 +1,4 @@
+{"tier": "deep",
+ "domains": ["security", "data"],
+ "rationale": "Establishes persisted data shape (emails and accounts tables) that downstream phases depend on, handles OAuth credentials and tokens, and leaves unresolved whether token refresh lives in n8n only or is mirrored in the accounts table.",
+ "signals": {"blast_radius": "n8n workflows (Gmail/Outlook push setup, renewal scheduler), Supabase migrations (emails and accounts tables), infrastructure (Pub/Sub and webhook subscriptions)", "unresolved": "Whether OAuth token refresh lives in n8n's credential store alone or is also mirrored in the accounts table — changes schema design", "irreversibility": "Schema persists; downstream phases (Phase 2+) will depend on emails table shape; reversible via git if nothing yet depends on it"}}

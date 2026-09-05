@@ -1,0 +1,152 @@
+<mxfile host="app.diagrams.net" type="device" version="24.7.17">
+  <diagram id="c4-level3a-n8n" name="L3a - Automation Engine">
+    <mxGraphModel dx="1400" dy="1000" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Smart Email Assistant &#8212; C4 Level 3a: Components of the Automation Engine (n8n)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;fontColor=#0B4884;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="One n8n workflow per box. Provider differences die at the Email Normaliser; model differences die at the LLM Gateway." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="48" width="900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="boundary" value="Automation Engine [Container: n8n]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#438DD5;dashed=1;dashPattern=8 8;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontColor=#438DD5;fontSize=13;fontStyle=1;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="300" y="90" width="810" height="670" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pubsub" value="&lt;b&gt;Google Cloud Pub/Sub&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6B6B6B;fontColor=#FFFFFF;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="140" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="gmail" value="&lt;b&gt;Gmail&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6B6B6B;fontColor=#FFFFFF;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="240" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="outlook" value="&lt;b&gt;Microsoft Outlook&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6B6B6B;fontColor=#FFFFFF;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="340" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="web" value="&lt;b&gt;Web Dashboard&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Container: Next.js]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="150" width="190" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="gemini" value="&lt;b&gt;Gemini Flash API&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#6B6B6B;fontColor=#FFFFFF;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="620" width="190" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="db" value="&lt;b&gt;Database&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Container: Supabase / PostgreSQL]&lt;/i&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="540" y="820" width="280" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gin" value="&lt;b&gt;Gmail Ingestion&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Workflow]&lt;/i&gt;&lt;br&gt;Pub/Sub trigger,&lt;br&gt;fetch full message" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="150" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="oin" value="&lt;b&gt;Outlook Ingestion&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Workflow]&lt;/i&gt;&lt;br&gt;Graph webhook,&lt;br&gt;fetch full message" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="600" y="150" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="hook" value="&lt;b&gt;Draft Webhook&lt;/b&gt;&lt;br&gt;&lt;i&gt;[HTTP endpoint]&lt;/i&gt;&lt;br&gt;Entry point for&lt;br&gt;the dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="870" y="150" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="norm" value="&lt;b&gt;Email Normaliser&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Workflow]&lt;/i&gt;&lt;br&gt;Maps both providers onto&lt;br&gt;one internal email schema" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="300" width="240" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="triage" value="&lt;b&gt;Triage Pipeline&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Workflow &#183; every new email]&lt;/i&gt;&lt;br&gt;Category +&lt;br&gt;one-line summary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="450" width="210" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="action" value="&lt;b&gt;Action Extraction&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Workflow &#183; every new email]&lt;/i&gt;&lt;br&gt;Task text +&lt;br&gt;optional deadline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="590" y="450" width="210" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="draft" value="&lt;b&gt;Draft Generation&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Workflow &#183; on demand]&lt;/i&gt;&lt;br&gt;Reply grounded in thread&lt;br&gt;and past sent mail" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=11;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="850" y="450" width="230" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="llm" value="&lt;b&gt;LLM Gateway&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Sub-workflow]&lt;/i&gt;&lt;br&gt;&lt;br&gt;Every model call routes here.&lt;br&gt;Swapping models is one node." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3C7FB1;strokeColor=#22536F;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="590" y="630" width="270" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="Push event" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" parent="1" source="pubsub" target="gin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="Fetch body&#10;[Gmail API]" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;dashed=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="gin" target="gmail">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="Graph webhook" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="1" source="outlook" target="oin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="Fetch body&#10;[Graph API]" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;dashed=1;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="1" source="oin" target="outlook">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" value="Raw Gmail message" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gin" target="norm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="Raw Graph message" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="oin" target="norm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e7" value="Triggers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="norm" target="triage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="Triggers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="norm" target="action">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e9" value="POST draft request" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="web" target="hook">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="Invokes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="hook" target="draft">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e11" value="Writes email row" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="1" source="norm" target="db">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="330" y="345" />
+              <mxPoint x="330" y="858" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="Writes category&#10;and summary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.15;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="triage" target="db">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="392" y="790" />
+              <mxPoint x="582" y="790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e13" value="Writes task&#10;[FK to source email]" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;endArrow=blockThin;endFill=1;exitX=0.15;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="action" target="db">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="621" y="780" />
+              <mxPoint x="680" y="780" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" value="Reads thread and past sent mail,&#10;writes draft for review" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#333333;labelBackgroundColor=#FFFFFF;strokeColor=#707070;startArrow=blockThin;startFill=1;endArrow=blockThin;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="1" source="draft" target="db">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1150" y="500" />
+              <mxPoint x="1150" y="858" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;strokeColor=#22536F;endArrow=blockThin;endFill=1;strokeWidth=2;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="triage" target="llm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;strokeColor=#22536F;endArrow=blockThin;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.35;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="action" target="llm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;strokeColor=#22536F;endArrow=blockThin;endFill=1;strokeWidth=2;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="draft" target="llm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="Single outbound&#10;model call" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;fontColor=#22536F;labelBackgroundColor=#FFFFFF;strokeColor=#22536F;endArrow=blockThin;endFill=1;strokeWidth=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="llm" target="gemini">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="The one architectural rule enforced from day one:&#10;no pipeline calls a model directly &#8212; every call goes&#10;through the LLM Gateway. The fallback router&#10;(local Ollama, paid escalation) is designed but not&#10;built in v1; it attaches here without touching&#10;any pipeline." style="text;html=1;strokeColor=#22536F;fillColor=#EEF6FB;align=left;verticalAlign=top;fontSize=11;fontColor=#22536F;spacingLeft=10;spacingTop=8;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="740" width="280" height="120" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

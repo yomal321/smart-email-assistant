@@ -1,0 +1,10 @@
+{
+  "tier": "deep",
+  "domains": ["security", "data"],
+  "rationale": "Creates multiple unresolved design questions that affect what gets built (data privacy decision gates AI work, triage category schema affects email records, deletion propagation affects state management); introduces new persisted data shape with Postgres tables read by multiple components; and sends personal email content to third-party LLM providers, creating a trust boundary.",
+  "signals": {
+    "blast_radius": "Five new systems: n8n ingestion and AI workflows, Supabase schema with accounts/emails/tasks tables, Next.js frontend, Docker infrastructure on OCI, and OAuth integrations for Gmail and Outlook",
+    "unresolved": "Data privacy decision blocking Phase 2 (whether Gemini Flash free tier trains on email); triage category schema (fixed enum vs model-proposed); email deletion propagation and orphaned task handling",
+    "irreversibility": "Database schema and synced email records are persisted; reverting after daily use loses user's extracted task list and email sync history"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "1105337322 8400",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "Establishes persisted data shape (emails and accounts tables) that downstream phases depend on, handles OAuth credentials and tokens, and leaves unresolved whether token refresh lives in n8n only or is mirrored in the accounts table.",
+  "domains": ["security", "data"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "fable"}
+  ],
+  "dropped": []
+}
