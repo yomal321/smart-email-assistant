@@ -12,13 +12,13 @@ Six tasks across three waves: schema + test fixtures (parallel, no dependencies)
 
 ### Wave 1 — Schema and fixtures
 
-- [ ] `T1` — Write the Supabase migration for `accounts`, `emails`, `sync_outcomes`
+- [x] `T1` — Write the Supabase migration for `accounts`, `emails`, `sync_outcomes`
   - Files: `supabase/migrations/0001_ingestion_schema.sql`
   - Estimate: small
   - Kind: migration
   - Notes: Exact DDL is in `design.md` § Data Model Changes — use it verbatim (column names, types, the `unique (account_id, provider, provider_message_id)` constraint, and the `check (provider in ('gmail'))` constraint). Include column comments noting which workflow writes each column, per `architect/04-data-model.md`'s "Who writes what" convention.
 
-- [ ] `T2` — Capture Gmail API fixture payloads for normalizer and fetch testing
+- [x] `T2` — Capture Gmail API fixture payloads for normalizer and fetch testing
   - Files: `n8n/fixtures/gmail-message-sample.json`, `n8n/fixtures/gmail-history-sample.json`
   - Estimate: small
   - Kind: test
@@ -26,21 +26,21 @@ Six tasks across three waves: schema + test fixtures (parallel, no dependencies)
 
 ### Wave 2 — n8n workflows
 
-- [ ] `T3` — Author the Email Normaliser sub-workflow
+- [x] `T3` — Author the Email Normaliser sub-workflow
   - Files: `n8n/workflows/email-normaliser.json`
   - Estimate: medium
   - Kind: impl
   - Depends: T1, T2
   - Notes: Maps a raw Gmail message to the `emails` row shape (FR4): participants as `{role, name, address}` array, plain-text `body`, full `raw_payload`, `labels` as array. Writes via `INSERT ... ON CONFLICT DO NOTHING` (FR5, NFR2) and advances `accounts.sync_cursor` in the same step. Must be invocable standalone with `gmail-message-sample.json` as input (NFR3) — this is what makes it testable before Wave 3's live setup exists.
 
-- [ ] `T4` — Author the Gmail Ingestion workflow
+- [x] `T4` — Author the Gmail Ingestion workflow
   - Files: `n8n/workflows/gmail-ingestion.json`
   - Estimate: medium
   - Kind: impl
   - Depends: T1, T3
   - Notes: Pub/Sub push webhook trigger → OIDC token verification (audience + `gmail-api-push@system.gserviceaccount.com` issuer; drop and count on failure, per FR2/NFR1/AC2) → `history.list` fetch using `accounts.sync_cursor` (FR3) → invoke Email Normaliser per resulting message. A notification with no new mail (e.g. a label-only change) must still advance the cursor without writing an `emails` row (spec.md Edge Cases).
 
-- [ ] `T5` — Author the Gmail Renewal & Recovery workflow
+- [x] `T5` — Author the Gmail Renewal & Recovery workflow
   - Files: `n8n/workflows/gmail-renewal-recovery.json`
   - Estimate: medium
   - Kind: impl
@@ -49,7 +49,7 @@ Six tasks across three waves: schema + test fixtures (parallel, no dependencies)
 
 ### Wave 3 — Setup runbook
 
-- [ ] `T6` — Write the Gmail ingestion setup runbook
+- [x] `T6` — Write the Gmail ingestion setup runbook
   - Files: `docs/setup/gmail-ingestion-setup.md`
   - Estimate: medium
   - Kind: docs
