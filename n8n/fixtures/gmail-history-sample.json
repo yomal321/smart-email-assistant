@@ -1,0 +1,28 @@
+{
+  "history": [
+    {
+      "id": "9876540",
+      "messages": [
+        {
+          "id": "18f2a4b3c5d6e7f8",
+          "threadId": "18f2a4b3c5d6e7f0"
+        }
+      ],
+      "messagesAdded": [
+        {
+          "message": {
+            "id": "18f2a4b3c5d6e7f8",
+            "threadId": "18f2a4b3c5d6e7f0",
+            "labelIds": [
+              "INBOX",
+              "IMPORTANT",
+              "CATEGORY_PERSONAL",
+              "Label_15"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "historyId": "9876543"
+}
