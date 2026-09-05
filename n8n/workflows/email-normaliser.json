@@ -48,7 +48,7 @@
       },
       "credentials": {
         "postgres": {
-          "id": "placeholder-supabase-postgres-credential",
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
           "name": "Supabase Postgres"
         }
       }
