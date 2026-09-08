@@ -50,3 +50,18 @@ Three parallel-authored n8n workflow files (T3, T4, T5) each needed to reference
 Fixed by aligning T3's file to the shared convention. When multiple tasks in a wave produce files that share placeholder/naming conventions, pin the exact literal strings in design.md or tasks.md rather than describing them only in prose, so parallel agents converge without needing a downstream task to catch the drift.
 
 ---
+
+## [L4] agent_issue — n8n's editor UI for Execute Workflow Trigger's 'Workflow ...
+
+**When:** 2026-09-08 10:12 UTC
+**Category:** agent_issue
+**Priority:** high
+**Status:** pending
+
+### Detail
+n8n's editor UI for Execute Workflow Trigger's 'Workflow Input Schema' field names, and the calling Execute Workflow node's mapped input keys, can silently store a trailing space (e.g. 'account_id ' instead of 'account_id') even though the displayed label looks clean and re-typing/deleting/re-adding the field in the UI did not fix it across multiple attempts. Every downstream symptom (Code node throwing 'Cannot read properties of undefined', apparently-correct input data shown in the debug panel, repeated republish/restart cycles) looked like a data-shape or publish-timing bug, wasting many iterations before the real cause was found.
+
+### Action
+Diagnosed conclusively by exporting the live workflows directly from the n8n container (docker exec ... n8n export:workflow --all) and diffing the raw JSON against the repo's authored copy, rather than trusting the editor UI. Found literal '"name": "account_id "' keys. Fixed by patching the exported JSON in a script (strip whitespace from every input-schema name and every caller's workflowInputs.value key + schema id/displayName) and re-importing via n8n import:workflow, then publish:workflow --id=<id> per workflow, then a container restart (CLI publish requires a restart to take effect while n8n is running). Future rule: if an Execute Workflow sub-workflow call fails with a field the caller's UI shows as correctly mapped, export the live workflow JSON and grep for trailing/leading whitespace in field names before assuming a logic or timing bug.
+
+---
