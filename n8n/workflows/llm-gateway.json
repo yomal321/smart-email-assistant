@@ -1,0 +1,143 @@
+{
+  "name": "LLM Gateway",
+  "nodes": [
+    {
+      "id": "c3d4e5f6-0001-4a1a-9c1a-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "system_prompt",
+              "type": "string"
+            },
+            {
+              "name": "user_content",
+              "type": "string"
+            },
+            {
+              "name": "response_schema",
+              "type": "object"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c3d4e5f6-0002-4a1a-9c1a-000000000002",
+      "name": "Call Gemini generateContent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"contents\": [ { \"role\": \"user\", \"parts\": [ { \"text\": $json.user_content } ] } ], \"systemInstruction\": { \"parts\": [ { \"text\": $json.system_prompt } ] }, \"generationConfig\": { \"responseMimeType\": \"application/json\", \"responseSchema\": $json.response_schema } } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_GEMINI_API_CREDENTIAL_ID",
+          "name": "Gemini API"
+        }
+      },
+      "notes": "ASSUMPTION (no live API access to verify): model id 'gemini-2.0-flash' on the v1beta generateContent endpoint, structured output via generationConfig.responseMimeType='application/json' + responseSchema=the caller's response_schema (Gemini's native JSON-mode/schema-constrained generation, not prose parsed after the fact). Auth is an HTTP Header Auth credential ('Gemini API', placeholder id REPLACE_WITH_GEMINI_API_CREDENTIAL_ID) whose stored header is expected to be 'x-goog-api-key: <API key>' -- set this up in n8n's credential UI on import, matching how gmail-ingestion.json/email-normaliser.json reference not-yet-created credentials by placeholder id + real name. options.response.response.neverError=true (plus onError=continueRegularOutput for network-level failures) means a non-2xx status lands here as a normal item instead of throwing, so 'Parse Gemini response' can inspect statusCode/body and always produce a typed { success, ... } result.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c3d4e5f6-0003-4a1a-9c1a-000000000003",
+      "name": "Parse Gemini response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Generic LLM Gateway contract (FR3): every path returns either\n// { success: true, data: <parsed structured object> } or\n// { success: false, error: <short message> } -- never an unhandled throw.\ntry {\n  const response = $json || {};\n\n  // A network-level failure (DNS, timeout, connection refused) surfaces here\n  // as an n8n error object rather than a normal HTTP response, since the\n  // HTTP Request node uses onError=continueRegularOutput.\n  if (response.error) {\n    const message =\n      (typeof response.error === 'string' && response.error) ||\n      (response.error && response.error.message) ||\n      'Request to Gemini failed';\n    return { json: { success: false, error: String(message) } };\n  }\n\n  const statusCode = response.statusCode;\n  const body = response.body;\n\n  if (!statusCode || statusCode < 200 || statusCode >= 300) {\n    const apiMessage =\n      body && body.error && body.error.message\n        ? body.error.message\n        : `Gemini API returned HTTP ${statusCode}`;\n    return { json: { success: false, error: String(apiMessage) } };\n  }\n\n  const candidates = (body && body.candidates) || [];\n  const parts =\n    (candidates[0] && candidates[0].content && candidates[0].content.parts) || [];\n  const text = parts[0] && parts[0].text;\n\n  if (!text) {\n    return {\n      json: { success: false, error: 'Gemini response contained no text to parse' },\n    };\n  }\n\n  let data;\n  try {\n    data = JSON.parse(text);\n  } catch (parseErr) {\n    return { json: { success: false, error: 'Gemini response was not valid JSON' } };\n  }\n\n  return { json: { success: true, data } };\n} catch (err) {\n  return { json: { success: false, error: (err && err.message) || 'Unknown LLM Gateway error' } };\n}\n"
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Call Gemini generateContent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Gemini generateContent": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Execute Workflow Trigger": [
+      {
+        "json": {
+          "system_prompt": "You are an email triage assistant. Read the email and classify it, then produce a one-line summary. Respond only with JSON matching the given schema.",
+          "user_content": "Subject: Re: Weekly sync - 3 PM tomorrow?\n\nBody:\nHi team,\n\nJust confirming our sync is still on for 3 PM tomorrow. Let me know if that no longer works for anyone.\n\nThanks,\nAlex",
+          "response_schema": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "needs_reply",
+                  "fyi",
+                  "waiting_on_someone_else",
+                  "promotional",
+                  "low_priority"
+                ]
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "category",
+              "summary"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "active": false,
+  "settings": {}
+}
