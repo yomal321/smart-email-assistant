@@ -13,7 +13,10 @@
       "name": "Gmail Pub/Sub Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-1600, 300],
+      "position": [
+        -1600,
+        300
+      ],
       "notes": "responseMode=onReceived (n8n default): n8n acks the HTTP request to Google's Pub/Sub push service immediately on receipt, before any of the verification/fetch logic below runs. This satisfies Pub/Sub's need for a fast ack regardless of how verification turns out downstream - the 'Drop - invalid token' branch does not need to (and cannot, under this mode) send its own distinct HTTP status back to Google.",
       "notesInFlow": true
     },
@@ -27,7 +30,10 @@
       "name": "Extract OIDC token",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-1360, 300]
+      "position": [
+        -1360,
+        300
+      ]
     },
     {
       "parameters": {
@@ -48,7 +54,10 @@
       "name": "Verify via tokeninfo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-1120, 300],
+      "position": [
+        -1120,
+        300
+      ],
       "onError": "continueRegularOutput",
       "notes": "No JWT/JWKS library is available in n8n's Code node sandbox, so verification is delegated to Google's lightweight tokeninfo endpoint rather than implementing signature verification here - the pragmatic, documented way to validate a Pub/Sub push OIDC token without a crypto library. onError=continueRegularOutput so a non-200 (invalid/expired token) flows into 'Token valid?' as a non-matching payload instead of halting the workflow.",
       "notesInFlow": true
@@ -89,7 +98,10 @@
       "name": "Token valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-880, 300],
+      "position": [
+        -880,
+        300
+      ],
       "notes": "A verified push is: HTTP 200 from tokeninfo AND aud equals this webhook's own public URL AND email equals gmail-api-push@system.gserviceaccount.com. On a failed/invalid token call (previous node's onError=continueRegularOutput), $json.aud/$json.email are absent, so both 'equals' checks fail naturally - no separate error-field check is needed. 'aud' rightValue is a placeholder (REPLACE_WITH_WEBHOOK_PUBLIC_URL) - fill in with this workflow's actual public webhook URL once n8n is deployed and the URL is known (this is also the audience value registered when this endpoint is configured as the Pub/Sub push subscription's OIDC audience).",
       "notesInFlow": true
     },
@@ -99,7 +111,10 @@
       "name": "Drop — invalid token",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-620, 460],
+      "position": [
+        -620,
+        460
+      ],
       "notes": "Terminal. The HTTP ack to Google already went out via the webhook's onReceived response mode, so nothing more is sent here - this node only marks the branch as intentionally ending without fetch/write, per FR2/AC2 ('discarded... never fetched, normalized, or written'). The drop is observable via this node's presence in n8n's execution log.",
       "notesInFlow": true
     },
@@ -113,7 +128,10 @@
       "name": "Read account cursor",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-620, 140],
+      "position": [
+        -620,
+        140
+      ],
       "credentials": {
         "postgres": {
           "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
@@ -146,7 +164,10 @@
       "name": "history.list fetch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-360, 140],
+      "position": [
+        -360,
+        140
+      ],
       "credentials": {
         "gmailOAuth2": {
           "id": "REPLACE_WITH_GMAIL_OAUTH2_CREDENTIAL_ID",
@@ -167,7 +188,10 @@
       "name": "Extract new message IDs + new cursor",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-100, 140],
+      "position": [
+        -100,
+        140
+      ],
       "notes": "Downstream nodes reference this node by name via $('Extract new message IDs + new cursor') rather than relying on data pass-through, since the loop below reshapes the item stream into one item per message id. This is also why 'Advance cursor' can be reached safely from either branch below and still know the right account_id/new_cursor.",
       "notesInFlow": true
     },
@@ -198,7 +222,10 @@
       "name": "Any new messages?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [160, 140],
+      "position": [
+        160,
+        140
+      ],
       "notes": "Edge case (spec.md): a notification for a non-new-mail change (e.g. a label-only change) yields zero messagesAdded. The false branch skips straight to 'Advance cursor' - no emails row is written, but the cursor still advances so the next fetch doesn't re-process the same history range.",
       "notesInFlow": true
     },
@@ -212,7 +239,10 @@
       "name": "Split message IDs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [420, 20]
+      "position": [
+        420,
+        20
+      ]
     },
     {
       "parameters": {
@@ -223,7 +253,10 @@
       "name": "Loop message IDs",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [680, 20],
+      "position": [
+        680,
+        20
+      ],
       "notes": "BEST-EFFORT, not live-verified: assumes n8n's Split In Batches output order is [0]=done, [1]=loop (current n8n convention, matching gmail-renewal-recovery.json's 'Loop Over Message IDs'). Verify against the live editor on import and swap connections if the running version orders them the other way.",
       "notesInFlow": true
     },
@@ -248,7 +281,10 @@
       "name": "messages.get fetch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [940, -100],
+      "position": [
+        940,
+        -100
+      ],
       "credentials": {
         "gmailOAuth2": {
           "id": "REPLACE_WITH_GMAIL_OAUTH2_CREDENTIAL_ID",
@@ -280,7 +316,10 @@
       "name": "Call Email Normaliser",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [1180, -100],
+      "position": [
+        1180,
+        -100
+      ],
       "notes": "References the 'Email Normaliser' sub-workflow BY NAME (cachedResultName) since no live n8n instance/workflow ID exists yet - workflowId.value is left blank as a placeholder, matching the pattern gmail-renewal-recovery.json already uses. Once email-normaliser.json (T3) is imported, re-point this node at the real workflow via n8n's resource picker (it resolves by ID internally, not by name). Passes { account_id, raw_message } matching the Email Normaliser contract.",
       "notesInFlow": true
     },
@@ -296,7 +335,10 @@
       "name": "Advance cursor",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [940, 140],
+      "position": [
+        940,
+        140
+      ],
       "credentials": {
         "postgres": {
           "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
@@ -317,7 +359,10 @@
       "name": "Sticky Note - Overview",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-1620, -160]
+      "position": [
+        -1620,
+        -160
+      ]
     },
     {
       "parameters": {
@@ -330,7 +375,10 @@
       "name": "Sticky Note - placeholders",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-1620, 480]
+      "position": [
+        -1620,
+        480
+      ]
     }
   ],
   "connections": {
