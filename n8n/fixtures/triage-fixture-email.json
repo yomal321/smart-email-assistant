@@ -1,0 +1,33 @@
+{
+  "_notes": "Fixtures for standalone testing of LLM Gateway (n8n/workflows/llm-gateway.json) and Triage Pipeline (n8n/workflows/triage-pipeline.json), per 004-triage design.md NFR1/AC3/AC2/AC5. Use `normal` and `malformed_empty_body` as pinData on Triage Pipeline's Execute Workflow Trigger node (mirrors 002-ingestion's email-normaliser.json pinData pattern). `invalid_category_mock` is not a Triage Pipeline input — it is a canned LLM Gateway *response* to pin on the 'Call LLM Gateway' node when testing Triage Pipeline's FR5 validation/rejection path (AC5) without depending on Gemini actually returning an out-of-set value live.",
+
+  "normal": {
+    "email_id": "00000000-0000-0000-0000-0000000000f1",
+    "subject": "Re: Weekly sync - 3 PM tomorrow?",
+    "body": "Hi team,\n\nJust confirming our sync is still on for 3 PM tomorrow. Let me know if that no longer works for anyone.\n\nThanks,\nAlex"
+  },
+
+  "malformed_empty_body": {
+    "email_id": "00000000-0000-0000-0000-0000000000f2",
+    "subject": null,
+    "body": ""
+  },
+
+  "invalid_category_mock": {
+    "_notes": "Pin this as 'Call LLM Gateway' node output when exercising Triage Pipeline's category-validation path (FR5/AC5). Simulates the model returning a value outside the five-value allow-list -- Triage Pipeline must reject this and write triage_error, never write 'urgent' to emails.category.",
+    "success": true,
+    "data": {
+      "category": "urgent",
+      "summary": "Needs a reply about tomorrow's sync time."
+    }
+  },
+
+  "oversized_summary_mock": {
+    "_notes": "Pin this as 'Call LLM Gateway' node output to exercise Triage Pipeline's summary shape guard (FR9/AC5-adjacent). A valid category paired with a summary that fails the shape check (too long, contains a URL) must also be rejected -- never written truncated or as-is.",
+    "success": true,
+    "data": {
+      "category": "needs_reply",
+      "summary": "This summary is deliberately far too long to pass the one-line, one-hundred-and-sixty-character shape guard defined in FR9, and it also contains a link: https://example.com/click-here which should independently fail the no-URL check."
+    }
+  }
+}
