@@ -79,6 +79,75 @@
         "language": "javaScript",
         "jsCode": "// Upsert email returns one row with `id` when the INSERT succeeded, or an\n// empty item (thanks to alwaysOutputData on that node) when ON CONFLICT DO\n// NOTHING skipped the insert because the row already existed.\nconst row = $input.item.json || {};\nconst emailId = row.id || null;\n\nreturn {\n  json: {\n    email_id: emailId,\n    inserted: Boolean(emailId),\n  },\n};"
       }
+    },
+    {
+      "id": "a1b2c3d4-0005-4a1a-9c1a-000000000005",
+      "name": "Inserted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-cond-1",
+              "leftValue": "={{ $json.inserted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "004-triage, T5: a duplicate delivery (ON CONFLICT DO NOTHING skipped the insert, inserted=false) never triggers Triage Pipeline -- only a genuinely new row does (FR1/AC4). Purely additive: this node and 'Call Triage Pipeline' are the only change this task makes to this already-live workflow.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a1b2c3d4-0006-4a1a-9c1a-000000000006",
+      "name": "Call Triage Pipeline",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        180
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Triage Pipeline"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_id": "={{ $json.email_id }}",
+            "subject": "={{ $('Normalize').item.json.subject }}",
+            "body": "={{ $('Normalize').item.json.body }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "004-triage FR2/NFR2: fires Triage Pipeline non-blocking (waitForSubWorkflow: false) so Gemini's latency/availability can never affect this already-verified ingestion path (002-ingestion AC1-AC5). References the 'Triage Pipeline' sub-workflow BY NAME (cachedResultName), same placeholder pattern this file's own callers already use -- workflowId.value is left blank until triage-pipeline.json is imported and this node is re-pointed at it via n8n's resource picker.",
+      "notesInFlow": true
     }
   ],
   "connections": {
@@ -113,6 +182,29 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Format output": {
+      "main": [
+        [
+          {
+            "node": "Inserted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserted?": {
+      "main": [
+        [
+          {
+            "node": "Call Triage Pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },
