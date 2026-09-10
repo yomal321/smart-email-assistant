@@ -1,0 +1,395 @@
+{
+  "name": "Action Extraction",
+  "nodes": [
+    {
+      "id": "f6a7b8c9-0001-4a1a-9c1a-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "email_id",
+              "type": "string"
+            },
+            {
+              "name": "subject",
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "type": "string"
+            },
+            {
+              "name": "received_at",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f6a7b8c9-0002-4a1a-9c1a-000000000002",
+      "name": "Build extraction prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Field minimization (same convention as Triage Pipeline's 'Build triage\n// prompt'): only subject + a truncated plain-text body + received_at ever\n// leave this workflow toward LLM Gateway / Gemini -- never raw_payload or\n// headers, which are not even part of this workflow's input in the first\n// place (Execute Workflow Trigger only declares email_id/subject/body/received_at).\nconst input = $json || {};\nconst emailId = input.email_id;\n\n// Malformed input (null/missing subject, body, or received_at) must never\n// throw here (mirrors AC2's no-content-email case, and any malformed row).\nconst subject = input.subject === null || input.subject === undefined ? '' : String(input.subject);\nconst bodyRaw = input.body === null || input.body === undefined ? '' : String(input.body);\nconst receivedAt = input.received_at === null || input.received_at === undefined ? '' : String(input.received_at);\nconst truncatedBody = bodyRaw.slice(0, 2000);\n\nconst systemPrompt = 'You are an email action-item extraction assistant. Read the email and decide whether it contains an actionable request or commitment -- something the recipient needs to do. If it does, set has_task to true and extract a short task_text describing what needs to be done. If it does not, set has_task to false and omit task_text and deadline entirely. Today\\'s date / the email\\'s reference date is ' + receivedAt + '. Only include a deadline if a date for the task is clearly and confidently stated in the email, or unambiguously implied relative to the reference date above (for example \"by Friday\") -- resolve any such relative date against the reference date, do not invent one. If you cannot produce a confident deadline in YYYY-MM-DD format, omit the deadline field entirely rather than guess. Respond only with JSON matching the given schema.';\n\nconst userContent = `Email received: ${receivedAt}\\n\\nSubject: ${subject}\\n\\nBody:\\n${truncatedBody}`;\n\n// task_text is constrained to a plain string; deadline is pinned to\n// YYYY-MM-DD via pattern as defense-in-depth (the actual enforcement point\n// is 'Validate extraction result' below, not this schema).\nconst responseSchema = {\n  type: 'object',\n  properties: {\n    has_task: {\n      type: 'boolean',\n    },\n    task_text: {\n      type: 'string',\n    },\n    deadline: {\n      type: 'string',\n      pattern: '^\\\\d{4}-\\\\d{2}-\\\\d{2}$',\n    },\n  },\n  required: ['has_task'],\n};\n\nreturn {\n  json: {\n    email_id: emailId,\n    system_prompt: systemPrompt,\n    user_content: userContent,\n    response_schema: responseSchema,\n  },\n};\n"
+      }
+    },
+    {
+      "id": "f6a7b8c9-0003-4a1a-9c1a-000000000003",
+      "name": "Call LLM Gateway",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "LLM Gateway"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "system_prompt": "={{ $json.system_prompt }}",
+            "user_content": "={{ $json.user_content }}",
+            "response_schema": "={{ $json.response_schema }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "notes": "References the 'LLM Gateway' sub-workflow BY NAME (cachedResultName), same placeholder pattern Triage Pipeline's 'Call LLM Gateway' uses -- workflowId.value is left blank since no live n8n instance/workflow ID exists yet. Once llm-gateway.json is imported, re-point this node at the real workflow via the resource picker. Passes { system_prompt, user_content, response_schema } per LLM Gateway's generic contract -- this node's own JSON shape is otherwise unmodified from llm-gateway.json's contract.",
+      "notesInFlow": true
+    },
+    {
+      "id": "f6a7b8c9-0004-4a1a-9c1a-000000000004",
+      "name": "Validate extraction result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Never throws unhandled (same convention as Triage Pipeline's 'Validate\n// triage result') -- any unexpected error still produces an { outcome:\n// 'error', ... } item that routes to the error-write branch.\ntry {\n  const gatewayResult = $json || {};\n\n  // .first() rather than .item: with multiple items in flight (e.g. running\n  // this workflow against more than one pinned fixture item at once during\n  // testing), .item cannot resolve a single unambiguous upstream match and\n  // n8n throws 'Multiple matches' -- same bug 004-triage hit and fixed this\n  // way in Triage Pipeline's 'Format success output'/'Format failure output'.\n  let emailId;\n  try {\n    emailId = $('Build extraction prompt').first().json.email_id;\n  } catch (refErr) {\n    emailId = null;\n  }\n\n  if (!gatewayResult.success) {\n    const message = gatewayResult.error || 'LLM Gateway call failed';\n    return { json: { outcome: 'error', email_id: emailId, error: String(message) } };\n  }\n\n  const data = gatewayResult.data || {};\n\n  // FR9: no actionable request found is the common, successful case -- no\n  // write at all, not an error.\n  if (!data.has_task) {\n    return { json: { outcome: 'none', email_id: emailId } };\n  }\n\n  const taskText = data.task_text;\n  if (typeof taskText !== 'string' || taskText.trim().length === 0) {\n    return {\n      json: {\n        outcome: 'error',\n        email_id: emailId,\n        error: 'has_task true but task_text missing/empty',\n      },\n    };\n  }\n\n  const deadline = data.deadline;\n  const hasDeadline = deadline !== undefined && deadline !== null && deadline !== '';\n\n  if (hasDeadline) {\n    if (typeof deadline !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(deadline)) {\n      return {\n        json: {\n          outcome: 'error',\n          email_id: emailId,\n          error: `deadline '${deadline}' does not match YYYY-MM-DD`,\n        },\n      };\n    }\n    return { json: { outcome: 'task', email_id: emailId, task_text: taskText, deadline } };\n  }\n\n  return { json: { outcome: 'task', email_id: emailId, task_text: taskText, deadline: null } };\n} catch (err) {\n  let emailId = null;\n  try {\n    emailId = $('Build extraction prompt').first().json.email_id;\n  } catch (refErr) {\n    emailId = null;\n  }\n  return {\n    json: {\n      outcome: 'error',\n      email_id: emailId,\n      error: (err && err.message) || 'Unknown Action Extraction error',\n    },\n  };\n}\n"
+      }
+    },
+    {
+      "id": "f6a7b8c9-0005-4a1a-9c1a-000000000005",
+      "name": "Outcome?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1280,
+        300
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "f6a7b8c9-cond-1",
+                    "leftValue": "={{ $json.outcome }}",
+                    "rightValue": "task",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "task"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "f6a7b8c9-cond-2",
+                    "leftValue": "={{ $json.outcome }}",
+                    "rightValue": "none",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "none"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "f6a7b8c9-cond-3",
+                    "leftValue": "={{ $json.outcome }}",
+                    "rightValue": "error",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "error"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f6a7b8c9-0006-4a1a-9c1a-000000000006",
+      "name": "Write task",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1540,
+        120
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO tasks (email_id, task_text, deadline, status) VALUES ($1, $2, $3, 'open') ON CONFLICT (email_id) DO NOTHING;",
+        "options": {
+          "queryReplacement": "={{ [$json.email_id, $json.task_text, $json.deadline] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "AC1: ON CONFLICT (email_id) DO NOTHING makes the write idempotent -- a re-run against an already-extracted email is a no-op. Reuses the same 'Supabase Postgres' credential (same name + placeholder id) Triage Pipeline's write nodes and Email Normaliser's 'Upsert email' node use, per NFR3.",
+      "notesInFlow": true
+    },
+    {
+      "id": "f6a7b8c9-0007-4a1a-9c1a-000000000007",
+      "name": "Format task output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// .first() rather than .item -- see 'Validate extraction result' node's\n// note: .item cannot resolve a single unambiguous upstream match when\n// multiple items are in flight, confirmed live during 004-triage AC testing.\nconst emailId = $('Validate extraction result').first().json.email_id;\nreturn { json: { email_id: emailId, extracted: true } };\n"
+      }
+    },
+    {
+      "id": "f6a7b8c9-0008-4a1a-9c1a-000000000008",
+      "name": "No action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// FR9: no actionable request found -- no DB write at all, just a minimal\n// output. .first() rather than .item -- see 'Validate extraction result'\n// node's note.\nconst emailId = $('Validate extraction result').first().json.email_id;\nreturn { json: { email_id: emailId, extracted: false } };\n"
+      }
+    },
+    {
+      "id": "f6a7b8c9-0009-4a1a-9c1a-000000000009",
+      "name": "Write extraction error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1540,
+        480
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE emails SET action_extraction_error = $1 WHERE id = $2;",
+        "options": {
+          "queryReplacement": "={{ [$json.error, $json.email_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "AC3: a forced failure is rejected (no row written to tasks) and recorded on the emails row instead. Same reused 'Supabase Postgres' credential as 'Write task' (NFR3).",
+      "notesInFlow": true
+    },
+    {
+      "id": "f6a7b8c9-000a-4a1a-9c1a-00000000000a",
+      "name": "Format error output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// .first() rather than .item -- see 'Validate extraction result' node's\n// note: .item cannot resolve a single unambiguous upstream match when\n// multiple items are in flight, confirmed live during 004-triage AC testing.\nconst emailId = $('Validate extraction result').first().json.email_id;\nreturn { json: { email_id: emailId, extracted: false } };\n"
+      }
+    },
+    {
+      "id": "f6a7b8c9-000b-4a1a-9c1a-00000000000b",
+      "name": "Sticky Note - placeholders",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        560
+      ],
+      "parameters": {
+        "content": "### Placeholders to fill in on import\n\n- **Supabase Postgres** credential (name 'Supabase Postgres', placeholder id REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID) -- reuse the same credential Triage Pipeline's write nodes and Email Normaliser's 'Upsert email' node already hold (NFR3), do not create a new one.\n- 'Call LLM Gateway' targets the 'LLM Gateway' sub-workflow by name only (workflowId.value is blank) -- re-point it at the real workflow via the resource picker once llm-gateway.json is imported.\n- This workflow is called by a future caller (005-action-items T3) with { email_id, subject, body, received_at } -- received_at must match the ISO timestamp shape Email Normaliser's 'Normalize' node produces.\n- No pinData is included here by design (NFR1) -- pin mock data directly on nodes in the n8n editor when testing AC1/AC2/AC3.",
+        "height": 300,
+        "width": 480,
+        "color": 7
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build extraction prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build extraction prompt": {
+      "main": [
+        [
+          {
+            "node": "Call LLM Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call LLM Gateway": {
+      "main": [
+        [
+          {
+            "node": "Validate extraction result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate extraction result": {
+      "main": [
+        [
+          {
+            "node": "Outcome?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outcome?": {
+      "main": [
+        [
+          {
+            "node": "Write task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write extraction error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write task": {
+      "main": [
+        [
+          {
+            "node": "Format task output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write extraction error": {
+      "main": [
+        [
+          {
+            "node": "Format error output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

@@ -148,6 +148,41 @@
       },
       "notes": "004-triage FR2/NFR2: fires Triage Pipeline non-blocking (waitForSubWorkflow: false) so Gemini's latency/availability can never affect this already-verified ingestion path (002-ingestion AC1-AC5). References the 'Triage Pipeline' sub-workflow BY NAME (cachedResultName), same placeholder pattern this file's own callers already use -- workflowId.value is left blank until triage-pipeline.json is imported and this node is re-pointed at it via n8n's resource picker.",
       "notesInFlow": true
+    },
+    {
+      "id": "a1b2c3d4-0007-4a1a-9c1a-000000000007",
+      "name": "Call Action Extraction",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        420
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Action Extraction"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_id": "={{ $json.email_id }}",
+            "subject": "={{ $('Normalize').item.json.subject }}",
+            "body": "={{ $('Normalize').item.json.body }}",
+            "received_at": "={{ $('Normalize').item.json.received_at }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "005-action-items, T3: second parallel branch off 'Inserted?'s true output, alongside 'Call Triage Pipeline' -- same guard (a genuinely new, non-duplicate insert), same non-blocking pattern (waitForSubWorkflow: false) so this new call can never affect this already-verified ingestion path. References the 'Action Extraction' sub-workflow BY NAME (cachedResultName) -- workflowId.value is left blank until action-extraction.json is imported and this node is re-pointed at it via n8n's resource picker. Passes received_at (Normalize's ISO timestamp) as the reference date Action Extraction needs to resolve relative deadlines.",
+      "notesInFlow": true
     }
   ],
   "connections": {
@@ -200,6 +235,11 @@
         [
           {
             "node": "Call Triage Pipeline",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Call Action Extraction",
             "type": "main",
             "index": 0
           }
