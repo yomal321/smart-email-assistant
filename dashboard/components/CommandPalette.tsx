@@ -122,7 +122,7 @@ export function CommandPalette() {
             onKeyDown={onInputKeyDown}
             placeholder="Search pages…"
             aria-label="Search pages"
-            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="w-full rounded-md bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/30 focus:outline-none"
           />
           <kbd className="shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
             Esc
@@ -147,7 +147,7 @@ export function CommandPalette() {
                   type="button"
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => selectItem(index)}
-                  className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-150 focus:outline-none ${
+                  className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-150 focus:ring-2 focus:ring-ring/30 focus:outline-none ${
                     active
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"

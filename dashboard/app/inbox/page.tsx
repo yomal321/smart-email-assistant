@@ -179,21 +179,21 @@ function InboxPageContent() {
                   <button
                     type="button"
                     onClick={() => applyBulkTaskStatus("done")}
-                    className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs font-medium text-success transition-colors hover:bg-muted"
+                    className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs font-medium text-success transition-colors hover:bg-muted focus:ring-2 focus:ring-ring/30 focus:outline-none"
                   >
                     Mark done
                   </button>
                   <button
                     type="button"
                     onClick={() => applyBulkTaskStatus("dismissed")}
-                    className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+                    className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted focus:ring-2 focus:ring-ring/30 focus:outline-none"
                   >
                     Mark dismissed
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedIds(new Set())}
-                    className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus:ring-2 focus:ring-ring/30 focus:outline-none"
                   >
                     Clear
                   </button>
@@ -219,7 +219,7 @@ function InboxPageContent() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus:ring-2 focus:ring-ring/30 focus:outline-none"
               >
                 Clear filters
               </button>
