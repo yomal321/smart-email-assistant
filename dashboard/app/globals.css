@@ -1,0 +1,262 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #475569;
+  --secondary-foreground: #ffffff;
+
+  --muted: #eaeff3;
+  --muted-foreground: #475569;
+  --border: #e2e8f0;
+  --ring: #2563eb;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --success-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+
+  /* category badges */
+  --cat-needs-reply-bg: #fee2e2;
+  --cat-needs-reply-fg: #991b1b;
+  --cat-fyi-bg: #dbeafe;
+  --cat-fyi-fg: #1e40af;
+  --cat-waiting-bg: #fef3c7;
+  --cat-waiting-fg: #92400e;
+  --cat-promotional-bg: #ede9fe;
+  --cat-promotional-fg: #5b21b6;
+  --cat-low-priority-bg: #f1f5f9;
+  --cat-low-priority-fg: #475569;
+
+  /* status pills (tasks + drafts) */
+  --status-open-bg: #dbeafe;
+  --status-open-fg: #1e40af;
+  --status-done-bg: #dcfce7;
+  --status-done-fg: #166534;
+  --status-dismissed-bg: #f1f5f9;
+  --status-dismissed-fg: #475569;
+  --status-pending-bg: #dbeafe;
+  --status-pending-fg: #1e40af;
+  --status-sent-bg: #dcfce7;
+  --status-sent-fg: #166534;
+  --status-discarded-bg: #f1f5f9;
+  --status-discarded-fg: #475569;
+
+  /* chart series (volume-over-time, category breakdown) */
+  --chart-1: #2563eb;
+  --chart-2: #15803d;
+  --chart-3: #b45309;
+  --chart-4: #7c3aed;
+  --chart-5: #be185d;
+
+  /* KPI trend indicators */
+  --trend-up: #15803d;
+  --trend-down: #dc2626;
+}
+
+/* Explicit dark theme (Settings: theme = "dark"), toggled via a `.dark`
+   class on <html>. Every :root token above has a mirrored override here,
+   each pairing re-checked for 4.5:1 contrast (AC6) rather than reusing the
+   light values' ratios. */
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+
+  --primary: #60a5fa;
+  --primary-foreground: #0f172a;
+  --secondary: #94a3b8;
+  --secondary-foreground: #0f172a;
+
+  --muted: #334155;
+  --muted-foreground: #cbd5e1;
+  --border: #334155;
+  --ring: #60a5fa;
+
+  --destructive: #f87171;
+  --destructive-foreground: #450a0a;
+  --success: #4ade80;
+  --success-foreground: #052e16;
+  --warning: #fbbf24;
+  --warning-foreground: #451a03;
+
+  --cat-needs-reply-bg: #450a0a;
+  --cat-needs-reply-fg: #fca5a5;
+  --cat-fyi-bg: #172554;
+  --cat-fyi-fg: #93c5fd;
+  --cat-waiting-bg: #451a03;
+  --cat-waiting-fg: #fcd34d;
+  --cat-promotional-bg: #2e1065;
+  --cat-promotional-fg: #c4b5fd;
+  --cat-low-priority-bg: #1e293b;
+  --cat-low-priority-fg: #cbd5e1;
+
+  --status-open-bg: #172554;
+  --status-open-fg: #93c5fd;
+  --status-done-bg: #052e16;
+  --status-done-fg: #86efac;
+  --status-dismissed-bg: #1e293b;
+  --status-dismissed-fg: #cbd5e1;
+  --status-pending-bg: #172554;
+  --status-pending-fg: #93c5fd;
+  --status-sent-bg: #052e16;
+  --status-sent-fg: #86efac;
+  --status-discarded-bg: #1e293b;
+  --status-discarded-fg: #cbd5e1;
+
+  --chart-1: #60a5fa;
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #a78bfa;
+  --chart-5: #f472b6;
+
+  --trend-up: #4ade80;
+  --trend-down: #f87171;
+}
+
+/* "System" theme fallback: only applies when neither an explicit `.dark`
+   nor `.light` class is present on <html>, so an explicit choice always
+   wins over the OS preference. Values mirror `.dark` above exactly. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.dark):not(.light) {
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --card: #1e293b;
+    --card-foreground: #f1f5f9;
+
+    --primary: #60a5fa;
+    --primary-foreground: #0f172a;
+    --secondary: #94a3b8;
+    --secondary-foreground: #0f172a;
+
+    --muted: #334155;
+    --muted-foreground: #cbd5e1;
+    --border: #334155;
+    --ring: #60a5fa;
+
+    --destructive: #f87171;
+    --destructive-foreground: #450a0a;
+    --success: #4ade80;
+    --success-foreground: #052e16;
+    --warning: #fbbf24;
+    --warning-foreground: #451a03;
+
+    --cat-needs-reply-bg: #450a0a;
+    --cat-needs-reply-fg: #fca5a5;
+    --cat-fyi-bg: #172554;
+    --cat-fyi-fg: #93c5fd;
+    --cat-waiting-bg: #451a03;
+    --cat-waiting-fg: #fcd34d;
+    --cat-promotional-bg: #2e1065;
+    --cat-promotional-fg: #c4b5fd;
+    --cat-low-priority-bg: #1e293b;
+    --cat-low-priority-fg: #cbd5e1;
+
+    --status-open-bg: #172554;
+    --status-open-fg: #93c5fd;
+    --status-done-bg: #052e16;
+    --status-done-fg: #86efac;
+    --status-dismissed-bg: #1e293b;
+    --status-dismissed-fg: #cbd5e1;
+    --status-pending-bg: #172554;
+    --status-pending-fg: #93c5fd;
+    --status-sent-bg: #052e16;
+    --status-sent-fg: #86efac;
+    --status-discarded-bg: #1e293b;
+    --status-discarded-fg: #cbd5e1;
+
+    --chart-1: #60a5fa;
+    --chart-2: #4ade80;
+    --chart-3: #fbbf24;
+    --chart-4: #a78bfa;
+    --chart-5: #f472b6;
+
+    --trend-up: #4ade80;
+    --trend-down: #f87171;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-cat-needs-reply-bg: var(--cat-needs-reply-bg);
+  --color-cat-needs-reply-fg: var(--cat-needs-reply-fg);
+  --color-cat-fyi-bg: var(--cat-fyi-bg);
+  --color-cat-fyi-fg: var(--cat-fyi-fg);
+  --color-cat-waiting-bg: var(--cat-waiting-bg);
+  --color-cat-waiting-fg: var(--cat-waiting-fg);
+  --color-cat-promotional-bg: var(--cat-promotional-bg);
+  --color-cat-promotional-fg: var(--cat-promotional-fg);
+  --color-cat-low-priority-bg: var(--cat-low-priority-bg);
+  --color-cat-low-priority-fg: var(--cat-low-priority-fg);
+
+  --color-status-open-bg: var(--status-open-bg);
+  --color-status-open-fg: var(--status-open-fg);
+  --color-status-done-bg: var(--status-done-bg);
+  --color-status-done-fg: var(--status-done-fg);
+  --color-status-dismissed-bg: var(--status-dismissed-bg);
+  --color-status-dismissed-fg: var(--status-dismissed-fg);
+  --color-status-pending-bg: var(--status-pending-bg);
+  --color-status-pending-fg: var(--status-pending-fg);
+  --color-status-sent-bg: var(--status-sent-bg);
+  --color-status-sent-fg: var(--status-sent-fg);
+  --color-status-discarded-bg: var(--status-discarded-bg);
+  --color-status-discarded-fg: var(--status-discarded-fg);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-trend-up: var(--trend-up);
+  --color-trend-down: var(--trend-down);
+
+  --font-sans: var(--font-plus-jakarta);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
