@@ -125,7 +125,7 @@ function InboxPageContent() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col md:flex-row">
-      <main className="flex-1 border-border md:border-r">
+      <main className="min-w-0 flex-1 border-border md:border-r">
         <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
           {filteredEmails.length > 0 && (
             <input

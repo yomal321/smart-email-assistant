@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useAppState, type Density, type Theme } from "@/components/AppStateProvider";
 
 const THEME_OPTIONS: { value: Theme; label: string; description: string }[] = [
@@ -15,16 +15,9 @@ const DENSITY_OPTIONS: { value: Density; label: string; description: string }[] 
 ];
 
 export default function SettingsPage() {
+  // Applying the theme to <html> (AC5) is centralized in AppStateProvider
+  // so it takes effect on every route, not just while Settings is mounted.
   const { theme, setTheme, density, setDensity } = useAppState();
-
-  // Apply the theme choice to <html> immediately (AC5) — no reload required.
-  // An explicit "light"/"dark" class always wins; "system" removes both so
-  // globals.css's `prefers-color-scheme` fallback takes over.
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("dark", theme === "dark");
-    root.classList.toggle("light", theme === "light");
-  }, [theme]);
 
   return (
     <div className="mx-auto w-full max-w-2xl p-6">

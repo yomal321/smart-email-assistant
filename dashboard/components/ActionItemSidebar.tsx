@@ -47,7 +47,7 @@ export function ActionItemSidebar({
                 <button
                   type="button"
                   onClick={() => onSelectEmail(email.id)}
-                  className="mb-1 cursor-pointer truncate text-left text-xs font-medium text-primary hover:underline"
+                  className="mb-1 block w-full cursor-pointer truncate text-left text-xs font-medium text-primary hover:underline"
                 >
                   {email.subject}
                 </button>
@@ -71,7 +71,7 @@ export function ActionItemSidebar({
                       <button
                         type="button"
                         onClick={() => onSelectEmail(email.id)}
-                        className="mb-1 cursor-pointer truncate text-left text-xs font-medium text-primary hover:underline"
+                        className="mb-1 block w-full cursor-pointer truncate text-left text-xs font-medium text-primary hover:underline"
                       >
                         {email.subject}
                       </button>
