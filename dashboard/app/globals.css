@@ -112,11 +112,18 @@
   --status-discarded-bg: #1e293b;
   --status-discarded-fg: #cbd5e1;
 
-  --chart-1: #60a5fa;
-  --chart-2: #4ade80;
-  --chart-3: #fbbf24;
-  --chart-4: #a78bfa;
-  --chart-5: #f472b6;
+  /* Re-stepped from the original 400-shades (validated with the dataviz
+     skill's six-checks validator against surface #1e293b): those sat at
+     OKLCH L 0.71–0.84, outside the dark-mode 0.48–0.67 band. These pass
+     lightness band, chroma floor, contrast (>=3:1), and the normal-vision
+     CVD floor; the adjacent CVD pair (amber/green) sits in the 6–8 WARN
+     band, which is legal because both charts ship direct labels/legend
+     text as the secondary encoding (never color alone). */
+  --chart-1: #3b82f6;
+  --chart-2: #16a34a;
+  --chart-3: #d97706;
+  --chart-4: #8b5cf6;
+  --chart-5: #ec4899;
 
   --trend-up: #4ade80;
   --trend-down: #f87171;
@@ -173,11 +180,11 @@
     --status-discarded-bg: #1e293b;
     --status-discarded-fg: #cbd5e1;
 
-    --chart-1: #60a5fa;
-    --chart-2: #4ade80;
-    --chart-3: #fbbf24;
-    --chart-4: #a78bfa;
-    --chart-5: #f472b6;
+    --chart-1: #3b82f6;
+    --chart-2: #16a34a;
+    --chart-3: #d97706;
+    --chart-4: #8b5cf6;
+    --chart-5: #ec4899;
 
     --trend-up: #4ade80;
     --trend-down: #f87171;

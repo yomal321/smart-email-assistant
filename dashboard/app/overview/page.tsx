@@ -4,6 +4,8 @@ import { useMemo, type SVGProps } from "react";
 import { emails } from "@/lib/data/fixtures";
 import { useAppState } from "@/components/AppStateProvider";
 import { KpiCard, type KpiTrend } from "@/components/KpiCard";
+import { VolumeChart } from "@/components/VolumeChart";
+import { CategoryBreakdownChart } from "@/components/CategoryBreakdownChart";
 import {
   countTriagedEmails,
   countOpenTasks,
@@ -148,9 +150,13 @@ export default function OverviewPage() {
         />
       </section>
 
-      {/* T12 inserts <VolumeChart /> here — email-volume-over-time chart + accessible table fallback (FR3) */}
+      <div className="mt-6">
+        <VolumeChart emails={emails} />
+      </div>
 
-      {/* T12 inserts <CategoryBreakdownChart /> here — category-breakdown chart + accessible table fallback (FR3) */}
+      <div className="mt-6">
+        <CategoryBreakdownChart emails={emails} />
+      </div>
     </div>
   );
 }
