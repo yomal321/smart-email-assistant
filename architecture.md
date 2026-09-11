@@ -59,7 +59,7 @@ flowchart TB
     subgraph sys ["Smart Email Assistant"]
         direction TB
         web["<b>Web Dashboard</b><br/><i>Next.js App Router + TypeScript · Vercel</i><br/>Unified inbox, action-item sidebar,<br/>draft review"]
-        n8n["<b>Automation Engine</b><br/><i>n8n · Docker + Caddy on Oracle Cloud ARM</i><br/>Ingestion, normalisation,<br/>and all AI pipelines"]
+        n8n["<b>Automation Engine</b><br/><i>n8n · Docker + Caddy on AWS EC2</i><br/>Ingestion, normalisation,<br/>and all AI pipelines"]
         db[("<b>Database</b><br/><i>Supabase · PostgreSQL</i><br/>accounts · emails · tasks<br/>full-text search via tsvector")]
     end
 
@@ -281,7 +281,7 @@ sequenceDiagram
 | Container | Host | Tier |
 |---|---|---|
 | Web Dashboard | Vercel | Free |
-| Automation Engine (n8n) | Oracle Cloud ARM VM — Docker Compose + Caddy | Free |
+| Automation Engine (n8n) | AWS EC2 (Ubuntu) — Docker Compose + Caddy | Free tier |
 | Database | Supabase | Free |
 | Pub/Sub transport | Google Cloud | Free |
 

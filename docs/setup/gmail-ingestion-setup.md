@@ -34,7 +34,7 @@ Target account for this change: `yomaltheekshana66@gmail.com`.
 ## 5. n8n reachable at a stable public HTTPS address
 
 - [ ] Stand up n8n somewhere with a stable public HTTPS URL before continuing — the webhook URL needed in step 9 and the Pub/Sub push subscription's audience/endpoint (step 2) both depend on this existing first.
-  - Production path: Oracle Cloud ARM VM + Docker Compose + Caddy (reverse proxy handles the HTTPS cert).
+  - Production path: AWS EC2 (Ubuntu) + Docker Compose + Caddy (reverse proxy handles the HTTPS cert).
   - Faster path to test the pipeline: a temporary n8n Cloud instance.
 
 ## 6. Apply the Supabase migration
@@ -101,8 +101,13 @@ insert into accounts (
 
 ## 12. Final verification (AC1–AC5)
 
-- [ ] **AC1** — Send a manual test email to `yomaltheekshana66@gmail.com`. Watch n8n's execution log (not Supabase polling) for a **Gmail Ingestion** execution firing within seconds, and confirm it produced exactly one new row in `emails` for that message.
-- [ ] **AC2** — Send (or simulate) a push request to the webhook with a missing/invalid OIDC token (e.g. no `Authorization` header, or a garbage bearer token). Confirm in n8n's execution log that the run reaches the **"Drop — invalid token"** node and stops there — no row written to `emails`.
-- [ ] **AC3** — Replay the same Pub/Sub notification for the test email from AC1 a second time (or trigger two overlapping deliveries). Confirm `emails` still has exactly one row for that `provider_message_id` — the `ON CONFLICT DO NOTHING` constraint absorbs the duplicate.
+- [x] **AC1** — Send a manual test email to `yomaltheekshana66@gmail.com`. Watch n8n's execution log (not Supabase polling) for a **Gmail Ingestion** execution firing within seconds, and confirm it produced exactly one new row in `emails` for that message.
+  - Confirmed 2026-09-08 with a real Gmail message — live Pub/Sub delivery observed firing the pipeline end-to-end.
+- [x] **AC2** — Send (or simulate) a push request to the webhook with a missing/invalid OIDC token (e.g. no `Authorization` header, or a garbage bearer token). Confirm in n8n's execution log that the run reaches the **"Drop — invalid token"** node and stops there — no row written to `emails`.
+  - Confirmed 2026-09-08 — event log traced two fake pushes, both dropped before fetch.
+- [x] **AC3** — Replay the same Pub/Sub notification for the test email from AC1 a second time (or trigger two overlapping deliveries). Confirm `emails` still has exactly one row for that `provider_message_id` — the `ON CONFLICT DO NOTHING` constraint absorbs the duplicate.
+  - Confirmed 2026-09-08 — duplicate insert rejected by the constraint; row count held at 1.
 - [ ] **AC4 (multi-day)** — Let at least one scheduled tick of **Gmail Renewal & Recovery** run (every 6 hours). Confirm afterward that `accounts.subscription_id` / `accounts.subscription_expires_at` were updated and a `renewed` row was written to `sync_outcomes` for that run — don't just confirm the workflow is deployed/active, confirm an actual successful run happened.
-- [ ] **AC5** — Run a schema review of `accounts` (e.g. `\d accounts` in Supabase Studio or re-read `0001_ingestion_schema.sql`) and confirm no column holds OAuth token or refresh-token material — only `n8n_credential_id` (a reference) plus sync-state columns.
+  - **Pending** — workflow is published and scheduled; needs a real 6-hour tick to fire and succeed. Re-check by querying `sync_outcomes` for a `renewed` row for this account.
+- [x] **AC5** — Run a schema review of `accounts` (e.g. `\d accounts` in Supabase Studio or re-read `0001_ingestion_schema.sql`) and confirm no column holds OAuth token or refresh-token material — only `n8n_credential_id` (a reference) plus sync-state columns.
+  - Confirmed 2026-09-08 — schema inspected directly: 10 columns total, `n8n_credential_id` is a plain-text reference, no OAuth token/refresh-token material present.

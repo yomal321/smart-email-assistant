@@ -1,0 +1,10 @@
+{
+  "tier": "standard",
+  "domains": ["data"],
+  "rationale": "Adds Outlook ingestion as a second provider via Microsoft Graph webhooks, reusing Gmail's validated pattern; all edits are additive with bounded 6-9 file scope, unresolved architectural questions (normaliser extend or duplicate, renewal shared or separate) are deferred design decisions with fixed output interface, and schema changes follow deliberately multi-provider-ready design.",
+  "signals": {
+    "blast_radius": "New Outlook trigger and renewal n8n workflows, Email Normaliser extension or separate sub-workflow, accounts.provider constraint widening migration, Outlook setup runbook; ~6-9 files total, all additive and reusing Gmail ingestion patterns",
+    "unresolved": "Whether Email Normaliser gains Outlook branch or Outlook gets its own normaliser sub-workflow; whether renewal workflow is shared across both providers or Outlook-specific",
+    "irreversibility": "All components are additive and independently reversible; database constraint migration is reversible; no data migration needed, only schema version coordination"
+  }
+}

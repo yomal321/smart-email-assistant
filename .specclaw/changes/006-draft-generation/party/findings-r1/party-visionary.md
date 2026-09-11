@@ -1,0 +1,29 @@
+### [WARN] party-visionary — "Most recent row wins" is the only definition of "current draft," and it lives in a future query, not in this schema
+**Quotes:**
+> `drafts` gets its own row per generation: `id`, `email_id` (FK, not null — same never-optional-source-link convention `005-action-items` established for `tasks`, but **no** uniqueness constraint on `email_id`, since multiple drafts per email is the whole point here), `draft_body` (text, not null), `status` (`pending`/`sent`/`discarded`, default `pending` — mirrors `tasks.status`'s provisional-enum pattern), `created_at`. The dashboard (Phase 5, not built yet) would show the most recent row per email as "the current draft."
+
+**Problem:** The schema has no column that marks which draft is "the one" — that fact exists only as a query convention (`ORDER BY created_at DESC LIMIT 1`) the artifact describes but doesn't build. That's fine for Phase 5's first query, but it means "current draft" as a concept has no home in the data — every future query that needs it (a list view, an export, an analytics rollup) re-derives it independently. The first plausible next feature that touches this surface — "let me revert to an earlier draft, the regeneration made it worse" — breaks the convention outright: reverting means an older row must become "current" while a newer one exists, which `ORDER BY created_at DESC` can never express. Supporting it requires adding a marker column (e.g. `is_current`) *and* retrofitting every query written against the old convention in the meantime, in lockstep, with nothing that fails if one is missed.
+**Status:** upheld
+
+### [WARN] party-visionary — "Never auto-sent" is asserted as permanent but enforced by nothing a future PR would trip over
+**Quotes:**
+> **Never auto-sent.** No code path in this change ever calls a send/modify endpoint against Gmail — the umbrella proposal's hard product rule ("Auto-send... explicitly out of scope") isn't a deferral here, it's a permanent constraint this pipeline is built to respect: it only ever writes to `drafts`.
+
+**Problem:** The permanence claimed here is entirely an absence of code, not a structural boundary — no OAuth scope restriction, no DB-level guard, nothing named in the artifact that would make a future PR notice it's crossing a line. Phase 5's own Draft Review Modal is, by the umbrella proposal's own description, the feature whose entire job is turning a draft into a sent email — it is the single most likely place this "permanent" rule gets casually eroded, because nothing here gives that future contributor a signal to stop and re-read this proposal. A constraint held up as a decided, closed door should leave a trace the next change can trip over; this one leaves only a sentence in a proposal that future changes have no reason to reread.
+**Status:** upheld
+
+### [WARN] party-visionary — the "no rate limiting, accepted gap" justification is scoped to "the only external endpoint," and that premise won't hold for the next one
+**Quotes:**
+> Rate limiting or abuse protection on the webhook beyond the shared-secret check itself — this endpoint is a materially larger attack surface than Phases 2/3's internal-only fan-outs (it's the first thing in this project reachable by anyone who has the URL and secret), so this is named as an explicit, accepted gap rather than silently absent, not a "we'll add it eventually" deferral.
+
+**Problem:** The reasoning that makes this gap acceptable is explicitly comparative and singular — "the first thing in this project reachable by anyone." That reasoning is sound for exactly one endpoint. It is the template the next on-demand, externally-reachable feature will find when it goes looking for how this project handles webhook auth, and nothing here flags that the justification must be re-derived, not copied, once a second such endpoint exists — at which point "no rate limiting because we're the only external surface" is no longer true for either one, and the aggregate attack surface (two secrets, two unthrottled endpoints) is a different risk than the one this table evaluated.
+**Status:** upheld
+
+### [NOTE] party-visionary — the FR2 auth-check pattern is invoked by analogy three times but never factored into a reusable node
+**Quotes:**
+> the endpoint is protected by a shared-secret header check — verified **before** any further processing, mirroring `002-ingestion`'s FR2 precedent ("verify before processing... a request that fails verification is discarded and counted; it is never fetched, normalized, or written")
+
+> call the existing **LLM Gateway** unmodified (same reused-choke-point pattern `005-action-items` already proved)
+
+**Problem:** This proposal explicitly banks the payoff of LLM Gateway being a single reusable subworkflow every new pipeline calls into "unmodified" — that's the leverage this codebase has already built. It then reaches for the *same kind* of reuse for authentication, but only by prose analogy to `002-ingestion`'s FR2 check, not by building an equivalent shared "verify shared secret" node. The next externally-reachable endpoint this project adds will have no `Auth Gateway` to call into the way it has an `LLM Gateway` — it will copy-paste this webhook's verify-then-proceed logic into its own n8n workflow instead, and in a low-code tool where workflows don't share code by reference, that copy is exactly the kind of duplicate that drifts the next time the secret-check logic needs a fix.
+**Status:** upheld

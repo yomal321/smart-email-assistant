@@ -11,7 +11,7 @@ flowchart TB
     subgraph sys ["Smart Email Assistant"]
         direction TB
         web["<b>Web Dashboard</b><br/><i>[Next.js App Router + TypeScript · Vercel]</i><br/>Unified inbox, action-item sidebar,<br/>draft review modal"]
-        n8n["<b>Automation Engine</b><br/><i>[n8n · Docker + Caddy on Oracle Cloud ARM]</i><br/>Ingestion, normalisation,<br/>and all AI pipelines"]
+        n8n["<b>Automation Engine</b><br/><i>[n8n · Docker + Caddy on AWS EC2]</i><br/>Ingestion, normalisation,<br/>and all AI pipelines"]
         db[("<b>Database</b><br/><i>[Supabase · PostgreSQL]</i><br/>accounts · emails · tasks<br/>full-text search via tsvector")]
     end
 
@@ -47,7 +47,7 @@ flowchart TB
 | Container | Technology | Host | Responsibility |
 |---|---|---|---|
 | **Web Dashboard** | Next.js App Router, TypeScript | Vercel (free) | Everything the user sees. Reads only. |
-| **Automation Engine** | n8n, Docker Compose + Caddy | Oracle Cloud ARM (free) | Every credential, every outbound call, every AI pipeline. |
+| **Automation Engine** | n8n, Docker Compose + Caddy | AWS EC2 (free tier) | Every credential, every outbound call, every AI pipeline. |
 | **Database** | Supabase / PostgreSQL | Supabase (free) | The contract between the other two. |
 
 ## Why the boundaries sit here
@@ -74,8 +74,8 @@ Both subscriptions expire and must be renewed (Gmail's `watch()` within 7 days, 
 | Container | Host | Tier | Operational burden |
 |---|---|---|---|
 | Web Dashboard | Vercel | Free | None — managed |
-| Automation Engine | Oracle Cloud ARM VM | Free | **Self-managed**: TLS, patching, uptime |
+| Automation Engine | AWS EC2 (Ubuntu) | Free tier | **Self-managed**: TLS, patching, uptime |
 | Database | Supabase | Free | None — managed |
 | Pub/Sub transport | Google Cloud | Free | None — managed |
 
-The Oracle VM is the only self-managed box and therefore the only real ops risk. Caddy handles TLS renewal automatically; ports 80/443 must be open in **both** the OCI security list *and* the instance's iptables — the proposal calls this out because missing the second one is the classic OCI trap.
+The EC2 instance is the only self-managed box and therefore the only real ops risk. Caddy handles TLS renewal automatically; ports 80/443/22 must be open in the instance's Security Group (AWS's cloud-level firewall) — the classic trap here is a Security Group inbound rule scoped to a single source IP that later moves (e.g. an ISP-assigned address changing), silently locking out SSH access.

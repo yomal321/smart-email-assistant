@@ -1,0 +1,8 @@
+{
+  "change": "004-triage",
+  "phase": "verify",
+  "branch": "",
+  "phases": {
+    "verify": {"status":"passed","at":"2026-09-10T07:26:29Z","verdict":"PASS"}
+  }
+}

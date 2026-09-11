@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "sig": "4247828225 11277",
+  "tier": "standard",
+  "tier_source": "classifier",
+  "rationale": "Adds Outlook ingestion as a second provider via Microsoft Graph webhooks, reusing Gmail's validated pattern; all edits are additive with bounded 6-9 file scope, unresolved architectural questions (normaliser extend or duplicate, renewal shared or separate) are deferred design decisions with fixed output interface, and schema changes follow deliberately multi-provider-ready design.",
+  "domains": ["data"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"}
+  ],
+  "dropped": []
+}

@@ -42,13 +42,14 @@
       "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"contents\": [ { \"role\": \"user\", \"parts\": [ { \"text\": $json.user_content } ] } ], \"systemInstruction\": { \"parts\": [ { \"text\": $json.system_prompt } ] }, \"generationConfig\": { \"responseMimeType\": \"application/json\", \"responseSchema\": $json.response_schema } } }}",
         "options": {
+          "timeout": 30000,
           "response": {
             "response": {
               "fullResponse": true,
@@ -63,7 +64,7 @@
           "name": "Gemini API"
         }
       },
-      "notes": "ASSUMPTION (no live API access to verify): model id 'gemini-2.0-flash' on the v1beta generateContent endpoint, structured output via generationConfig.responseMimeType='application/json' + responseSchema=the caller's response_schema (Gemini's native JSON-mode/schema-constrained generation, not prose parsed after the fact). Auth is an HTTP Header Auth credential ('Gemini API', placeholder id REPLACE_WITH_GEMINI_API_CREDENTIAL_ID) whose stored header is expected to be 'x-goog-api-key: <API key>' -- set this up in n8n's credential UI on import, matching how gmail-ingestion.json/email-normaliser.json reference not-yet-created credentials by placeholder id + real name. options.response.response.neverError=true (plus onError=continueRegularOutput for network-level failures) means a non-2xx status lands here as a normal item instead of throwing, so 'Parse Gemini response' can inspect statusCode/body and always produce a typed { success, ... } result.",
+      "notes": "Model id updated 2026-09-08 to 'gemini-3.6-flash' after live verification against 004-triage: 'gemini-2.0-flash' returned a deprecation error ('This model models/gemini-2.0-flash is no longer available... use models/gemini-3.6-flash') during a real test run, confirmed by triage_error on the affected emails row. Structured output via generationConfig.responseMimeType='application/json' + responseSchema=the caller's response_schema (Gemini's native JSON-mode/schema-constrained generation, not prose parsed after the fact) was confirmed working against the new model id in the same live test. Auth is an HTTP Header Auth credential ('Gemini API', placeholder id REPLACE_WITH_GEMINI_API_CREDENTIAL_ID) whose stored header is 'x-goog-api-key: <API key>' -- set this up in n8n's credential UI on import, matching how gmail-ingestion.json/email-normaliser.json reference not-yet-created credentials by placeholder id + real name. options.response.response.neverError=true (plus onError=continueRegularOutput for network-level failures) means a non-2xx status lands here as a normal item instead of throwing, so 'Parse Gemini response' can inspect statusCode/body and always produce a typed { success, ... } result. options.timeout=30000 added 2026-09-11 during 006-draft-generation live deployment: the caller-side Execute Workflow node has no per-node timeout field in this n8n version's Settings tab (confirmed live, not just suspected), so FR9's 30s hang protection is enforced here instead -- this single HTTP node is the only place in the whole gateway that actually makes a network call, so a timeout here protects every caller (Triage Pipeline, Action Extraction, Draft Generation) at once rather than needing to be set per-caller.",
       "notesInFlow": true
     },
     {

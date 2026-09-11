@@ -1,0 +1,23 @@
+### [WARN] party-po — "Within seconds" latency requirement is asserted without value justification, forcing the cost of a new trigger mechanism
+**Quotes:** > A newly-ingested Gmail message receives a non-null `category` (one of the five provisional values) and a non-empty `summary` within seconds of its `emails` row appearing — confirmed by observing the Database Webhook fire and the Gemini Triage workflow execute, not by polling `emails`.
+**Problem:** The stated value this change chases is "you can tell at a glance which emails actually need you" — a value that does not obviously require sub-minute freshness. The proposal never argues why "within seconds" (rather than "within a few minutes") is necessary to deliver that glance-value, yet this precision requirement is the reason a brand-new trigger mechanism is introduced at all (the proposal's own risk table admits "Supabase Database Webhooks are a new mechanism, unverified in this project," carrying "setup/debugging friction"). A looser freshness requirement is a cheaper variant of the requirement itself and the proposal never considers it.
+**Fix:** State why near-real-time triage matters here (e.g., is there a downstream consumer that needs it within seconds?), or relax the Done-when criterion to a coarser interval and let cost follow value.
+**Status:** upheld
+
+### [WARN] party-po — Recurring Gemini cost is bounded by a ceiling but no expected usage number is given
+**Quotes:** > concentrated in prompt/output quality (a wrong category is embarrassing, not dangerous, since nothing auto-acts on it yet) and in the free-tier Gemini rate limit (15 req/min, 1M tokens/day) being sufficient for single-mailbox volume, which the umbrella proposal already judged likely.
+**Problem:** The proposal states the ceiling (15 req/min, 1M tokens/day) but never states the expected number this change will actually consume — no estimate of emails/day, average subject+body token count, or resulting daily token spend. "Sufficient for single-mailbox volume" is asserted by reference to another document's judgment rather than computed here, so the running-cost trade this change adds (one LLM call per inserted row, forever) cannot be checked against the stated ceiling from this artifact alone.
+**Fix:** State the assumed daily email volume and an estimated token cost per triage call, then show the resulting daily/monthly total against the 15 req/min and 1M tokens/day ceilings.
+**Status:** upheld
+
+### [WARN] party-po — Scope size is not weighed against the recurring cost of the manual status quo it replaces
+**Quotes:** > nothing reads `subject`/`body` and turns it into a signal the umbrella proposal (`001-smart-email-assistant`) actually promised: "You can't tell at a glance which emails actually need you."
+**Problem:** The full cost of doing nothing here is "the user keeps scanning their inbox manually," and that cost scales with inbox volume/frequency — a number the proposal never states. This change spends a new n8n workflow, a new trigger mechanism, a new credential, a new migration, and a new LLM dependency to replace that manual scan. Without an inbox-volume figure, there is no way to check whether the recurring inconvenience being removed is large enough to earn a standing pipeline versus, say, a much smaller mechanism (e.g., a single scheduled digest query the user runs on demand).
+**Fix:** State the approximate email volume/day this pipeline is sized for, so the cost of the pipeline can be compared to the manual-scan cost it removes.
+**Status:** upheld
+
+### [NOTE] party-po — Category and summary are bundled as one shippable unit with no named cut line between them
+**Quotes:** > An n8n sub-workflow, triggered per newly-inserted `emails` row, calls Gemini Flash with a structured-output prompt and writes back `category` + a new `summary` column.
+**Problem:** The stated problem is "can I tell at a glance which emails need me" — a question `category` alone answers. `summary` is additional model output, an additional Done-when check ("non-empty `summary`"), and an additional schema column, but the proposal never names it as a separable increment that could ship first (or ship the same day but be allowed to lag) while category alone unblocks the primary stated value.
+**Fix:** Name the cut line explicitly — either justify why category and summary must land atomically, or note that `summary` could be treated as a smaller follow-on shipped once the category signal alone is validated in practice.
+**Status:** upheld

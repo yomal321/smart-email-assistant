@@ -1,0 +1,8 @@
+{
+  "change": "006-draft-generation",
+  "phase": "build",
+  "branch": "",
+  "phases": {
+    "build": {"status":"done","at":"2026-09-11T07:40:48Z","tasks":{"done":4,"total":4,"failed":0}}
+  }
+}

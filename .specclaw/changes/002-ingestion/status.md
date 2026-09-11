@@ -2,7 +2,7 @@
 
 **Change:** 002-ingestion
 **Started:** 2026-09-05
-**Last Updated:** 2026-09-05
+**Last Updated:** 2026-09-08
 
 ## Progress
 
@@ -13,7 +13,7 @@
 | Design | ✅ Done |  |
 | Tasks | ✅ Done |  |
 | Build | ✅ Done | 6/6 tasks |
-| Verify | ⚪ Pending | |
+| Verify | 🟡 In Progress | 4/5 AC confirmed against production (AC1, AC2, AC3, AC5); AC4 pending a real 6-hour renewal tick |
 
 ## Task Progress
 

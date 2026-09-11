@@ -28,7 +28,7 @@
           <mxGeometry x="100" y="470" width="290" height="170" as="geometry" />
         </mxCell>
 
-        <mxCell id="n8n" value="&lt;b&gt;Automation Engine&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Container: n8n, Docker + Caddy on Oracle Cloud ARM]&lt;/i&gt;&lt;br&gt;&lt;br&gt;Ingestion, normalisation,&lt;br&gt;and all AI pipelines" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
+        <mxCell id="n8n" value="&lt;b&gt;Automation Engine&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Container: n8n, Docker + Caddy on AWS EC2]&lt;/i&gt;&lt;br&gt;&lt;br&gt;Ingestion, normalisation,&lt;br&gt;and all AI pipelines" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#FFFFFF;fontSize=12;arcSize=12;" vertex="1" parent="1">
           <mxGeometry x="510" y="330" width="300" height="160" as="geometry" />
         </mxCell>
 

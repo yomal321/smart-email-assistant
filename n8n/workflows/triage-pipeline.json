@@ -189,7 +189,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "const emailId = $('Validate triage result').item.json.email_id;\nreturn { json: { email_id: emailId, triaged: true } };\n"
+        "jsCode": "// .first() rather than .item: with multiple items in flight (e.g. running\n// this workflow against more than one pinned fixture item at once during\n// testing), .item cannot resolve a single unambiguous upstream match and\n// n8n throws 'Multiple matches' -- confirmed live during 004-triage AC\n// testing. .first() is safe here regardless of item count since each\n// invocation of this whole sub-workflow (from Email Normaliser) always\n// carries exactly one email through it in production.\nconst emailId = $('Validate triage result').first().json.email_id;\nreturn { json: { email_id: emailId, triaged: true } };\n"
       }
     },
     {
@@ -204,7 +204,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "const emailId = $('Validate triage result').item.json.email_id;\nreturn { json: { email_id: emailId, triaged: false } };\n"
+        "jsCode": "// .first() rather than .item -- see 'Format success output' node's note:\n// .item cannot resolve a single unambiguous upstream match when multiple\n// items are in flight, confirmed live during 004-triage AC testing.\nconst emailId = $('Validate triage result').first().json.email_id;\nreturn { json: { email_id: emailId, triaged: false } };\n"
       }
     },
     {

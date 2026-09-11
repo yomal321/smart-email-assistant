@@ -90,7 +90,7 @@ Reads directly from Supabase. Calls an n8n webhook for on-demand actions such as
 
 | Component | Host | Cost |
 |---|---|---|
-| n8n | Oracle Cloud Free Tier (ARM VM, Docker + Caddy) | Free |
+| n8n | AWS EC2 (Ubuntu, Docker + Caddy) | Free tier |
 | Frontend | Vercel | Free |
 | Database | Supabase | Free tier |
 | Pub/Sub | Google Cloud (required for Gmail push) | Free tier |
@@ -160,8 +160,7 @@ Unified inbox, action-item sidebar, draft review modal.
 | Free-tier LLM providers may train on submitted data | Email content is personal and involves third parties | Decide deliberately before Phase 2. Options: cheap paid tier, or local Ollama for sensitive processing. |
 | Gmail OAuth verification required for sensitive scopes | Cannot share beyond test users | Acceptable for a personal project. Self as test user. |
 | Hallucinated action items or drafts erode trust fast | Product becomes unusable | Strict structured output schemas. Never auto-send. Always show source email alongside extracted task. |
-| Oracle Cloud ARM capacity errors | Blocked on provisioning | Try alternate availability domains; retry on a schedule. Budget setup time. |
-| Self-managed VM means self-managed ops | Downtime, TLS expiry, security exposure | Docker Compose + Caddy for automatic TLS. Open 80/443 in *both* OCI security list and instance iptables. |
+| Self-managed VM means self-managed ops | Downtime, TLS expiry, security exposure | Docker Compose + Caddy for automatic TLS. Open 80/443/22 in the EC2 instance's Security Group. |
 | n8n workflows become visual spaghetti as branching grows | Hard to maintain or debug | One workflow per pipeline. Peel complex logic into code if it outgrows the node editor. |
 | Free-tier rate limits tighten without warning | Pipeline stalls | Single-user volume is well within limits. Single LLM choke point makes provider swap cheap. |
 

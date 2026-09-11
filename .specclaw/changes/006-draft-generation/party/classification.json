@@ -1,0 +1,10 @@
+{
+  "tier": "deep",
+  "domains": ["security"],
+  "rationale": "Creates the first externally-reachable HTTP endpoint with new authentication design, qualifying for deep tier as a new trust boundary despite mostly additive changes.",
+  "signals": {
+    "blast_radius": "New drafts table, new Draft Generation workflow with HTTP webhook trigger, shared-secret credential, and setup runbook; all additive to existing subsystems.",
+    "unresolved": "All open questions are tuning details (rate-limiting, sample size, credential custody) that don't change the design; Phase 5 dashboard is deferred but anticipated.",
+    "irreversibility": "Git revert plus schema drop; no migrations or dependencies on removed capabilities."
+  }
+}

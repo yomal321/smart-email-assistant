@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "4014181187 10914",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "Adds emails.summary column to existing persisted emails table, a change to persisted data shape that becomes irreversible once the workflow processes real mail.",
+  "domains": ["data"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "fable"}
+  ],
+  "dropped": []
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "sig": "3720535530 11165",
+  "tier": "standard",
+  "tier_source": "classifier",
+  "rationale": "Second iteration of an already-proven pattern (fan-out from Email Normaliser, LLM Gateway call, guarded write) with purely additive schema and workflow changes; all open questions are tuning parameters, not design changes.",
+  "domains": [],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"}
+  ],
+  "dropped": []
+}

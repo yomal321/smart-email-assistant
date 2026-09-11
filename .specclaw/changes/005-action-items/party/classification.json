@@ -1,0 +1,10 @@
+{
+  "tier": "standard",
+  "domains": [],
+  "rationale": "Second iteration of an already-proven pattern (fan-out from Email Normaliser, LLM Gateway call, guarded write) with purely additive schema and workflow changes; all open questions are tuning parameters, not design changes.",
+  "signals": {
+    "blast_radius": "New tasks table and emails.action_extraction_error column, new action-extraction n8n workflow, additive branch on email-normaliser—all following the 004-triage pattern that already proved safe in production",
+    "unresolved": "Status values, deadline parsing precision, and task-text validation are tuning knobs; no open question changes the file list or core design",
+    "irreversibility": "Code changes revert cleanly; data migration required only if tasks table is populated before rollback"
+  }
+}

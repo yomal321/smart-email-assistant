@@ -1,0 +1,4 @@
+{"tier": "deep",
+ "domains": ["data"],
+ "rationale": "Adds emails.summary column to existing persisted emails table, a change to persisted data shape that becomes irreversible once the workflow processes real mail.",
+ "signals": {"blast_radius": "One new n8n workflow and Database Webhook trigger; one migration adding summary column to existing emails table", "unresolved": "Category taxonomy is provisional; all open questions are tuning knobs with no impact on the file list", "irreversibility": "Workflow and webhook are reversible, but column deletion means data loss for any emails already triaged; undo requires backfill strategy not yet planned"}}
