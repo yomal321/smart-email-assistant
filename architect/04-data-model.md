@@ -8,6 +8,7 @@ Not a C4 level — a supporting view. The database is the contract between the t
 erDiagram
     ACCOUNTS ||--o{ EMAILS : syncs
     EMAILS   ||--o{ TASKS  : yields
+    EMAILS   ||--o{ DRAFTS : drafts
 
     ACCOUNTS {
         uuid id PK
@@ -24,7 +25,6 @@ erDiagram
         text body
         text category "written by triage"
         text summary "written by triage"
-        text draft_body "written by draft generation"
         tsvector search_vector
         timestamptz received_at
     }
@@ -35,6 +35,13 @@ erDiagram
         date deadline "nullable"
         text status
     }
+    DRAFTS {
+        uuid id PK
+        uuid email_id FK "no unique constraint -- multiple per email"
+        text draft_body
+        text status "pending/sent/discarded"
+        timestamptz created_at
+    }
 ```
 
 ## Who writes what
@@ -44,7 +51,7 @@ erDiagram
 | Ingestion + Normaliser | `emails`: account_id, thread_id, sender, subject, body, received_at |
 | Triage Pipeline | `emails`: category, summary |
 | Action Extraction | `tasks`: entire row |
-| Draft Generation | the draft body |
+| Draft Generation | `drafts`: entire row |
 | Postgres | `emails.search_vector` (generated / trigger-maintained) |
 | Web Dashboard | nothing — reads only |
 
@@ -58,7 +65,6 @@ Splitting the table by writer this way makes the phasing obvious: Phase 1 fills 
 
 These are carried over rather than silently decided:
 
-- **Draft storage.** A `draft_body` column on `emails` assumes one draft per email. A separate `drafts` table allows regeneration and history. The diagram shows the column with the question flagged — it is a Phase 4 decision, not a Phase 1 one.
 - **Deletion propagation.** If an email is deleted or archived at the provider, does the local `emails` row follow? And what happens to a `task` whose source email disappears — cascade, orphan, or tombstone? Cascading would silently delete commitments the user still owes.
 - **Token storage.** `accounts.credentials` overlaps with n8n's own credential store. Mirroring tokens in both places means two things to keep in sync and two places to leak from.
 - **Backfill policy.** On first connect: recent mail only, or full history? This decides whether `emails` holds hundreds of rows or hundreds of thousands, which in turn decides whether tsvector search is sufficient.
