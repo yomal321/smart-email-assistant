@@ -49,3 +49,28 @@ export function getInitials(name: string): string {
     .map((part) => part[0]?.toUpperCase())
     .join("");
 }
+
+/**
+ * A sender's avatar color is picked deterministically from their name (same
+ * sender, same color, every render) rather than reused from category/status
+ * tokens — those two already carry their own meaning (what an email *is*),
+ * and reusing them here would make an unrelated visual (who it's *from*)
+ * look like a third status signal. Pulls from the same five-color set the
+ * rest of the app already defines (`--cat-*`), so no new palette is
+ * introduced and every pairing is already contrast-checked in both themes.
+ */
+const AVATAR_PALETTE = [
+  { bg: "bg-cat-needs-reply-bg", fg: "text-cat-needs-reply-fg" },
+  { bg: "bg-cat-fyi-bg", fg: "text-cat-fyi-fg" },
+  { bg: "bg-cat-waiting-bg", fg: "text-cat-waiting-fg" },
+  { bg: "bg-cat-promotional-bg", fg: "text-cat-promotional-fg" },
+  { bg: "bg-cat-low-priority-bg", fg: "text-cat-low-priority-fg" },
+] as const;
+
+export function avatarPalette(name: string): { bg: string; fg: string } {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}

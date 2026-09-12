@@ -115,8 +115,11 @@ export function VolumeChart({ emails }: { emails: Email[] }) {
               width={32}
             />
             <Tooltip content={VolumeTooltip} cursor={{ stroke: "var(--border)", strokeWidth: 1 }} />
+            {/* `linear`, not a smoothed spline: each point is one real day's count,
+                so straight segments read as the literal day-to-day change rather
+                than implying curvature between two discrete daily samples. */}
             <Area
-              type="monotone"
+              type="linear"
               dataKey="count"
               stroke="var(--chart-1)"
               strokeWidth={2}

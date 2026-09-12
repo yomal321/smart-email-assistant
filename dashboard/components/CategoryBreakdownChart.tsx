@@ -22,13 +22,18 @@ import type { Email, EmailCategory } from "@/lib/types";
  * order — never reassigned by sort position. `computeCategoryBreakdown`
  * sorts rows by count descending, so which row is on top changes as data
  * changes; the color must not ("color follows the entity, never its rank").
+ *
+ * Reuses the exact `--cat-*-fg` tokens `CategoryBadge` renders elsewhere
+ * (Inbox rows, Action Item sidebar) rather than the generic `--chart-*`
+ * palette, so "needs reply" means the same color everywhere in the app
+ * instead of one color on a badge and a different one on this chart.
  */
 const CATEGORY_COLOR: Record<EmailCategory, string> = {
-  needs_reply: "var(--chart-1)",
-  fyi: "var(--chart-2)",
-  waiting_on_someone_else: "var(--chart-3)",
-  promotional: "var(--chart-4)",
-  low_priority: "var(--chart-5)",
+  needs_reply: "var(--cat-needs-reply-fg)",
+  fyi: "var(--cat-fyi-fg)",
+  waiting_on_someone_else: "var(--cat-waiting-fg)",
+  promotional: "var(--cat-promotional-fg)",
+  low_priority: "var(--cat-low-priority-fg)",
 };
 
 function CategoryTooltip({ active, payload }: TooltipContentProps) {

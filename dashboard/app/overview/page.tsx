@@ -126,7 +126,10 @@ export default function OverviewPage() {
         </p>
       </header>
 
-      <section aria-label="Key metrics" className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <section
+        aria-label="Key metrics"
+        className="mt-4 grid grid-cols-1 divide-y divide-border rounded-lg border border-border bg-card lg:grid-cols-4 lg:divide-x lg:divide-y-0"
+      >
         <KpiCard
           label="Emails triaged"
           value={totalTriaged.toLocaleString()}

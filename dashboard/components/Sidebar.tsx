@@ -153,8 +153,11 @@ export function Sidebar() {
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="mb-2 px-2 py-1">
-          <p className="text-sm font-semibold text-foreground">Smart Email Assistant</p>
+        <div className="mb-2 flex items-center gap-2 border-b border-border px-2 pb-3">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
+            S
+          </span>
+          <p className="truncate text-sm font-semibold text-foreground">Smart Email Assistant</p>
         </div>
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href);

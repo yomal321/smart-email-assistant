@@ -56,19 +56,19 @@ function TrendArrowIcon({
  */
 export function KpiCard({ label, value, icon: Icon, trend, emptyTrendLabel = "No prior-period data" }: KpiCardProps) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
+    <div className="p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+      <p className="mt-2 text-3xl font-semibold tabular-nums text-foreground">{value}</p>
       {trend === null ? (
-        <p className="mt-1 text-xs text-muted-foreground">{emptyTrendLabel}</p>
+        <p className="mt-1.5 text-xs text-muted-foreground">{emptyTrendLabel}</p>
       ) : trend.percent === 0 ? (
-        <p className="mt-1 text-xs text-muted-foreground">No change vs prior period</p>
+        <p className="mt-1.5 text-xs text-muted-foreground">No change vs prior period</p>
       ) : (
         <p
-          className={`mt-1 inline-flex items-center gap-1 text-xs font-medium tabular-nums ${
+          className={`mt-1.5 inline-flex items-center gap-1 text-xs font-medium tabular-nums ${
             trend.percent > 0 ? "text-trend-up" : "text-trend-down"
           }`}
         >

@@ -2,7 +2,7 @@ import type { Email, Task, Draft } from "@/lib/types";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { TaskCard } from "@/components/TaskCard";
 import { StatusBadge } from "@/components/StatusBadge";
-import { formatRelativeTime, getInitials } from "@/lib/format";
+import { avatarPalette, formatRelativeTime, getInitials } from "@/lib/format";
 
 export function InboxRow({
   email,
@@ -28,6 +28,7 @@ export function InboxRow({
   onOpenDraft: () => void;
 }) {
   const sender = email.participants.find((p) => p.role === "from");
+  const avatar = sender ? avatarPalette(sender.name) : null;
 
   return (
     <div className="border-b border-border last:border-b-0">
@@ -48,7 +49,9 @@ export function InboxRow({
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
         >
           <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+              avatar ? `${avatar.bg} ${avatar.fg}` : "bg-muted text-muted-foreground"
+            }`}
             aria-hidden
           >
             {sender ? getInitials(sender.name) : "?"}

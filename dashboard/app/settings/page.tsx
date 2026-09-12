@@ -1,7 +1,34 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactNode, SVGProps } from "react";
 import { useAppState, type Density, type Theme } from "@/components/AppStateProvider";
+
+function ThemeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden {...props}>
+      <path
+        d="M10 3v1.5M10 15.5V17M17 10h-1.5M4.5 10H3M14.6 5.4l-1.1 1.1M6.5 13.5l-1.1 1.1M14.6 14.6l-1.1-1.1M6.5 6.5 5.4 5.4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="10" cy="10" r="3.25" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function DensityIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden {...props}>
+      <path
+        d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 const THEME_OPTIONS: { value: Theme; label: string; description: string }[] = [
   { value: "light", label: "Light", description: "Always use the light palette" },
@@ -26,10 +53,13 @@ export default function SettingsPage() {
         Prototype preferences, stored locally in this browser only.
       </p>
 
-      <section className="mt-6 rounded-lg border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold text-foreground">Theme</h2>
+      <section className="mt-8 rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center gap-2">
+          <ThemeIcon className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Theme</h2>
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">Choose how Smart Email Assistant looks.</p>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {THEME_OPTIONS.map((option) => (
             <OptionCard
               key={option.value}
@@ -43,10 +73,13 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-lg border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold text-foreground">Density</h2>
+      <section className="mt-5 rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center gap-2">
+          <DensityIcon className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Density</h2>
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">Adjust spacing across the app.</p>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {DENSITY_OPTIONS.map((option) => (
             <OptionCard
               key={option.value}
