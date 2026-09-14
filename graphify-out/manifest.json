@@ -1,0 +1,1484 @@
+{
+  ".specclaw/changes/001-smart-email-assistant/party/classification.json": {
+    "mtime": 1788598686.0908635,
+    "seen": 1789298038.7325492,
+    "ast_hash": "b97aea49d8259eb7a8e7232524015cce",
+    "semantic_hash": "b97aea49d8259eb7a8e7232524015cce"
+  },
+  ".specclaw/changes/001-smart-email-assistant/party/panel.json": {
+    "mtime": 1788598694.2617145,
+    "seen": 1789298038.7325535,
+    "ast_hash": "4248268fc32e738c855dd14fd25d0591",
+    "semantic_hash": "4248268fc32e738c855dd14fd25d0591"
+  },
+  ".specclaw/changes/002-ingestion/party/classification.json": {
+    "mtime": 1788599834.4881635,
+    "seen": 1789298038.7325556,
+    "ast_hash": "8c627aa25ea1da90892749647bac7299",
+    "semantic_hash": "8c627aa25ea1da90892749647bac7299"
+  },
+  ".specclaw/changes/002-ingestion/party/panel.json": {
+    "mtime": 1788599841.3225162,
+    "seen": 1789298038.7325566,
+    "ast_hash": "6e84a7abd92faf5fe2355f5af2f87cca",
+    "semantic_hash": "6e84a7abd92faf5fe2355f5af2f87cca"
+  },
+  ".specclaw/changes/002-ingestion/state.json": {
+    "mtime": 1788636283.6678183,
+    "seen": 1789298038.7325573,
+    "ast_hash": "9014906253b6837e5af57e13ab781bd2",
+    "semantic_hash": "9014906253b6837e5af57e13ab781bd2"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party/classification.json": {
+    "mtime": 1788863201.8388965,
+    "seen": 1789298038.7325578,
+    "ast_hash": "545b3ab537265790d61779846e5291fc",
+    "semantic_hash": "545b3ab537265790d61779846e5291fc"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party/panel.json": {
+    "mtime": 1788863209.7977192,
+    "seen": 1789298038.7325585,
+    "ast_hash": "dd11cd7787e7fbc05134fbd18977cfe7",
+    "semantic_hash": "dd11cd7787e7fbc05134fbd18977cfe7"
+  },
+  ".specclaw/changes/004-triage/party/classification.json": {
+    "mtime": 1788863883.6202495,
+    "seen": 1789298038.7325592,
+    "ast_hash": "58435e10fb470d8eeef886f04a6769b4",
+    "semantic_hash": "58435e10fb470d8eeef886f04a6769b4"
+  },
+  ".specclaw/changes/004-triage/party/panel.json": {
+    "mtime": 1788863891.1305263,
+    "seen": 1789298038.73256,
+    "ast_hash": "ea87bb80101d6f51e5241f36cd50722d",
+    "semantic_hash": "ea87bb80101d6f51e5241f36cd50722d"
+  },
+  ".specclaw/changes/004-triage/state.json": {
+    "mtime": 1789025189.2881122,
+    "seen": 1789298038.7325604,
+    "ast_hash": "6fc80458bc7fff81c77b35651de6414b",
+    "semantic_hash": "6fc80458bc7fff81c77b35651de6414b"
+  },
+  ".specclaw/changes/005-action-items/party/classification.json": {
+    "mtime": 1789026205.9851375,
+    "seen": 1789298038.732561,
+    "ast_hash": "ad99b043f1485a8fdc6c3a74ff07922a",
+    "semantic_hash": "ad99b043f1485a8fdc6c3a74ff07922a"
+  },
+  ".specclaw/changes/005-action-items/party/panel.json": {
+    "mtime": 1789026227.2302475,
+    "seen": 1789298038.7325618,
+    "ast_hash": "eaea3fd7b03f92b9d59a52fa07eed44e",
+    "semantic_hash": "eaea3fd7b03f92b9d59a52fa07eed44e"
+  },
+  ".specclaw/changes/005-action-items/state.json": {
+    "mtime": 1789106705.4489455,
+    "seen": 1789298038.732563,
+    "ast_hash": "73371a7d2c6c46a3654af1473f9ba29d",
+    "semantic_hash": "73371a7d2c6c46a3654af1473f9ba29d"
+  },
+  ".specclaw/changes/006-draft-generation/party/classification.json": {
+    "mtime": 1789107086.5505357,
+    "seen": 1789298038.7325635,
+    "ast_hash": "f19346a8f3043e03bb298610627a029e",
+    "semantic_hash": "f19346a8f3043e03bb298610627a029e"
+  },
+  ".specclaw/changes/006-draft-generation/party/panel.json": {
+    "mtime": 1789107105.07976,
+    "seen": 1789298038.7325644,
+    "ast_hash": "1b7203304fcd95c6047b29f18b8a7209",
+    "semantic_hash": "1b7203304fcd95c6047b29f18b8a7209"
+  },
+  ".specclaw/changes/006-draft-generation/state.json": {
+    "mtime": 1789112448.7783644,
+    "seen": 1789298038.732565,
+    "ast_hash": "4dc775d3178c9c313821197b989206a9",
+    "semantic_hash": "4dc775d3178c9c313821197b989206a9"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/classification.json": {
+    "mtime": 1789122851.9648182,
+    "seen": 1789298038.7325656,
+    "ast_hash": "cb72c8362dc16a52c3d5679f082dc9fb",
+    "semantic_hash": "cb72c8362dc16a52c3d5679f082dc9fb"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/panel.json": {
+    "mtime": 1789122859.7054603,
+    "seen": 1789298038.7325664,
+    "ast_hash": "2478997b2cb218ae8b30a6e7f57ce3cd",
+    "semantic_hash": "2478997b2cb218ae8b30a6e7f57ce3cd"
+  },
+  ".specclaw/changes/007-web-dashboard/party/classification.json": {
+    "mtime": 1789159474.9526765,
+    "seen": 1789298038.7325668,
+    "ast_hash": "964da0397fb5fecd9edff5cdbed56198",
+    "semantic_hash": "964da0397fb5fecd9edff5cdbed56198"
+  },
+  ".specclaw/changes/007-web-dashboard/party/panel.json": {
+    "mtime": 1789159482.0723612,
+    "seen": 1789298038.7325675,
+    "ast_hash": "eb7c87137d94de7cea2b1d504bbf00fd",
+    "semantic_hash": "eb7c87137d94de7cea2b1d504bbf00fd"
+  },
+  ".specclaw/changes/007-web-dashboard/state.json": {
+    "mtime": 1789164362.454407,
+    "seen": 1789298038.7325683,
+    "ast_hash": "723b458cba5bc3d08513cc501a33decd",
+    "semantic_hash": "723b458cba5bc3d08513cc501a33decd"
+  },
+  "gmail-dashboard/.impeccable/config.json": {
+    "mtime": 1789272528.3499234,
+    "seen": 1789298038.7325687,
+    "ast_hash": "f0e171bf8dad7043fef4c4d8b7890aec",
+    "semantic_hash": "f0e171bf8dad7043fef4c4d8b7890aec"
+  },
+  "gmail-dashboard/.impeccable/decision.json": {
+    "mtime": 1789272754.930688,
+    "seen": 1789298038.7325697,
+    "ast_hash": "1a9041b07d7aff3df246089fb54050df",
+    "semantic_hash": "1a9041b07d7aff3df246089fb54050df"
+  },
+  "gmail-dashboard/app/actions/page.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325704,
+    "ast_hash": "562bc16b2211be66066d3c1a49c9cfa9",
+    "semantic_hash": "562bc16b2211be66066d3c1a49c9cfa9"
+  },
+  "gmail-dashboard/app/analytics/page.tsx": {
+    "mtime": 1789279866.70127,
+    "seen": 1789298038.732571,
+    "ast_hash": "7143981a41da627d7979426ca281b5a5",
+    "semantic_hash": "7143981a41da627d7979426ca281b5a5"
+  },
+  "gmail-dashboard/app/contacts/page.tsx": {
+    "mtime": 1789281858.6097362,
+    "seen": 1789298038.7325714,
+    "ast_hash": "fadeb9c8ecf04680ea0c0a02662bb15a",
+    "semantic_hash": "fadeb9c8ecf04680ea0c0a02662bb15a"
+  },
+  "gmail-dashboard/app/drafts/page.tsx": {
+    "mtime": 1789282838.8627887,
+    "seen": 1789298038.7325718,
+    "ast_hash": "a68dc755b6729bce6a66a37b62a5b0dc",
+    "semantic_hash": "a68dc755b6729bce6a66a37b62a5b0dc"
+  },
+  "gmail-dashboard/app/follow-ups/page.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325726,
+    "ast_hash": "b1ec9cbf0d73307f36f64e24ff2d2c8c",
+    "semantic_hash": "b1ec9cbf0d73307f36f64e24ff2d2c8c"
+  },
+  "gmail-dashboard/app/fonts.ts": {
+    "mtime": 1789279410.96076,
+    "seen": 1789298038.7325733,
+    "ast_hash": "0759b1287098f080c439772f7d6fa2c9",
+    "semantic_hash": "0759b1287098f080c439772f7d6fa2c9"
+  },
+  "gmail-dashboard/app/inbox/page.tsx": {
+    "mtime": 1789275279.943713,
+    "seen": 1789298038.7325737,
+    "ast_hash": "713cbf342e44dc8f26911897798a96dd",
+    "semantic_hash": "713cbf342e44dc8f26911897798a96dd"
+  },
+  "gmail-dashboard/app/layout.tsx": {
+    "mtime": 1789274998.0339034,
+    "seen": 1789298038.7325742,
+    "ast_hash": "917befe2a00f5034c89be37127a4e4b5",
+    "semantic_hash": "917befe2a00f5034c89be37127a4e4b5"
+  },
+  "gmail-dashboard/app/page.tsx": {
+    "mtime": 1789283268.4972298,
+    "seen": 1789298038.732575,
+    "ast_hash": "81cf8b2569653662ae95d294578df5cc",
+    "semantic_hash": "81cf8b2569653662ae95d294578df5cc"
+  },
+  "gmail-dashboard/app/providers.tsx": {
+    "mtime": 1789275106.2800167,
+    "seen": 1789298038.7325754,
+    "ast_hash": "d74c4ec6b0367b0c031a79b4c8f8fa7c",
+    "semantic_hash": "d74c4ec6b0367b0c031a79b4c8f8fa7c"
+  },
+  "gmail-dashboard/app/review/page.tsx": {
+    "mtime": 1789275052.3487737,
+    "seen": 1789298038.732576,
+    "ast_hash": "327d382114e840518711084a557fbc50",
+    "semantic_hash": "327d382114e840518711084a557fbc50"
+  },
+  "gmail-dashboard/app/rules/page.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325766,
+    "ast_hash": "f988e5161ad57e793b5c32778fe9cb6f",
+    "semantic_hash": "f988e5161ad57e793b5c32778fe9cb6f"
+  },
+  "gmail-dashboard/app/settings/page.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.732577,
+    "ast_hash": "085e567eb32f2f98d3c58a3dbf4d94d4",
+    "semantic_hash": "085e567eb32f2f98d3c58a3dbf4d94d4"
+  },
+  "gmail-dashboard/components.json": {
+    "mtime": 1789273913.4259632,
+    "seen": 1789298038.7325778,
+    "ast_hash": "a0238eb4ceb9341a82b6e3640ca96743",
+    "semantic_hash": "a0238eb4ceb9341a82b6e3640ca96743"
+  },
+  "gmail-dashboard/components/board/action-items-provider.tsx": {
+    "mtime": 1789275070.782396,
+    "seen": 1789298038.7325783,
+    "ast_hash": "136b171e7e654a0c4877ea9eb8bf02a5",
+    "semantic_hash": "136b171e7e654a0c4877ea9eb8bf02a5"
+  },
+  "gmail-dashboard/components/board/app-shell.tsx": {
+    "mtime": 1789275728.7535412,
+    "seen": 1789298038.7325788,
+    "ast_hash": "51d3c80e91dc0ad26ee4fb11de9e58ba",
+    "semantic_hash": "51d3c80e91dc0ad26ee4fb11de9e58ba"
+  },
+  "gmail-dashboard/components/board/board-list.tsx": {
+    "mtime": 1789282074.9531264,
+    "seen": 1789298038.7325792,
+    "ast_hash": "e01db32d815df081a92fa95da53d1895",
+    "semantic_hash": "e01db32d815df081a92fa95da53d1895"
+  },
+  "gmail-dashboard/components/board/board-provider.tsx": {
+    "mtime": 1789275642.6488583,
+    "seen": 1789298038.7325802,
+    "ast_hash": "625276887b49f4edfc9605ce7c42d157",
+    "semantic_hash": "625276887b49f4edfc9605ce7c42d157"
+  },
+  "gmail-dashboard/components/board/command-palette.tsx": {
+    "mtime": 1789274900.4013062,
+    "seen": 1789298038.7325807,
+    "ast_hash": "61be60b8f87d1a08f1975b571adc3951",
+    "semantic_hash": "61be60b8f87d1a08f1975b571adc3951"
+  },
+  "gmail-dashboard/components/board/commit-view.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325811,
+    "ast_hash": "46e935a2730bd5e09328d86628641dcb",
+    "semantic_hash": "46e935a2730bd5e09328d86628641dcb"
+  },
+  "gmail-dashboard/components/board/concourse-bar.tsx": {
+    "mtime": 1789279487.8556664,
+    "seen": 1789298038.7325823,
+    "ast_hash": "888cb5ccc4cf4e7c8d204518aecf2f97",
+    "semantic_hash": "888cb5ccc4cf4e7c8d204518aecf2f97"
+  },
+  "gmail-dashboard/components/board/drafts-provider.tsx": {
+    "mtime": 1789275098.9810112,
+    "seen": 1789298038.7325833,
+    "ast_hash": "6e3665b6b0207e5170baea98e7ee2510",
+    "semantic_hash": "6e3665b6b0207e5170baea98e7ee2510"
+  },
+  "gmail-dashboard/components/board/empty-state.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325838,
+    "ast_hash": "796e2774ef1280cd3f89fbde8dde1c23",
+    "semantic_hash": "796e2774ef1280cd3f89fbde8dde1c23"
+  },
+  "gmail-dashboard/components/board/filter-bar.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325842,
+    "ast_hash": "3e903d7775e65f4aa361e71dc7815f66",
+    "semantic_hash": "3e903d7775e65f4aa361e71dc7815f66"
+  },
+  "gmail-dashboard/components/board/preferences-provider.tsx": {
+    "mtime": 1789278076.1898718,
+    "seen": 1789298038.732585,
+    "ast_hash": "7c8f662e395c369306d08f362fb48aae",
+    "semantic_hash": "7c8f662e395c369306d08f362fb48aae"
+  },
+  "gmail-dashboard/components/board/selection-bar.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325854,
+    "ast_hash": "1eee525bdedab78e9af980ae149a2650",
+    "semantic_hash": "1eee525bdedab78e9af980ae149a2650"
+  },
+  "gmail-dashboard/components/board/sheet-overlay.tsx": {
+    "mtime": 1789281408.7579913,
+    "seen": 1789298038.732586,
+    "ast_hash": "479e59a2d9c9d0ed8b1bf169b20bc85c",
+    "semantic_hash": "479e59a2d9c9d0ed8b1bf169b20bc85c"
+  },
+  "gmail-dashboard/components/board/shortcut-sheet.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325864,
+    "ast_hash": "865e9cac1e9ecc8515da607c7e036d1b",
+    "semantic_hash": "865e9cac1e9ecc8515da607c7e036d1b"
+  },
+  "gmail-dashboard/components/board/undo-bar.tsx": {
+    "mtime": 1789279451.701508,
+    "seen": 1789298038.7325873,
+    "ast_hash": "a0053df7047aa97a277e5b5198713338",
+    "semantic_hash": "a0053df7047aa97a277e5b5198713338"
+  },
+  "gmail-dashboard/components/charts/busiest-hours-heatmap.tsx": {
+    "mtime": 1789279593.753513,
+    "seen": 1789298038.7325878,
+    "ast_hash": "e77fccdd5528d148c3bc17d619316d6d",
+    "semantic_hash": "e77fccdd5528d148c3bc17d619316d6d"
+  },
+  "gmail-dashboard/components/charts/category-breakdown.tsx": {
+    "mtime": 1789281073.695774,
+    "seen": 1789298038.7325883,
+    "ast_hash": "49565b34dc889a3b78da4425fe525578",
+    "semantic_hash": "49565b34dc889a3b78da4425fe525578"
+  },
+  "gmail-dashboard/components/charts/response-time-histogram.tsx": {
+    "mtime": 1789281059.4657156,
+    "seen": 1789298038.732589,
+    "ast_hash": "5c6322a4cbd406d5506ababd0de62c7c",
+    "semantic_hash": "5c6322a4cbd406d5506ababd0de62c7c"
+  },
+  "gmail-dashboard/components/charts/volume-trend.tsx": {
+    "mtime": 1789281048.9682367,
+    "seen": 1789298038.7325897,
+    "ast_hash": "9858dd974a7353b9669ae8e65e823eee",
+    "semantic_hash": "9858dd974a7353b9669ae8e65e823eee"
+  },
+  "gmail-dashboard/components/station/balance-band.tsx": {
+    "mtime": 1789279851.0617597,
+    "seen": 1789298038.7325902,
+    "ast_hash": "9a2f969073639167169732891b522d28",
+    "semantic_hash": "9a2f969073639167169732891b522d28"
+  },
+  "gmail-dashboard/components/station/board-row.tsx": {
+    "mtime": 1789283256.442158,
+    "seen": 1789298038.732591,
+    "ast_hash": "be044608a14029fa5d1b6988aa1207a2",
+    "semantic_hash": "be044608a14029fa5d1b6988aa1207a2"
+  },
+  "gmail-dashboard/components/station/board-sheet.tsx": {
+    "mtime": 1789281858.6541803,
+    "seen": 1789298038.7325916,
+    "ast_hash": "35c2af5b96b43fbcd3696edb9d1a1a6f",
+    "semantic_hash": "35c2af5b96b43fbcd3696edb9d1a1a6f"
+  },
+  "gmail-dashboard/components/station/delay-figure.tsx": {
+    "mtime": 1789274530.2578125,
+    "seen": 1789298038.732592,
+    "ast_hash": "b56e1703a7e871feefb7dd9afd61a37b",
+    "semantic_hash": "b56e1703a7e871feefb7dd9afd61a37b"
+  },
+  "gmail-dashboard/components/station/flap.tsx": {
+    "mtime": 1789274521.2437272,
+    "seen": 1789298038.7325926,
+    "ast_hash": "5692799609100826deec9e681f562e6d",
+    "semantic_hash": "5692799609100826deec9e681f562e6d"
+  },
+  "gmail-dashboard/components/station/initials-avatar.tsx": {
+    "mtime": 1789279451.7173002,
+    "seen": 1789298038.732593,
+    "ast_hash": "e6e83278592a14049133b4a8959e5367",
+    "semantic_hash": "e6e83278592a14049133b4a8959e5367"
+  },
+  "gmail-dashboard/components/station/platform-badge.tsx": {
+    "mtime": 1789281657.2915778,
+    "seen": 1789298038.732594,
+    "ast_hash": "96d9a9b01a553ad7cb634b5049b2dc8a",
+    "semantic_hash": "96d9a9b01a553ad7cb634b5049b2dc8a"
+  },
+  "gmail-dashboard/components/station/platform-rail.tsx": {
+    "mtime": 1789283652.728101,
+    "seen": 1789298038.7325945,
+    "ast_hash": "c25c8f339a2d06f512b29855c75a519b",
+    "semantic_hash": "c25c8f339a2d06f512b29855c75a519b"
+  },
+  "gmail-dashboard/components/station/priority-aspect.tsx": {
+    "mtime": 1789281812.2290378,
+    "seen": 1789298038.7325952,
+    "ast_hash": "04fcf5f4e5f544feb8e4fc0ee96d53ef",
+    "semantic_hash": "04fcf5f4e5f544feb8e4fc0ee96d53ef"
+  },
+  "gmail-dashboard/components/station/sync-clock.tsx": {
+    "mtime": 1789279451.7173002,
+    "seen": 1789298038.7325957,
+    "ast_hash": "b00ecb491b18f88b4780a84e698e6628",
+    "semantic_hash": "b00ecb491b18f88b4780a84e698e6628"
+  },
+  "gmail-dashboard/components/station/tone-pill.tsx": {
+    "mtime": 1789281670.0277033,
+    "seen": 1789298038.7325962,
+    "ast_hash": "23e652b6bcfe8ab4b53ef1189306cf87",
+    "semantic_hash": "23e652b6bcfe8ab4b53ef1189306cf87"
+  },
+  "gmail-dashboard/components/ui/badge.tsx": {
+    "mtime": 1789273948.6525238,
+    "seen": 1789298038.7325966,
+    "ast_hash": "661ce75f620c0ea8fd7a3102f2159643",
+    "semantic_hash": "661ce75f620c0ea8fd7a3102f2159643"
+  },
+  "gmail-dashboard/components/ui/button.tsx": {
+    "mtime": 1789273931.4054077,
+    "seen": 1789298038.7325976,
+    "ast_hash": "7be2359f1dd105869c353c3556134b01",
+    "semantic_hash": "7be2359f1dd105869c353c3556134b01"
+  },
+  "gmail-dashboard/components/ui/checkbox.tsx": {
+    "mtime": 1789279451.7173002,
+    "seen": 1789298038.732598,
+    "ast_hash": "78805ded9ccd70f17dc9112c0c77b6fb",
+    "semantic_hash": "78805ded9ccd70f17dc9112c0c77b6fb"
+  },
+  "gmail-dashboard/components/ui/command.tsx": {
+    "mtime": 1789273949.8728278,
+    "seen": 1789298038.7325985,
+    "ast_hash": "29315e38d17b7f403562970a69259de7",
+    "semantic_hash": "29315e38d17b7f403562970a69259de7"
+  },
+  "gmail-dashboard/components/ui/dialog.tsx": {
+    "mtime": 1789273949.649855,
+    "seen": 1789298038.732599,
+    "ast_hash": "7822c0ed21773a566d2622e0f392c063",
+    "semantic_hash": "7822c0ed21773a566d2622e0f392c063"
+  },
+  "gmail-dashboard/components/ui/dropdown-menu.tsx": {
+    "mtime": 1789273949.4600127,
+    "seen": 1789298038.7325997,
+    "ast_hash": "ce4f08c31b774b7bf83eacc080f7c7bc",
+    "semantic_hash": "ce4f08c31b774b7bf83eacc080f7c7bc"
+  },
+  "gmail-dashboard/components/ui/input-group.tsx": {
+    "mtime": 1789273949.7950237,
+    "seen": 1789298038.7326002,
+    "ast_hash": "72836c47a2142be95ca69233f7f0a243",
+    "semantic_hash": "72836c47a2142be95ca69233f7f0a243"
+  },
+  "gmail-dashboard/components/ui/input.tsx": {
+    "mtime": 1789273949.1998408,
+    "seen": 1789298038.732601,
+    "ast_hash": "422f1ab610ad83456b8d6f928f5fb740",
+    "semantic_hash": "422f1ab610ad83456b8d6f928f5fb740"
+  },
+  "gmail-dashboard/components/ui/label.tsx": {
+    "mtime": 1789273949.3514695,
+    "seen": 1789298038.7326014,
+    "ast_hash": "829ff50ce08ae0548ce1ee9baac55bef",
+    "semantic_hash": "829ff50ce08ae0548ce1ee9baac55bef"
+  },
+  "gmail-dashboard/components/ui/popover.tsx": {
+    "mtime": 1789273948.7946887,
+    "seen": 1789298038.7326021,
+    "ast_hash": "f23b5b3a61669efff5f042754e8255c4",
+    "semantic_hash": "f23b5b3a61669efff5f042754e8255c4"
+  },
+  "gmail-dashboard/components/ui/scroll-area.tsx": {
+    "mtime": 1789273948.962262,
+    "seen": 1789298038.7326026,
+    "ast_hash": "d50164d52a3d43cb02b2966d59890bfd",
+    "semantic_hash": "d50164d52a3d43cb02b2966d59890bfd"
+  },
+  "gmail-dashboard/components/ui/select.tsx": {
+    "mtime": 1789273949.1356928,
+    "seen": 1789298038.7326033,
+    "ast_hash": "e79e10eac151b2d5c9a26bbba06498bd",
+    "semantic_hash": "e79e10eac151b2d5c9a26bbba06498bd"
+  },
+  "gmail-dashboard/components/ui/separator.tsx": {
+    "mtime": 1789273948.90671,
+    "seen": 1789298038.7326038,
+    "ast_hash": "8e3cbb83ec08f12f8af908de476864f6",
+    "semantic_hash": "8e3cbb83ec08f12f8af908de476864f6"
+  },
+  "gmail-dashboard/components/ui/sheet.tsx": {
+    "mtime": 1789273949.727073,
+    "seen": 1789298038.7326045,
+    "ast_hash": "40aa6c8d7e32ae1b699723f09fa667d8",
+    "semantic_hash": "40aa6c8d7e32ae1b699723f09fa667d8"
+  },
+  "gmail-dashboard/components/ui/slider.tsx": {
+    "mtime": 1789275370.501523,
+    "seen": 1789298038.7326052,
+    "ast_hash": "32628851515c44e64c354778bb83f962",
+    "semantic_hash": "32628851515c44e64c354778bb83f962"
+  },
+  "gmail-dashboard/components/ui/switch.tsx": {
+    "mtime": 1789273949.29927,
+    "seen": 1789298038.7326057,
+    "ast_hash": "1c66c7a462adeca69ba16b4bced0d421",
+    "semantic_hash": "1c66c7a462adeca69ba16b4bced0d421"
+  },
+  "gmail-dashboard/components/ui/table.tsx": {
+    "mtime": 1789273949.5686128,
+    "seen": 1789298038.7326064,
+    "ast_hash": "c8c2da1704112a7f341c8cf6452d46d8",
+    "semantic_hash": "c8c2da1704112a7f341c8cf6452d46d8"
+  },
+  "gmail-dashboard/components/ui/tabs.tsx": {
+    "mtime": 1789273949.0196981,
+    "seen": 1789298038.732607,
+    "ast_hash": "00af02574ec272deceabf2a55a4353ea",
+    "semantic_hash": "00af02574ec272deceabf2a55a4353ea"
+  },
+  "gmail-dashboard/components/ui/textarea.tsx": {
+    "mtime": 1789273949.255412,
+    "seen": 1789298038.7326076,
+    "ast_hash": "b0b57c5892dbfbacb6576dedb713756e",
+    "semantic_hash": "b0b57c5892dbfbacb6576dedb713756e"
+  },
+  "gmail-dashboard/components/ui/toggle.tsx": {
+    "mtime": 1789273949.5122159,
+    "seen": 1789298038.7326102,
+    "ast_hash": "412efdf5ee7689e8929ae07861801bf1",
+    "semantic_hash": "412efdf5ee7689e8929ae07861801bf1"
+  },
+  "gmail-dashboard/components/ui/tooltip.tsx": {
+    "mtime": 1789279451.7173002,
+    "seen": 1789298038.7326107,
+    "ast_hash": "0293b1dadb5ae07ad41233356fe0e42d",
+    "semantic_hash": "0293b1dadb5ae07ad41233356fe0e42d"
+  },
+  "gmail-dashboard/eslint.config.mjs": {
+    "mtime": 1789273706.8591478,
+    "seen": 1789298038.7326114,
+    "ast_hash": "dfa1f5f6a7037bf39dc510f30b180002",
+    "semantic_hash": "dfa1f5f6a7037bf39dc510f30b180002"
+  },
+  "gmail-dashboard/lib/data/fixtures/action-items.ts": {
+    "mtime": 1789274302.132164,
+    "seen": 1789298038.7326121,
+    "ast_hash": "87ac3aacba60fa5f60a4639c33e3cce1",
+    "semantic_hash": "87ac3aacba60fa5f60a4639c33e3cce1"
+  },
+  "gmail-dashboard/lib/data/fixtures/activity.ts": {
+    "mtime": 1789274364.6579626,
+    "seen": 1789298038.7326126,
+    "ast_hash": "b6c37a0ba9fef1c932428e180b9fac91",
+    "semantic_hash": "b6c37a0ba9fef1c932428e180b9fac91"
+  },
+  "gmail-dashboard/lib/data/fixtures/commitments.ts": {
+    "mtime": 1789274334.7559266,
+    "seen": 1789298038.732613,
+    "ast_hash": "421e6d223fe191280a57aea4434407e0",
+    "semantic_hash": "421e6d223fe191280a57aea4434407e0"
+  },
+  "gmail-dashboard/lib/data/fixtures/contacts.ts": {
+    "mtime": 1789274086.378999,
+    "seen": 1789298038.7326145,
+    "ast_hash": "dc1ff6c5865c28d4224045477b193c0f",
+    "semantic_hash": "dc1ff6c5865c28d4224045477b193c0f"
+  },
+  "gmail-dashboard/lib/data/fixtures/drafts.ts": {
+    "mtime": 1789274318.7134237,
+    "seen": 1789298038.7326157,
+    "ast_hash": "f5d34bb0e564dde003635d03e1a874f3",
+    "semantic_hash": "f5d34bb0e564dde003635d03e1a874f3"
+  },
+  "gmail-dashboard/lib/data/fixtures/messages.ts": {
+    "mtime": 1789275673.8668118,
+    "seen": 1789298038.7326167,
+    "ast_hash": "48e2666e0e2db6f2e01ec097b1c33521",
+    "semantic_hash": "48e2666e0e2db6f2e01ec097b1c33521"
+  },
+  "gmail-dashboard/lib/data/fixtures/rules.ts": {
+    "mtime": 1789274352.7110884,
+    "seen": 1789298038.7326174,
+    "ast_hash": "fb32b9ebd8125c84c6a1b95100642cde",
+    "semantic_hash": "fb32b9ebd8125c84c6a1b95100642cde"
+  },
+  "gmail-dashboard/lib/data/fixtures/sla.ts": {
+    "mtime": 1789274099.7031422,
+    "seen": 1789298038.7326183,
+    "ast_hash": "6c51cf79589dc6acee74719d1ceacd18",
+    "semantic_hash": "6c51cf79589dc6acee74719d1ceacd18"
+  },
+  "gmail-dashboard/lib/data/fixtures/sync.ts": {
+    "mtime": 1789274343.3395047,
+    "seen": 1789298038.732619,
+    "ast_hash": "e4ded0021c998d20730f469f88b8a145",
+    "semantic_hash": "e4ded0021c998d20730f469f88b8a145"
+  },
+  "gmail-dashboard/lib/data/index.ts": {
+    "mtime": 1789274390.3372927,
+    "seen": 1789298038.73262,
+    "ast_hash": "7bdfc234350659022b7dad03482b244e",
+    "semantic_hash": "7bdfc234350659022b7dad03482b244e"
+  },
+  "gmail-dashboard/lib/data/now.ts": {
+    "mtime": 1789274062.2879024,
+    "seen": 1789298038.7326207,
+    "ast_hash": "61114c0d043fc967909641b2832ecf9d",
+    "semantic_hash": "61114c0d043fc967909641b2832ecf9d"
+  },
+  "gmail-dashboard/lib/data/types.ts": {
+    "mtime": 1789274039.6687167,
+    "seen": 1789298038.732622,
+    "ast_hash": "1a4f3d7235c0e278ff2fac90b099a551",
+    "semantic_hash": "1a4f3d7235c0e278ff2fac90b099a551"
+  },
+  "gmail-dashboard/lib/format/delay.ts": {
+    "mtime": 1789274402.5342202,
+    "seen": 1789298038.7326229,
+    "ast_hash": "c9378b72371b8c17d29ecd4fbd4c02cd",
+    "semantic_hash": "c9378b72371b8c17d29ecd4fbd4c02cd"
+  },
+  "gmail-dashboard/lib/format/relative-time.ts": {
+    "mtime": 1789274411.6847022,
+    "seen": 1789298038.7326238,
+    "ast_hash": "52d684d26ddf92df51cb445dba14a65c",
+    "semantic_hash": "52d684d26ddf92df51cb445dba14a65c"
+  },
+  "gmail-dashboard/lib/keyboard/registry.ts": {
+    "mtime": 1789274426.0200417,
+    "seen": 1789298038.7326245,
+    "ast_hash": "41c43cfbeb2c54a53fe5df39d45fb4f1",
+    "semantic_hash": "41c43cfbeb2c54a53fe5df39d45fb4f1"
+  },
+  "gmail-dashboard/lib/utils.ts": {
+    "mtime": 1789273931.48972,
+    "seen": 1789298038.7326255,
+    "ast_hash": "0482d21cfeab8cfcfe44f94927e45afb",
+    "semantic_hash": "0482d21cfeab8cfcfe44f94927e45afb"
+  },
+  "gmail-dashboard/next.config.ts": {
+    "mtime": 1789273706.9562871,
+    "seen": 1789298038.7326262,
+    "ast_hash": "9b77af189a21a7a64e4bd7a426f64176",
+    "semantic_hash": "9b77af189a21a7a64e4bd7a426f64176"
+  },
+  "gmail-dashboard/package.json": {
+    "mtime": 1789273947.2686284,
+    "seen": 1789298038.732627,
+    "ast_hash": "dd9ef36b6c4905c63e2fd13af6536889",
+    "semantic_hash": "dd9ef36b6c4905c63e2fd13af6536889"
+  },
+  "gmail-dashboard/postcss.config.mjs": {
+    "mtime": 1789273706.8846447,
+    "seen": 1789298038.7326276,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "gmail-dashboard/tsconfig.json": {
+    "mtime": 1789273720.4828503,
+    "seen": 1789298038.7326286,
+    "ast_hash": "02fc19ad21338c2ab820a70136310db4",
+    "semantic_hash": "02fc19ad21338c2ab820a70136310db4"
+  },
+  "n8n/fixtures/gmail-history-sample.json": {
+    "mtime": 1788636283.198149,
+    "seen": 1789298038.7326295,
+    "ast_hash": "75ef6483b5681a1ed213651eab437819",
+    "semantic_hash": "75ef6483b5681a1ed213651eab437819"
+  },
+  "n8n/fixtures/gmail-message-sample.json": {
+    "mtime": 1788636283.198149,
+    "seen": 1789298038.73263,
+    "ast_hash": "48a302b7356744ebfdb1e32f18432194",
+    "semantic_hash": "48a302b7356744ebfdb1e32f18432194"
+  },
+  "n8n/fixtures/triage-fixture-email.json": {
+    "mtime": 1788868902.944974,
+    "seen": 1789298038.732631,
+    "ast_hash": "1e1b9d23ec17f23efdbc255da431c609",
+    "semantic_hash": "1e1b9d23ec17f23efdbc255da431c609"
+  },
+  "n8n/workflows/action-extraction.json": {
+    "mtime": 1789028451.8915806,
+    "seen": 1789298038.732632,
+    "ast_hash": "e45a660498285850ca433114254bc892",
+    "semantic_hash": "e45a660498285850ca433114254bc892"
+  },
+  "n8n/workflows/draft-generation.json": {
+    "mtime": 1789112448.1423998,
+    "seen": 1789298038.7326326,
+    "ast_hash": "ccc52714205218e42c7596630a527be6",
+    "semantic_hash": "ccc52714205218e42c7596630a527be6"
+  },
+  "n8n/workflows/email-normaliser.json": {
+    "mtime": 1789028451.8915806,
+    "seen": 1789298038.7326336,
+    "ast_hash": "395364ed78b4b42868ef02d254afc6fa",
+    "semantic_hash": "395364ed78b4b42868ef02d254afc6fa"
+  },
+  "n8n/workflows/gmail-ingestion.json": {
+    "mtime": 1788862160.5952766,
+    "seen": 1789298038.7326345,
+    "ast_hash": "4a45bfc02a91feea129c0fb98152a007",
+    "semantic_hash": "4a45bfc02a91feea129c0fb98152a007"
+  },
+  "n8n/workflows/gmail-renewal-recovery.json": {
+    "mtime": 1788862160.5952766,
+    "seen": 1789298038.7326355,
+    "ast_hash": "217d3eab4c86a9f86800d8a32bb35648",
+    "semantic_hash": "217d3eab4c86a9f86800d8a32bb35648"
+  },
+  "n8n/workflows/llm-gateway.json": {
+    "mtime": 1789116250.86805,
+    "seen": 1789298038.7326362,
+    "ast_hash": "a91294161b862ae86569289de65372f3",
+    "semantic_hash": "a91294161b862ae86569289de65372f3"
+  },
+  "n8n/workflows/triage-pipeline.json": {
+    "mtime": 1789023080.5178406,
+    "seen": 1789298038.7326372,
+    "ast_hash": "b04e5b5a47e6ba3173cb105789a14aae",
+    "semantic_hash": "b04e5b5a47e6ba3173cb105789a14aae"
+  },
+  "supabase/migrations/0001_ingestion_schema.sql": {
+    "mtime": 1788636283.198149,
+    "seen": 1789298038.732638,
+    "ast_hash": "b861581aa418e17c5d1f5a58fb55a42a",
+    "semantic_hash": "b861581aa418e17c5d1f5a58fb55a42a"
+  },
+  "supabase/migrations/0002_triage_schema.sql": {
+    "mtime": 1788868902.9473305,
+    "seen": 1789298038.732639,
+    "ast_hash": "ced20f2cbc8763ea99b22796806334d2",
+    "semantic_hash": "ced20f2cbc8763ea99b22796806334d2"
+  },
+  "supabase/migrations/0003_action_items_schema.sql": {
+    "mtime": 1789028451.8925815,
+    "seen": 1789298038.7326398,
+    "ast_hash": "b06feea5d5d33746dcf9b3060272c443",
+    "semantic_hash": "b06feea5d5d33746dcf9b3060272c443"
+  },
+  "supabase/migrations/0004_draft_generation_schema.sql": {
+    "mtime": 1789121964.1780124,
+    "seen": 1789298038.7326405,
+    "ast_hash": "f201f8dbdcc72f08b191b25f0200c105",
+    "semantic_hash": "f201f8dbdcc72f08b191b25f0200c105"
+  },
+  ".specclaw/STATUS.md": {
+    "mtime": 1789164413.0337355,
+    "seen": 1789298038.7326412,
+    "ast_hash": "5eee795550d6643739dfb57864bdfbbf",
+    "semantic_hash": "5eee795550d6643739dfb57864bdfbbf"
+  },
+  ".specclaw/changes/001-smart-email-assistant/proposal.md": {
+    "mtime": 1788598591.1705222,
+    "seen": 1789298038.732642,
+    "ast_hash": "9645f237b34fce655f182154a88f172c",
+    "semantic_hash": "9645f237b34fce655f182154a88f172c"
+  },
+  ".specclaw/changes/001-smart-email-assistant/status.md": {
+    "mtime": 1788598597.105922,
+    "seen": 1789298038.7326431,
+    "ast_hash": "14568e8a5aa9583b769f19ac72852d6b",
+    "semantic_hash": "14568e8a5aa9583b769f19ac72852d6b"
+  },
+  ".specclaw/changes/002-ingestion/design.md": {
+    "mtime": 1788634737.6015549,
+    "seen": 1789298038.732644,
+    "ast_hash": "85437013a5b946e76d1cbdfa2a79e734",
+    "semantic_hash": "85437013a5b946e76d1cbdfa2a79e734"
+  },
+  ".specclaw/changes/002-ingestion/party-report.md": {
+    "mtime": 1788633982.9954963,
+    "seen": 1789298038.732645,
+    "ast_hash": "579cc10c76ce7f2d260e35fd34d5b41f",
+    "semantic_hash": "579cc10c76ce7f2d260e35fd34d5b41f"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r1/party-architect.md": {
+    "mtime": 1788600050.1371136,
+    "seen": 1789298038.732646,
+    "ast_hash": "deff86760b4d3fc12300fe7ecc2c0562",
+    "semantic_hash": "deff86760b4d3fc12300fe7ecc2c0562"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r1/party-ba.md": {
+    "mtime": 1788600064.0080433,
+    "seen": 1789298038.7326467,
+    "ast_hash": "64274ab1100b70d5a7decec5bb7a44ae",
+    "semantic_hash": "64274ab1100b70d5a7decec5bb7a44ae"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r1/party-po.md": {
+    "mtime": 1788600020.7680328,
+    "seen": 1789298038.7326477,
+    "ast_hash": "09ec1eaafecf3300aa768fb756641b1e",
+    "semantic_hash": "09ec1eaafecf3300aa768fb756641b1e"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r1/party-security.md": {
+    "mtime": 1788600096.5699914,
+    "seen": 1789298038.7326486,
+    "ast_hash": "eda226e521b9bd701ab9b0684bf03a3c",
+    "semantic_hash": "eda226e521b9bd701ab9b0684bf03a3c"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r1/party-visionary.md": {
+    "mtime": 1788600115.568017,
+    "seen": 1789298038.7326496,
+    "ast_hash": "61c0e2d0cd1d069e93dbe8b4e20f550c",
+    "semantic_hash": "61c0e2d0cd1d069e93dbe8b4e20f550c"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r2/party-architect.md": {
+    "mtime": 1788633897.7837558,
+    "seen": 1789298038.7326503,
+    "ast_hash": "e454bae347088fef6caf507ce7d00b1b",
+    "semantic_hash": "e454bae347088fef6caf507ce7d00b1b"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r2/party-ba.md": {
+    "mtime": 1788633911.5013032,
+    "seen": 1789298038.732651,
+    "ast_hash": "585b5aa4010be22301b3545f956b14d4",
+    "semantic_hash": "585b5aa4010be22301b3545f956b14d4"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r2/party-po.md": {
+    "mtime": 1788600249.3121176,
+    "seen": 1789298038.7326517,
+    "ast_hash": "84c73ddfae48fbb790583bd035b1f85e",
+    "semantic_hash": "84c73ddfae48fbb790583bd035b1f85e"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r2/party-security.md": {
+    "mtime": 1788633950.4060886,
+    "seen": 1789298038.7326524,
+    "ast_hash": "59cd3cb72e7bc1d5e7ca15261e3a71c6",
+    "semantic_hash": "59cd3cb72e7bc1d5e7ca15261e3a71c6"
+  },
+  ".specclaw/changes/002-ingestion/party/findings-r2/party-visionary.md": {
+    "mtime": 1788633969.410664,
+    "seen": 1789298038.7326534,
+    "ast_hash": "5dfa8905fb4ba641f6a36d3d77aae13e",
+    "semantic_hash": "5dfa8905fb4ba641f6a36d3d77aae13e"
+  },
+  ".specclaw/changes/002-ingestion/proposal.md": {
+    "mtime": 1788634548.2162912,
+    "seen": 1789298038.732654,
+    "ast_hash": "56b7ac0fde9ffa6ba3d636c737bf1888",
+    "semantic_hash": "56b7ac0fde9ffa6ba3d636c737bf1888"
+  },
+  ".specclaw/changes/002-ingestion/spec.md": {
+    "mtime": 1788634660.6340182,
+    "seen": 1789298038.732655,
+    "ast_hash": "e76af79d41304b47a388989740b19fe0",
+    "semantic_hash": "e76af79d41304b47a388989740b19fe0"
+  },
+  ".specclaw/changes/002-ingestion/status.md": {
+    "mtime": 1789123096.1125655,
+    "seen": 1789298038.7326562,
+    "ast_hash": "78ad0af417b6657d8da7c9aa948c0c04",
+    "semantic_hash": "78ad0af417b6657d8da7c9aa948c0c04"
+  },
+  ".specclaw/changes/002-ingestion/tasks.md": {
+    "mtime": 1788636277.0429287,
+    "seen": 1789298038.732657,
+    "ast_hash": "65e2f899df4e701e9e2eed62d0c30407",
+    "semantic_hash": "65e2f899df4e701e9e2eed62d0c30407"
+  },
+  ".specclaw/changes/002-ingestion/verify-report.md": {
+    "mtime": 1789123079.9894164,
+    "seen": 1789298038.732658,
+    "ast_hash": "9a4558005db0ee1a9b75ea31c26329bb",
+    "semantic_hash": "9a4558005db0ee1a9b75ea31c26329bb"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party-report.md": {
+    "mtime": 1788863510.3036766,
+    "seen": 1789298038.7326586,
+    "ast_hash": "3c8c9754fb830731f6e2138ac4d4e010",
+    "semantic_hash": "3c8c9754fb830731f6e2138ac4d4e010"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party/findings-r1/party-architect.md": {
+    "mtime": 1788863366.898506,
+    "seen": 1789298038.7326598,
+    "ast_hash": "7baa33665f91eafd54dfa302a5538599",
+    "semantic_hash": "7baa33665f91eafd54dfa302a5538599"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party/findings-r1/party-ba.md": {
+    "mtime": 1788863332.6323912,
+    "seen": 1789298038.7326605,
+    "ast_hash": "71ef8fa3c029c603fb5100434c8723cd",
+    "semantic_hash": "71ef8fa3c029c603fb5100434c8723cd"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party/findings-r1/party-po.md": {
+    "mtime": 1788863375.5718877,
+    "seen": 1789298038.7326612,
+    "ast_hash": "21381326d74eea44616b698d21ef3511",
+    "semantic_hash": "21381326d74eea44616b698d21ef3511"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party/findings-r2/party-architect.md": {
+    "mtime": 1788863496.7370708,
+    "seen": 1789298038.7326622,
+    "ast_hash": "349b134f8e216feda21aa87c4d43ad18",
+    "semantic_hash": "349b134f8e216feda21aa87c4d43ad18"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party/findings-r2/party-ba.md": {
+    "mtime": 1788863433.0721626,
+    "seen": 1789298038.7326634,
+    "ast_hash": "71ef8fa3c029c603fb5100434c8723cd",
+    "semantic_hash": "71ef8fa3c029c603fb5100434c8723cd"
+  },
+  ".specclaw/changes/003-outlook-ingestion/party/findings-r2/party-po.md": {
+    "mtime": 1788863419.9779656,
+    "seen": 1789298038.7326643,
+    "ast_hash": "dd5193cacd1a4b96087c1bcf5438ac77",
+    "semantic_hash": "dd5193cacd1a4b96087c1bcf5438ac77"
+  },
+  ".specclaw/changes/003-outlook-ingestion/proposal.md": {
+    "mtime": 1788863531.1370704,
+    "seen": 1789298038.7326653,
+    "ast_hash": "64c9491fab7c4f2dc119794889f90139",
+    "semantic_hash": "64c9491fab7c4f2dc119794889f90139"
+  },
+  ".specclaw/changes/003-outlook-ingestion/status.md": {
+    "mtime": 1788863624.0761864,
+    "seen": 1789298038.732666,
+    "ast_hash": "820cbda87b9f5c63a161a255a5beb5b0",
+    "semantic_hash": "820cbda87b9f5c63a161a255a5beb5b0"
+  },
+  ".specclaw/changes/004-triage/design.md": {
+    "mtime": 1788866866.1866033,
+    "seen": 1789298038.7326672,
+    "ast_hash": "bc3a8a85aa1a564fa743d173b5d9fdea",
+    "semantic_hash": "bc3a8a85aa1a564fa743d173b5d9fdea"
+  },
+  ".specclaw/changes/004-triage/party-report.md": {
+    "mtime": 1788864325.2634249,
+    "seen": 1789298038.732668,
+    "ast_hash": "2e8e07e246089c391a3e65e81fc8627d",
+    "semantic_hash": "2e8e07e246089c391a3e65e81fc8627d"
+  },
+  ".specclaw/changes/004-triage/party/findings-r1/party-architect.md": {
+    "mtime": 1788864084.0508325,
+    "seen": 1789298038.7326686,
+    "ast_hash": "ec5255d2aa7c4bd8fcc12c433392293e",
+    "semantic_hash": "ec5255d2aa7c4bd8fcc12c433392293e"
+  },
+  ".specclaw/changes/004-triage/party/findings-r1/party-ba.md": {
+    "mtime": 1788864015.3332634,
+    "seen": 1789298038.7326694,
+    "ast_hash": "b21483e861f04732f8c4f0771f37e327",
+    "semantic_hash": "b21483e861f04732f8c4f0771f37e327"
+  },
+  ".specclaw/changes/004-triage/party/findings-r1/party-po.md": {
+    "mtime": 1788863998.5749702,
+    "seen": 1789298038.7326703,
+    "ast_hash": "d62bd4dfbe354e7f77ee46971be8c822",
+    "semantic_hash": "d62bd4dfbe354e7f77ee46971be8c822"
+  },
+  ".specclaw/changes/004-triage/party/findings-r1/party-security.md": {
+    "mtime": 1788864117.5472765,
+    "seen": 1789298038.7326713,
+    "ast_hash": "365f485b4fbd690f8c9ae9d7639740e5",
+    "semantic_hash": "365f485b4fbd690f8c9ae9d7639740e5"
+  },
+  ".specclaw/changes/004-triage/party/findings-r1/party-visionary.md": {
+    "mtime": 1788864050.8219378,
+    "seen": 1789298038.732672,
+    "ast_hash": "d06c06de635e98a4b78aa10f857af0cc",
+    "semantic_hash": "d06c06de635e98a4b78aa10f857af0cc"
+  },
+  ".specclaw/changes/004-triage/party/findings-r2/party-architect.md": {
+    "mtime": 1788864266.7654314,
+    "seen": 1789298038.732673,
+    "ast_hash": "d900744725281275f46d343586d6a1a0",
+    "semantic_hash": "d900744725281275f46d343586d6a1a0"
+  },
+  ".specclaw/changes/004-triage/party/findings-r2/party-ba.md": {
+    "mtime": 1788864201.7671304,
+    "seen": 1789298038.732674,
+    "ast_hash": "b21483e861f04732f8c4f0771f37e327",
+    "semantic_hash": "b21483e861f04732f8c4f0771f37e327"
+  },
+  ".specclaw/changes/004-triage/party/findings-r2/party-po.md": {
+    "mtime": 1788864183.4897623,
+    "seen": 1789298038.7326746,
+    "ast_hash": "34056309eed65ee50a6cb5b90c3efada",
+    "semantic_hash": "34056309eed65ee50a6cb5b90c3efada"
+  },
+  ".specclaw/changes/004-triage/party/findings-r2/party-security.md": {
+    "mtime": 1788864316.238372,
+    "seen": 1789298038.7326756,
+    "ast_hash": "c0f690b2155a135ab70e68ee2e6dc8d8",
+    "semantic_hash": "c0f690b2155a135ab70e68ee2e6dc8d8"
+  },
+  ".specclaw/changes/004-triage/party/findings-r2/party-visionary.md": {
+    "mtime": 1788864219.5642252,
+    "seen": 1789298038.7326763,
+    "ast_hash": "309c642cec7e5cc75422e315037ebe40",
+    "semantic_hash": "309c642cec7e5cc75422e315037ebe40"
+  },
+  ".specclaw/changes/004-triage/proposal.md": {
+    "mtime": 1788864369.6121998,
+    "seen": 1789298038.7326775,
+    "ast_hash": "6e160e4d32a011cc77242b7364c5a3db",
+    "semantic_hash": "6e160e4d32a011cc77242b7364c5a3db"
+  },
+  ".specclaw/changes/004-triage/spec.md": {
+    "mtime": 1788866807.9579015,
+    "seen": 1789298038.7326782,
+    "ast_hash": "0613f70d597816b18c2b1d849248ac64",
+    "semantic_hash": "0613f70d597816b18c2b1d849248ac64"
+  },
+  ".specclaw/changes/004-triage/status.md": {
+    "mtime": 1789025189.5954378,
+    "seen": 1789298038.7326794,
+    "ast_hash": "26d25b790dbb6f021afe63a861e3ff65",
+    "semantic_hash": "26d25b790dbb6f021afe63a861e3ff65"
+  },
+  ".specclaw/changes/004-triage/tasks.md": {
+    "mtime": 1788868888.109189,
+    "seen": 1789298038.73268,
+    "ast_hash": "1c9055880d3f6967cd8348bbdabc9c91",
+    "semantic_hash": "1c9055880d3f6967cd8348bbdabc9c91"
+  },
+  ".specclaw/changes/004-triage/verify-report.md": {
+    "mtime": 1789025160.8823493,
+    "seen": 1789298038.732681,
+    "ast_hash": "7bc551d93ea1087e45c968c5303b1a26",
+    "semantic_hash": "7bc551d93ea1087e45c968c5303b1a26"
+  },
+  ".specclaw/changes/005-action-items/design.md": {
+    "mtime": 1789027586.918563,
+    "seen": 1789298038.7326818,
+    "ast_hash": "ca3a0dad57859285fb640c626373b9cf",
+    "semantic_hash": "ca3a0dad57859285fb640c626373b9cf"
+  },
+  ".specclaw/changes/005-action-items/party-report.md": {
+    "mtime": 1789026563.2143013,
+    "seen": 1789298038.7326825,
+    "ast_hash": "dcf129f7c9e33ee4ecec53c6526efbe7",
+    "semantic_hash": "dcf129f7c9e33ee4ecec53c6526efbe7"
+  },
+  ".specclaw/changes/005-action-items/party/findings-r1/party-architect.md": {
+    "mtime": 1789026407.344664,
+    "seen": 1789298038.7326865,
+    "ast_hash": "2daa7c38ad56cee5257d50566f72a884",
+    "semantic_hash": "2daa7c38ad56cee5257d50566f72a884"
+  },
+  ".specclaw/changes/005-action-items/party/findings-r1/party-ba.md": {
+    "mtime": 1789026416.8702984,
+    "seen": 1789298038.7326877,
+    "ast_hash": "18462460cb85c3e82e56b20cabeaee48",
+    "semantic_hash": "18462460cb85c3e82e56b20cabeaee48"
+  },
+  ".specclaw/changes/005-action-items/party/findings-r1/party-po.md": {
+    "mtime": 1789026368.1764255,
+    "seen": 1789298038.7326884,
+    "ast_hash": "ea3e6dab22c0bb97341bcd6d469a7866",
+    "semantic_hash": "ea3e6dab22c0bb97341bcd6d469a7866"
+  },
+  ".specclaw/changes/005-action-items/party/findings-r2/party-architect.md": {
+    "mtime": 1789026544.1895056,
+    "seen": 1789298038.7326891,
+    "ast_hash": "e02f2f27fb52c3daa2fc78955febf526",
+    "semantic_hash": "e02f2f27fb52c3daa2fc78955febf526"
+  },
+  ".specclaw/changes/005-action-items/party/findings-r2/party-ba.md": {
+    "mtime": 1789026501.897895,
+    "seen": 1789298038.73269,
+    "ast_hash": "18462460cb85c3e82e56b20cabeaee48",
+    "semantic_hash": "18462460cb85c3e82e56b20cabeaee48"
+  },
+  ".specclaw/changes/005-action-items/party/findings-r2/party-po.md": {
+    "mtime": 1789026478.2997558,
+    "seen": 1789298038.732691,
+    "ast_hash": "ea3e6dab22c0bb97341bcd6d469a7866",
+    "semantic_hash": "ea3e6dab22c0bb97341bcd6d469a7866"
+  },
+  ".specclaw/changes/005-action-items/proposal.md": {
+    "mtime": 1789027174.7775195,
+    "seen": 1789298038.7326918,
+    "ast_hash": "4c1b54e690821674989c819837465611",
+    "semantic_hash": "4c1b54e690821674989c819837465611"
+  },
+  ".specclaw/changes/005-action-items/spec.md": {
+    "mtime": 1789027516.7705173,
+    "seen": 1789298038.7326927,
+    "ast_hash": "432a6505bd54ba1407a4d0786c0aa8fb",
+    "semantic_hash": "432a6505bd54ba1407a4d0786c0aa8fb"
+  },
+  ".specclaw/changes/005-action-items/status.md": {
+    "mtime": 1789106705.7884195,
+    "seen": 1789298038.7326934,
+    "ast_hash": "86a36ec7852efe270637dbc16d9aa728",
+    "semantic_hash": "86a36ec7852efe270637dbc16d9aa728"
+  },
+  ".specclaw/changes/005-action-items/tasks.md": {
+    "mtime": 1789028424.1725998,
+    "seen": 1789298038.7326946,
+    "ast_hash": "74d1eb195a2427e4e648e4bd8771c725",
+    "semantic_hash": "74d1eb195a2427e4e648e4bd8771c725"
+  },
+  ".specclaw/changes/005-action-items/verify-report.md": {
+    "mtime": 1789106682.5733764,
+    "seen": 1789298038.7326956,
+    "ast_hash": "6635c9aca2156ee4e318550aa52d6d2b",
+    "semantic_hash": "6635c9aca2156ee4e318550aa52d6d2b"
+  },
+  ".specclaw/changes/006-draft-generation/design.md": {
+    "mtime": 1789111065.8151927,
+    "seen": 1789298038.7326965,
+    "ast_hash": "58abf4cf29d81e923af9c3e178a6eea1",
+    "semantic_hash": "58abf4cf29d81e923af9c3e178a6eea1"
+  },
+  ".specclaw/changes/006-draft-generation/party-report.md": {
+    "mtime": 1789107617.8903015,
+    "seen": 1789298038.7326972,
+    "ast_hash": "d8a9e35c324e39cbd9a3e9fa700ae111",
+    "semantic_hash": "d8a9e35c324e39cbd9a3e9fa700ae111"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r1/party-architect.md": {
+    "mtime": 1789107325.3814363,
+    "seen": 1789298038.7326982,
+    "ast_hash": "d5184f51db7b491acdd6b4a21a6d51c0",
+    "semantic_hash": "d5184f51db7b491acdd6b4a21a6d51c0"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r1/party-ba.md": {
+    "mtime": 1789107276.0175846,
+    "seen": 1789298038.7326992,
+    "ast_hash": "ea6166d6f0b411203c7522e1264c09f0",
+    "semantic_hash": "ea6166d6f0b411203c7522e1264c09f0"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r1/party-po.md": {
+    "mtime": 1789107228.9003673,
+    "seen": 1789298038.7326999,
+    "ast_hash": "6d8b7d6569fe7eb587c34b32649ddee1",
+    "semantic_hash": "6d8b7d6569fe7eb587c34b32649ddee1"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r1/party-security.md": {
+    "mtime": 1789107359.2850356,
+    "seen": 1789298038.7327008,
+    "ast_hash": "8d481849433359f285164ba6bb0eb3c6",
+    "semantic_hash": "8d481849433359f285164ba6bb0eb3c6"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r1/party-visionary.md": {
+    "mtime": 1789107387.328395,
+    "seen": 1789298038.732702,
+    "ast_hash": "2a5a5996f36c744f8209ed41f711bd67",
+    "semantic_hash": "2a5a5996f36c744f8209ed41f711bd67"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r2/party-architect.md": {
+    "mtime": 1789107554.9601524,
+    "seen": 1789298038.7327027,
+    "ast_hash": "ea0859c2b7eeb6acc2cc352080d52437",
+    "semantic_hash": "ea0859c2b7eeb6acc2cc352080d52437"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r2/party-ba.md": {
+    "mtime": 1789107491.8696816,
+    "seen": 1789298038.7327037,
+    "ast_hash": "ea6166d6f0b411203c7522e1264c09f0",
+    "semantic_hash": "ea6166d6f0b411203c7522e1264c09f0"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r2/party-po.md": {
+    "mtime": 1789107460.8168006,
+    "seen": 1789298038.7327044,
+    "ast_hash": "badde997a1757abcf92723a1153e3382",
+    "semantic_hash": "badde997a1757abcf92723a1153e3382"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r2/party-security.md": {
+    "mtime": 1789107593.2952745,
+    "seen": 1789298038.7327056,
+    "ast_hash": "b665e75b30cc2fb3cbacf45e5fae85b1",
+    "semantic_hash": "b665e75b30cc2fb3cbacf45e5fae85b1"
+  },
+  ".specclaw/changes/006-draft-generation/party/findings-r2/party-visionary.md": {
+    "mtime": 1789107507.2260423,
+    "seen": 1789298038.7327063,
+    "ast_hash": "1ece09dbf6684aa698b1745871e9eec1",
+    "semantic_hash": "1ece09dbf6684aa698b1745871e9eec1"
+  },
+  ".specclaw/changes/006-draft-generation/proposal.md": {
+    "mtime": 1789110513.1100307,
+    "seen": 1789298038.7327073,
+    "ast_hash": "10d8a89db635f2dd62d854def633f59e",
+    "semantic_hash": "10d8a89db635f2dd62d854def633f59e"
+  },
+  ".specclaw/changes/006-draft-generation/spec.md": {
+    "mtime": 1789110986.5503087,
+    "seen": 1789298038.732708,
+    "ast_hash": "13337ef84d56ddb51813711b6705fc10",
+    "semantic_hash": "13337ef84d56ddb51813711b6705fc10"
+  },
+  ".specclaw/changes/006-draft-generation/status.md": {
+    "mtime": 1789121414.111859,
+    "seen": 1789298038.7327092,
+    "ast_hash": "2c42e1dd649f3d830254136942e5b308",
+    "semantic_hash": "2c42e1dd649f3d830254136942e5b308"
+  },
+  ".specclaw/changes/006-draft-generation/tasks.md": {
+    "mtime": 1789112430.3742394,
+    "seen": 1789298038.73271,
+    "ast_hash": "2c18ce2307ba4b5ce55fe093dd70514e",
+    "semantic_hash": "2c18ce2307ba4b5ce55fe093dd70514e"
+  },
+  ".specclaw/changes/006-draft-generation/verify-report.md": {
+    "mtime": 1789121406.810874,
+    "seen": 1789298038.7327108,
+    "ast_hash": "65835823eb5c736c1da32c853797b6a5",
+    "semantic_hash": "65835823eb5c736c1da32c853797b6a5"
+  },
+  ".specclaw/changes/007-web-dashboard/design.md": {
+    "mtime": 1789159848.5558891,
+    "seen": 1789298038.7327118,
+    "ast_hash": "3e22175cd5306f4f14e5ac9761cfccfa",
+    "semantic_hash": "3e22175cd5306f4f14e5ac9761cfccfa"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r1/party-architect.md": {
+    "mtime": 1789123125.46883,
+    "seen": 1789298038.7327127,
+    "ast_hash": "7698737ffdfd7b86f205eccd7ef42082",
+    "semantic_hash": "7698737ffdfd7b86f205eccd7ef42082"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r1/party-ba.md": {
+    "mtime": 1789123089.0755086,
+    "seen": 1789298038.7327135,
+    "ast_hash": "a7e6dd667b2de94a9b51c62b855f6e31",
+    "semantic_hash": "a7e6dd667b2de94a9b51c62b855f6e31"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r1/party-po.md": {
+    "mtime": 1789123105.2765963,
+    "seen": 1789298038.7327144,
+    "ast_hash": "2f7e28720c4d9b9278a173fa444f37e1",
+    "semantic_hash": "2f7e28720c4d9b9278a173fa444f37e1"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r1/party-security.md": {
+    "mtime": 1789123159.4377599,
+    "seen": 1789298038.7327154,
+    "ast_hash": "56b42ff26178823d3f70a66dd72eae88",
+    "semantic_hash": "56b42ff26178823d3f70a66dd72eae88"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r1/party-visionary.md": {
+    "mtime": 1789123173.7052593,
+    "seen": 1789298038.732716,
+    "ast_hash": "97d9ebc6e60d6700f16a0b24ff1308b6",
+    "semantic_hash": "97d9ebc6e60d6700f16a0b24ff1308b6"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r2/party-architect.md": {
+    "mtime": 1789123300.9653797,
+    "seen": 1789298038.732717,
+    "ast_hash": "5067ee54eb925c10129566a52045ee4c",
+    "semantic_hash": "5067ee54eb925c10129566a52045ee4c"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r2/party-ba.md": {
+    "mtime": 1789123245.189191,
+    "seen": 1789298038.7327178,
+    "ast_hash": "9a2a6372be1ff75f1984b69583c0a5a4",
+    "semantic_hash": "9a2a6372be1ff75f1984b69583c0a5a4"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r2/party-po.md": {
+    "mtime": 1789123230.1346686,
+    "seen": 1789298038.7327187,
+    "ast_hash": "240f353c04eb81177223496ec1f20369",
+    "semantic_hash": "240f353c04eb81177223496ec1f20369"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r2/party-security.md": {
+    "mtime": 1789123337.5143776,
+    "seen": 1789298038.7327197,
+    "ast_hash": "1a2ede111293f825dd99629bc779952d",
+    "semantic_hash": "1a2ede111293f825dd99629bc779952d"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/findings-r2/party-visionary.md": {
+    "mtime": 1789123264.8093846,
+    "seen": 1789298038.7327204,
+    "ast_hash": "c7b9346b2c75f20e4f516b1b3584bedf",
+    "semantic_hash": "c7b9346b2c75f20e4f516b1b3584bedf"
+  },
+  ".specclaw/changes/007-web-dashboard/party/_archive-2026-09-11/party-report-2026-09-11.md": {
+    "mtime": 1789123354.5059679,
+    "seen": 1789298038.732721,
+    "ast_hash": "5fd3baa30b4c6afaf81176e38eca3816",
+    "semantic_hash": "5fd3baa30b4c6afaf81176e38eca3816"
+  },
+  ".specclaw/changes/007-web-dashboard/proposal.md": {
+    "mtime": 1789159369.9375143,
+    "seen": 1789298038.7327223,
+    "ast_hash": "be2649effd43bc93e2ccf432f0686ec0",
+    "semantic_hash": "be2649effd43bc93e2ccf432f0686ec0"
+  },
+  ".specclaw/changes/007-web-dashboard/spec.md": {
+    "mtime": 1789159778.0683737,
+    "seen": 1789298038.7327232,
+    "ast_hash": "1f7e091729864ffc098677976b9bed3d",
+    "semantic_hash": "1f7e091729864ffc098677976b9bed3d"
+  },
+  ".specclaw/changes/007-web-dashboard/status.md": {
+    "mtime": 1789164362.8847084,
+    "seen": 1789298038.732724,
+    "ast_hash": "5e99442910993ffec0ae40217f0c75c6",
+    "semantic_hash": "5e99442910993ffec0ae40217f0c75c6"
+  },
+  ".specclaw/changes/007-web-dashboard/tasks.md": {
+    "mtime": 1789164347.785392,
+    "seen": 1789298038.732725,
+    "ast_hash": "1aa9cd2398deebfaf02ee79dc014ed2a",
+    "semantic_hash": "1aa9cd2398deebfaf02ee79dc014ed2a"
+  },
+  ".specclaw/config.yaml": {
+    "mtime": 1788598489.3318512,
+    "seen": 1789298038.732726,
+    "ast_hash": "61e3fa8bea1959f903fde32b4cdf1a5b",
+    "semantic_hash": "61e3fa8bea1959f903fde32b4cdf1a5b"
+  },
+  ".specclaw/learnings.md": {
+    "mtime": 1789164395.1681526,
+    "seen": 1789298038.732727,
+    "ast_hash": "f4cccbff7682f286a5e9857b69bf5502",
+    "semantic_hash": "f4cccbff7682f286a5e9857b69bf5502"
+  },
+  ".specclaw/patterns.md": {
+    "mtime": 1788636328.628592,
+    "seen": 1789298038.732728,
+    "ast_hash": "c4382b3bfbbaf36015705deb809f8096",
+    "semantic_hash": "c4382b3bfbbaf36015705deb809f8096"
+  },
+  "CAPABILITIES.md": {
+    "mtime": 1789274956.1946068,
+    "seen": 1789298038.7327287,
+    "ast_hash": "a586ab7e1b864c7928e9d6927b9b7ad2",
+    "semantic_hash": "a586ab7e1b864c7928e9d6927b9b7ad2"
+  },
+  "PRODUCT.md": {
+    "mtime": 1789133185.6493783,
+    "seen": 1789298038.73273,
+    "ast_hash": "08b592ca9ffc293757f28c7d05ce5466",
+    "semantic_hash": "08b592ca9ffc293757f28c7d05ce5466"
+  },
+  "README.md": {
+    "mtime": 1789123161.7882597,
+    "seen": 1789298038.7327306,
+    "ast_hash": "fb44564eec1ff61afde4a7f7a5be0288",
+    "semantic_hash": "fb44564eec1ff61afde4a7f7a5be0288"
+  },
+  "architect/01-system-context.md": {
+    "mtime": 1788633664.82354,
+    "seen": 1789298038.7327316,
+    "ast_hash": "f20e652b9a2d34ab10e946b21c5f1eaf",
+    "semantic_hash": "f20e652b9a2d34ab10e946b21c5f1eaf"
+  },
+  "architect/02-container.md": {
+    "mtime": 1789121655.8139858,
+    "seen": 1789298038.7327328,
+    "ast_hash": "903775f36e3b7ce8486983d24a6a959c",
+    "semantic_hash": "903775f36e3b7ce8486983d24a6a959c"
+  },
+  "architect/03a-component-automation-engine.md": {
+    "mtime": 1788633717.8613713,
+    "seen": 1789298038.7327335,
+    "ast_hash": "72d2f01fe7aa6c118a4c127290470e8f",
+    "semantic_hash": "72d2f01fe7aa6c118a4c127290470e8f"
+  },
+  "architect/03b-component-web-dashboard.md": {
+    "mtime": 1788633737.9110794,
+    "seen": 1789298038.7327344,
+    "ast_hash": "874aa2ff9ffd624ee3bb84768a62ae75",
+    "semantic_hash": "874aa2ff9ffd624ee3bb84768a62ae75"
+  },
+  "architect/04-data-model.md": {
+    "mtime": 1789112448.1423998,
+    "seen": 1789298038.7327352,
+    "ast_hash": "4844b4b75761c3934bca9d2b8165316b",
+    "semantic_hash": "4844b4b75761c3934bca9d2b8165316b"
+  },
+  "architect/README.md": {
+    "mtime": 1788633649.148179,
+    "seen": 1789298038.7327363,
+    "ast_hash": "64c1ae41f55b0228aa271ca6a246f10f",
+    "semantic_hash": "64c1ae41f55b0228aa271ca6a246f10f"
+  },
+  "architecture.md": {
+    "mtime": 1789121623.0255735,
+    "seen": 1789298038.732737,
+    "ast_hash": "8e8a844930ce7ec5bd0d48b98cfbd7a9",
+    "semantic_hash": "8e8a844930ce7ec5bd0d48b98cfbd7a9"
+  },
+  "docs/setup/action-items-setup.md": {
+    "mtime": 1789106556.6862524,
+    "seen": 1789298038.7327378,
+    "ast_hash": "c79b543e78ce9a116279de886a874818",
+    "semantic_hash": "c79b543e78ce9a116279de886a874818"
+  },
+  "docs/setup/draft-generation-setup.md": {
+    "mtime": 1789121336.3280826,
+    "seen": 1789298038.7327387,
+    "ast_hash": "2d7235deaf99afc690612592e60f1242",
+    "semantic_hash": "2d7235deaf99afc690612592e60f1242"
+  },
+  "docs/setup/gmail-ingestion-setup.md": {
+    "mtime": 1789123053.8829834,
+    "seen": 1789298038.7327397,
+    "ast_hash": "812373338e5bbae4d25f17254b941699",
+    "semantic_hash": "812373338e5bbae4d25f17254b941699"
+  },
+  "docs/setup/triage-setup.md": {
+    "mtime": 1789025071.2170486,
+    "seen": 1789298038.7327404,
+    "ast_hash": "c0ee80a35922ec4de58ed5c230dca33f",
+    "semantic_hash": "c0ee80a35922ec4de58ed5c230dca33f"
+  },
+  "feature-ideas.md": {
+    "mtime": 1789162668.272403,
+    "seen": 1789298038.7327414,
+    "ast_hash": "8474d38ca9a5b0a45f105224ce37708e",
+    "semantic_hash": "8474d38ca9a5b0a45f105224ce37708e"
+  },
+  "gmail-dashboard/.impeccable/surfaces/app.md": {
+    "mtime": 1789272854.5586183,
+    "seen": 1789298038.732742,
+    "ast_hash": "b64d84a32406ebf8bc3beb62d7367e5c",
+    "semantic_hash": "b64d84a32406ebf8bc3beb62d7367e5c"
+  },
+  "gmail-dashboard/AGENTS.md": {
+    "mtime": 1789273818.6778738,
+    "seen": 1789298038.732743,
+    "ast_hash": "01e8142356e15c3404e0d84c48187cd0",
+    "semantic_hash": "01e8142356e15c3404e0d84c48187cd0"
+  },
+  "gmail-dashboard/CLAUDE.md": {
+    "mtime": 1789273818.6788743,
+    "seen": 1789298038.7327437,
+    "ast_hash": "5c27369b226fcf2be8a6cfe52224e767",
+    "semantic_hash": "5c27369b226fcf2be8a6cfe52224e767"
+  },
+  "gmail-dashboard/DESIGN.md": {
+    "mtime": 1789278427.02807,
+    "seen": 1789298038.7327447,
+    "ast_hash": "50580ad800eaf0954ccda702525d872d",
+    "semantic_hash": "50580ad800eaf0954ccda702525d872d"
+  },
+  "gmail-dashboard/PRODUCT.md": {
+    "mtime": 1789272564.9985673,
+    "seen": 1789298038.7327454,
+    "ast_hash": "b6d05ccf9e1568a3ccbd5f8795eca32e",
+    "semantic_hash": "b6d05ccf9e1568a3ccbd5f8795eca32e"
+  },
+  "gmail-dashboard/README.md": {
+    "mtime": 1789278512.5782459,
+    "seen": 1789298038.7327466,
+    "ast_hash": "e4f393e691f0a42af35872ce53be3d84",
+    "semantic_hash": "e4f393e691f0a42af35872ce53be3d84"
+  },
+  "gmail-dashboard/design-spec.md": {
+    "mtime": 1789273286.6800935,
+    "seen": 1789298038.7327473,
+    "ast_hash": "53516a9f27bd833a46a1a701f01bdba2",
+    "semantic_hash": "53516a9f27bd833a46a1a701f01bdba2"
+  },
+  "gmail-dashboard/smart-gmail-assistant-dashboard.md": {
+    "mtime": 1789272021.1081872,
+    "seen": 1789298038.7327483,
+    "ast_hash": "299fe1e720a3e99d791a3924762300ba",
+    "semantic_hash": "299fe1e720a3e99d791a3924762300ba"
+  },
+  "smart-email-assistant-proposal.md": {
+    "mtime": 1789121594.7434158,
+    "seen": 1789298038.732749,
+    "ast_hash": "4752259545ddceedea079a9d43c49670",
+    "semantic_hash": "4752259545ddceedea079a9d43c49670"
+  },
+  "gmail-dashboard/public/file.svg": {
+    "mtime": 1789273706.890654,
+    "seen": 1789298038.7327502,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "gmail-dashboard/public/globe.svg": {
+    "mtime": 1789273706.9013293,
+    "seen": 1789298038.7327511,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "gmail-dashboard/public/next.svg": {
+    "mtime": 1789273706.912079,
+    "seen": 1789298038.7327518,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "gmail-dashboard/public/vercel.svg": {
+    "mtime": 1789273706.9220743,
+    "seen": 1789298038.7327528,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "gmail-dashboard/public/window.svg": {
+    "mtime": 1789273706.9317656,
+    "seen": 1789298038.732754,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": "a2760511c65806022ad20adf74370ff3"
+  }
+}

@@ -1,0 +1,19 @@
+### [WARN] party-po — Full-text search is unconditioned scope with no value tied to any stated success criterion, and the proposal's own open question shows a cheaper cut exists
+**Quotes:** > Full-text search over `emails.subject`/`body`, which requires a new migration (`0005`) adding a `tsvector` `search_vector` column + GIN index — not present in the schema today
+> **Search migration ownership.** `0005_search_schema.sql` (tsvector column + index) doesn't exist yet — is it built as part of this change, or as a small prerequisite change that ships and verifies independently first?
+**Problem:** The problem statement grounds the whole proposal in three success criteria — "inbox triaged in under two minutes," "used daily by choice," "at least half of routine replies start from a generated draft" — and search returns value against none of them; its only justification is "per the original proposal's ... decision," i.e. precedent, not a value claim for this change. Despite that, Scope commits it unconditionally alongside a brand-new migration and index, the single largest net-new schema cost in the change. The proposal itself surfaces the cheaper variant (ship `0005` as an independent prerequisite) as an open question but does not take it, so the committed scope is larger than the value case in this document supports.
+**Fix:** Cut full-text search from this change's committed scope; ship the inbox/sidebar/draft-modal triad first (which does map to the stated criteria), and let `0005` land as its own small, independently verifiable change.
+**Status:** upheld
+
+### [NOTE] party-po — Access-gate cost spread across options of very different price is left fully open with no recommended default
+**Quotes:** > **Auth/access gate.** No multi-tenancy is planned, but the dashboard will be reachable at a public Vercel URL. Is a single shared password, Vercel's built-in deployment protection, or something else the right minimum here?
+**Problem:** These three options are not cost-equivalent: Vercel's built-in deployment protection is a platform toggle with near-zero build cost, while a custom shared-password gate is new code (middleware, secret handling, session logic) the team must write and maintain. The proposal frames this as an open choice among peers without naming that one option is essentially free and the other is a recurring maintenance surface, so the smaller-cost variant isn't visibly on the table as the default.
+**Fix:** Name Vercel's built-in deployment protection as the default unless a stated reason rules it out, and treat a custom auth gate as the variant that must justify its extra build cost.
+**Status:** upheld
+
+### [WARN] party-po — Recurring per-draft operator-attention cost (manual copy-paste into Gmail, forever) is never quantified against the metric it's meant to serve
+**Quotes:** > Lets the user mark a draft `discarded`, or `sent` after they've manually copied it into Gmail themselves
+> The dashboard never sends mail; there is still no Gmail credential anywhere near it.
+**Problem:** Every draft that becomes "sent" requires a manual copy-paste by the operator, indefinitely — this is a permanent per-use operator-attention cost the proposal builds into the design but never sizes. The proposal's own success criterion is "at least half of routine replies start from a generated draft," which implies a daily volume of this manual step, yet no number (drafts/day, minutes/draft) appears anywhere to let a reader judge whether the modal's value clears this recurring cost.
+**Fix:** State an estimated daily draft volume and per-draft copy time so the modal's ongoing cost can be weighed against the throughput it's meant to unlock.
+**Status:** upheld

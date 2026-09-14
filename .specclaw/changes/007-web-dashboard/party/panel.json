@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "sig": "1636396509 8136",
+  "tier": "thin",
+  "tier_source": "classifier",
+  "rationale": "Extends the fixture-based dashboard frontend with new navigation, pages, and charts—all additive and self-contained within one subsystem, no unresolved questions that would alter the file list, trivial to revert.",
+  "domains": [],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"}
+  ],
+  "dropped": []
+}

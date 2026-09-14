@@ -1,0 +1,10 @@
+{
+  "tier": "thin",
+  "domains": [],
+  "rationale": "Extends the fixture-based dashboard frontend with new navigation, pages, and charts—all additive and self-contained within one subsystem, no unresolved questions that would alter the file list, trivial to revert.",
+  "signals": {
+    "blast_radius": "Dashboard frontend components and routes only, no backend or integration changes",
+    "unresolved": "Open questions about fixture richness and palette scope are tuning knobs that don't change what gets built",
+    "irreversibility": "Pure git revert with no dependencies formed or data migrations"
+  }
+}

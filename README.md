@@ -8,11 +8,11 @@ It never sends anything. Drafts are written for review; the send button belongs 
 
 ## Status
 
-Gmail ingestion through draft generation is live and verified against a real deployment. The web dashboard is the remaining phase.
+Gmail ingestion through draft generation is live, with every acceptance criterion verified against a real deployment. The web dashboard is the remaining phase.
 
 | Phase | Capability | State |
 |---|---|---|
-| 1 | **Ingestion** — Gmail push sync into a normalised schema | 🟢 Live — 4/5 ACs verified; AC4 awaits a real 6-hour renewal tick |
+| 1 | **Ingestion** — Gmail push sync into a normalised schema | 🟢 Live — 5/5 ACs verified |
 | 2 | **Triage** — category + one-line summary per email | 🟢 Live — verified |
 | 3 | **Action items** — task extraction with optional deadline | 🟢 Live — verified |
 | 4 | **Draft generation** — authenticated on-demand reply endpoint | 🟢 Live — 8/8 ACs verified |

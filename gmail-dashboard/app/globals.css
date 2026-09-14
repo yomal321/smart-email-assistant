@@ -1,0 +1,348 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/* ============================================================
+   The Departure Board — design tokens
+   Modern, soft, rounded system: indigo primary, warm amber accent,
+   diffuse elevation shadows in place of hard rules. See design-spec.md.
+   ============================================================ */
+
+:root {
+  /* Ground */
+  --ground: #f5f6fa;
+  --surface: #ffffff;
+  --surface-sunk: #eef0f8;
+  --surface-raised: #ffffff;
+
+  /* Ink */
+  --ink: #14152a;
+  --ink-secondary: #565a72;
+  --ink-tertiary: #82869f;
+  --ink-disabled: #b7bbce;
+
+  /* Signal */
+  --signal: #e11d48;
+  --signal-field: #fdeaef;
+  --departure: #4f46e5;
+  --departure-ink: #ffffff;
+  --departure-field: #eeecfd;
+  --departure-field-ink: #4338ca;
+  --cleared: #059669;
+  --cleared-field: #e7f7f1;
+
+  /* Soft rules — a quiet 1px separator, no bevel */
+  --rule: #e6e8f2;
+  --rule-highlight: transparent;
+  --rule-strong: #d3d6e6;
+
+  /* Platform accents (light) */
+  --platform-1: #f59e0b; /* Needs Reply */
+  --platform-1-ink: #452b00;
+  --platform-2: #2563eb; /* Meeting */
+  --platform-2-ink: #ffffff;
+  --platform-3: #059669; /* Invoice */
+  --platform-3-ink: #ffffff;
+  --platform-4: #64748b; /* FYI */
+  --platform-4-ink: #ffffff;
+  --platform-5: #8b5cf6; /* Newsletter */
+  --platform-5-ink: #ffffff;
+  --platform-6: #94a3b8; /* Automated */
+  --platform-6-ink: #1e293b;
+  --platform-7: #fb7185; /* Spam-ish */
+  --platform-7-ink: #ffffff;
+
+  /* Radius — generous and consistent, never sharp */
+  --radius: 16px;
+  --radius-pill: 999px;
+
+  /* Shadows — soft, diffuse elevation */
+  --shadow-card: 0 1px 2px rgba(20, 21, 42, 0.04), 0 10px 24px -12px rgba(20, 21, 42, 0.12);
+  --shadow-sheet: 0 24px 48px -12px rgba(20, 21, 42, 0.18), 0 8px 16px -8px rgba(20, 21, 42, 0.1);
+  --shadow-popover: 0 12px 28px -8px rgba(20, 21, 42, 0.16), 0 2px 6px rgba(20, 21, 42, 0.08);
+
+  /* shadcn/ui mapping — the primitives inherit the board's identity */
+  --background: var(--ground);
+  --foreground: var(--ink);
+  --card: var(--surface-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--departure);
+  --primary-foreground: var(--departure-ink);
+  --secondary: var(--surface-sunk);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-sunk);
+  --muted-foreground: var(--ink-tertiary);
+  --accent: var(--departure-field);
+  --accent-foreground: var(--departure-field-ink);
+  --destructive: var(--signal);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--departure);
+}
+
+:root[data-theme="dark"] {
+  --ground: #0b0c14;
+  --surface: #12131e;
+  --surface-sunk: #0e0f18;
+  --surface-raised: #191b28;
+
+  --ink: #f1f2f8;
+  --ink-secondary: #b8bbcc;
+  --ink-tertiary: #82869c;
+  --ink-disabled: #4e5266;
+
+  --signal: #fb7185;
+  --signal-field: #33121a;
+  --departure: #818cf8;
+  --departure-ink: #0b0c14;
+  --departure-field: #23234a;
+  --departure-field-ink: #c7d2fe;
+  --cleared: #34d399;
+  --cleared-field: #0c2a22;
+
+  --rule: #262a3d;
+  --rule-highlight: transparent;
+  --rule-strong: #363b54;
+
+  --platform-1: #fbbf24;
+  --platform-1-ink: #291a00;
+  --platform-2: #60a5fa;
+  --platform-2-ink: #071426;
+  --platform-3: #34d399;
+  --platform-3-ink: #052018;
+  --platform-4: #94a3b8;
+  --platform-4-ink: #0b0c14;
+  --platform-5: #a78bfa;
+  --platform-5-ink: #1e1b4b;
+  --platform-6: #7c879c;
+  --platform-6-ink: #f1f2f8;
+  --platform-7: #fb7185;
+  --platform-7-ink: #2a0a10;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px -12px rgba(0, 0, 0, 0.45);
+  --shadow-sheet: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 8px 20px -8px rgba(0, 0, 0, 0.4);
+  --shadow-popover: 0 12px 28px -8px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-surface-raised: var(--surface-raised);
+
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-ink-disabled: var(--ink-disabled);
+
+  --color-signal: var(--signal);
+  --color-signal-field: var(--signal-field);
+  --color-departure: var(--departure);
+  --color-departure-ink: var(--departure-ink);
+  --color-departure-field: var(--departure-field);
+  --color-cleared: var(--cleared);
+  --color-cleared-field: var(--cleared-field);
+
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+
+  --color-platform-1: var(--platform-1);
+  --color-platform-2: var(--platform-2);
+  --color-platform-3: var(--platform-3);
+  --color-platform-4: var(--platform-4);
+  --color-platform-5: var(--platform-5);
+  --color-platform-6: var(--platform-6);
+  --color-platform-7: var(--platform-7);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-sans);
+  --font-narrow: var(--font-narrow);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: var(--radius);
+  --radius-xl: 20px;
+  --radius-pill: var(--radius-pill);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-sheet: var(--shadow-sheet);
+  --shadow-popover: var(--shadow-popover);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply font-sans;
+    font-feature-settings: "tnum" 0, "lnum" 1;
+  }
+  body {
+    @apply bg-ground text-ink;
+  }
+
+  /* Tabular numerals — every figure that means a quantity */
+  .tabular,
+  .font-tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+
+  /* Quiet 1px divider — used for in-list separators, never for outer frames */
+  .rule-b {
+    border-bottom: 1px solid var(--rule);
+  }
+  .rule-t {
+    border-top: 1px solid var(--rule);
+  }
+  .rule-r {
+    border-right: 1px solid var(--rule);
+  }
+  .rule-strong-b {
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  /* Reusable elevated card surface — soft shadow, generous rounding */
+  .card-surface {
+    background: var(--surface-raised);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--rule);
+  }
+
+  /* Browser surfaces — themed, never left as browser defaults */
+  ::selection {
+    background: var(--departure-field);
+    color: var(--departure-field-ink);
+  }
+  :root {
+    accent-color: var(--departure);
+  }
+  input,
+  textarea {
+    caret-color: var(--departure);
+  }
+  :focus-visible {
+    outline: 2px solid var(--departure);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  * {
+    scrollbar-color: var(--ink-disabled) transparent;
+    scrollbar-width: thin;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--ink-disabled);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  /* Nav rails scroll when content overflows but never show scrollbar chrome —
+     it's navigation furniture, not a content panel; a persistent thumb/track
+     reads as clutter against the rail's own rules and icons. Still scrollable
+     via wheel/trackpad/keyboard, just visually silent. */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  a {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  mark {
+    background: var(--departure-field);
+    color: var(--departure-field-ink);
+    border-radius: 4px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer utilities {
+  .measure {
+    max-width: 68ch;
+  }
+
+  /* Split-flap character cell — see components/station/flap.tsx */
+  .flap-cell {
+    perspective: 240px;
+  }
+  .flap-face {
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+  }
+  @keyframes flap-flip {
+    0% {
+      transform: rotateX(0deg);
+    }
+    50% {
+      transform: rotateX(-90deg);
+    }
+    50.01% {
+      transform: rotateX(90deg);
+    }
+    100% {
+      transform: rotateX(0deg);
+    }
+  }
+  .flap-flipping {
+    animation: flap-flip 180ms cubic-bezier(0.33, 0, 0.15, 1);
+    animation-fill-mode: both;
+    transform-origin: center bottom;
+  }
+
+  /* Density — comfortable is the default row height; dense tightens it. */
+  [data-density="dense"] .board-row {
+    min-height: 2.75rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

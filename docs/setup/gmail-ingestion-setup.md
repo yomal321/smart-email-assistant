@@ -16,7 +16,7 @@ Target account for this change: `yomaltheekshana66@gmail.com`.
 ## 2. Pub/Sub topic
 
 - [ ] Create a Pub/Sub topic, e.g. `gmail-push-notifications`.
-- [ ] Note its full resource name: `projects/<GCP_PROJECT_ID>/topics/gmail-push-notifications`. This is the value that fills every `REPLACE_WITH_GCP_PROJECT_ID` placeholder found in `n8n/workflows/gmail-renewal-recovery.json` (the `jsonBody.topicName` sent to `watch()`, in both the "Call watch()" and "Re-register watch()" nodes, and the `newSubscriptionId` fallback string in the "Prepare catch-up" code node).
+- [ ] Note its full resource name: `projects/<GCP_PROJECT_ID>/topics/gmail-push-notifications`. This is the value that fills every `REPLACE_WITH_GCP_PROJECT_ID` placeholder in `n8n/workflows/gmail-renewal-recovery.json` — there are **four** functional occurrences, enumerated in step 9. Replace all four; missing one fails silently.
 - [ ] Restrict the topic's publish IAM to **only** the principal `gmail-api-push@system.gserviceaccount.com`, with role `roles/pubsub.publisher`. Do not grant any broader publisher.
 - [ ] Create a push subscription on this topic pointed at your n8n webhook URL (final URL comes from step 9 — you can create the subscription now with a placeholder endpoint and edit it once the URL is known, or wait until after step 5/9).
 
@@ -66,7 +66,17 @@ Import in this order so sub-workflow references can be resolved:
 ## 9. Fill in the remaining placeholders
 
 - [ ] In **Gmail Ingestion**, node **"Token valid?"**: replace `REPLACE_WITH_WEBHOOK_PUBLIC_URL` with this workflow's actual public webhook URL (the `Gmail Pub/Sub Webhook` node's path is `gmail-pubsub`, so the full URL is `https://<your-n8n-host>/webhook/gmail-pubsub`). This same URL is also what you register as the OIDC audience on the Pub/Sub push subscription (step 2).
-- [ ] In **Gmail Renewal & Recovery**, every occurrence of `REPLACE_WITH_GCP_PROJECT_ID` (in the `jsonBody.topicName` sent by "Call watch()" and "Re-register watch()", and in the `newSubscriptionId` fallback inside "Prepare catch-up"): replace with your real GCP project ID from step 2.
+- [ ] In **Gmail Renewal & Recovery**, every occurrence of `REPLACE_WITH_GCP_PROJECT_ID`: replace with your real GCP project ID from step 2. There are **four** functional locations — miss one and the workflow still appears to work, so check all four explicitly:
+  1. `jsonBody.topicName` in **"Call watch()"**
+  2. `jsonBody.topicName` in **"Re-register watch()"**
+  3. the `newSubscriptionId` fallback inside **"Prepare catch-up"**
+  4. the **`options.queryReplacement` array in "Record renewed"** — this is the value written to `accounts.subscription_id`, a *separate* hardcoded copy of the topic string rather than a reference to what `watch()` was actually called with
+  - Location 4 is the easy one to miss, and missing it is silent: renewals succeed normally (the `watch()` call uses location 1) while the placeholder string is quietly written into `accounts.subscription_id` on every run. This happened on the first real deployment — see AC4 in section 12. If you have already deployed and hit this, fix the node and backfill with:
+    ```sql
+    update accounts
+    set subscription_id = 'projects/<YOUR_GCP_PROJECT_ID>/topics/gmail-push-notifications'
+    where subscription_id like '%REPLACE_WITH_GCP_PROJECT_ID%';
+    ```
 
 ## 10. Register the initial subscription
 
@@ -107,7 +117,8 @@ insert into accounts (
   - Confirmed 2026-09-08 — event log traced two fake pushes, both dropped before fetch.
 - [x] **AC3** — Replay the same Pub/Sub notification for the test email from AC1 a second time (or trigger two overlapping deliveries). Confirm `emails` still has exactly one row for that `provider_message_id` — the `ON CONFLICT DO NOTHING` constraint absorbs the duplicate.
   - Confirmed 2026-09-08 — duplicate insert rejected by the constraint; row count held at 1.
-- [ ] **AC4 (multi-day)** — Let at least one scheduled tick of **Gmail Renewal & Recovery** run (every 6 hours). Confirm afterward that `accounts.subscription_id` / `accounts.subscription_expires_at` were updated and a `renewed` row was written to `sync_outcomes` for that run — don't just confirm the workflow is deployed/active, confirm an actual successful run happened.
-  - **Pending** — workflow is published and scheduled; needs a real 6-hour tick to fire and succeed. Re-check by querying `sync_outcomes` for a `renewed` row for this account.
+- [x] **AC4 (multi-day)** — Let at least one scheduled tick of **Gmail Renewal & Recovery** run (every 6 hours). Confirm afterward that `accounts.subscription_id` / `accounts.subscription_expires_at` were updated and a `renewed` row was written to `sync_outcomes` for that run — don't just confirm the workflow is deployed/active, confirm an actual successful run happened.
+  - **PASS 2026-09-11.** `sync_outcomes` holds **12 `renewed` rows and zero `failed`** (latest `2026-09-11 06:30:16`) — roughly three days of 6-hourly ticks with a 100% success rate. `accounts.subscription_expires_at` is `2026-09-18 06:30:16`, exactly 7 days after that latest renewal's own timestamp, which is what proves the renewal actually extended the subscription rather than the row merely being stale. `last_successful_sync` (`2026-09-11 07:52`) and an advancing `sync_cursor` (`261981`) confirm mail is still flowing through the renewed subscription.
+  - ⚠️ **Defect found by this check (fixed in step 9 below):** `accounts.subscription_id` contains the literal string `projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications`. The renewal itself works — `watch()` is called with the correct topic — but the **"Record renewed"** node writes a *separately hardcoded* copy of the topic string, and step 9's placeholder list originally omitted that node. The stored value is inert (nothing branches on `subscription_id`; it is only ever `SELECT`ed, never consumed), so this is a data-hygiene and debuggability problem rather than a functional one — but it must be corrected in the live workflow, and the existing row backfilled.
 - [x] **AC5** — Run a schema review of `accounts` (e.g. `\d accounts` in Supabase Studio or re-read `0001_ingestion_schema.sql`) and confirm no column holds OAuth token or refresh-token material — only `n8n_credential_id` (a reference) plus sync-state columns.
   - Confirmed 2026-09-08 — schema inspected directly: 10 columns total, `n8n_credential_id` is a plain-text reference, no OAuth token/refresh-token material present.

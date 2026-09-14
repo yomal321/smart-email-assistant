@@ -170,3 +170,93 @@ Immediately after fixing L10 (crypto module), the same 'Verify secret' node fail
 Set N8N_BLOCK_ENV_ACCESS_IN_NODE=false in the n8n environment to allow $env reads inside Code nodes. This and NODE_FUNCTION_ALLOW_BUILTIN=crypto (L10) are BOTH required together for any Code node that reads $env AND uses a builtin module -- they are independent sandbox gates, fixing one does not imply the other is also fixed. Any future phase whose Code nodes read $env (not just this one) needs N8N_BLOCK_ENV_ACCESS_IN_NODE=false already set; worth proactively adding both env vars to the base docker-compose.yml template for any n8n instance this project stands up in the future, rather than discovering them one at a time against a live 401.
 
 ---
+
+## [L12] design_gap — A runbook said 'every occurrence' of a placeholder but t...
+
+**When:** 2026-09-11 10:45 UTC
+**Category:** design_gap
+**Priority:** medium
+**Status:** pending
+
+### Detail
+A runbook said 'every occurrence' of a placeholder but then enumerated an incomplete list, so following it correctly still produced wrong production data. gmail-renewal-recovery.json hardcodes the Pub/Sub topic string in FOUR functional locations (Call watch() jsonBody, Re-register watch() jsonBody, Prepare catch-up newSubscriptionId, and -- the missed one -- the options.queryReplacement array in the 'Record renewed' Postgres node). docs/setup/gmail-ingestion-setup.md step 9 listed only the first three. Result: accounts.subscription_id held the literal 'projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications' for three days of successful renewals. The failure was silent because the watch() call uses a DIFFERENT copy of the string (correctly replaced), so renewals succeeded normally at 12/12; and because nothing branches on subscription_id -- it is only ever SELECTed, never consumed -- so no behaviour changed. Found only when AC4's verification query surfaced the raw column value.
+
+### Action
+Fixed the runbook to enumerate all four locations explicitly, flag location 4 as the silent one, and supply a backfill UPDATE for deployments that already hit it. Two general rules: (1) when a placeholder appears N times across a workflow, never write 'every occurrence' followed by a prose list -- state the count explicitly and enumerate every one, because a reader treats the list as exhaustive; (2) the same literal value duplicated across an API-call node and a database-write node is a latent trap -- the API node's copy is validated by the provider (a wrong topic fails loudly) while the database node's copy is validated by nothing, so a partial replacement is invisible. Prefer deriving the stored value from the actual API request/response (as the 'Record re-registered' node already does via $('Prepare catch-up').item.json.newSubscriptionId) over a second hardcoded copy.
+
+---
+
+## [L13] design_gap — AppStateProvider.tsx:48 has a react-hooks/set-state-in-ef...
+
+**When:** 2026-09-11 21:19 UTC
+**Category:** design_gap
+**Priority:** low
+**Status:** pending
+
+### Detail
+AppStateProvider.tsx:48 has a react-hooks/set-state-in-effect lint error (setThemeState/setDensityState called synchronously in the localStorage-hydration useEffect), flagged by T8's agent but out of T8's file scope
+
+### Action
+Fix during T13 (responsive/dark-mode sweep) — e.g. read localStorage via a lazy useState initializer instead of an effect
+
+---
+
+## [L14] design_gap — The entire dashboard/ prototype scaffold (DraftModal.tsx,...
+
+**When:** 2026-09-11 22:06 UTC
+**Category:** design_gap
+**Priority:** medium
+**Status:** pending
+
+### Detail
+The entire dashboard/ prototype scaffold (DraftModal.tsx, SearchBar.tsx, StatusBadge.tsx, TaskCard.tsx, lib/types.ts, config files, README.md, public/ assets) was untracked in git before this build started — none of tasks.md's 15 tasks declared these files, so they were committed separately as a one-off chore commit outside any task scope
+
+### Action
+When planning a build, check 'git status' for pre-existing untracked files under the target directory before assuming committed files are the true baseline
+
+---
+
+## [L15] design_gap — T12 created chart components at dashboard/components/Volu...
+
+**When:** 2026-09-11 22:06 UTC
+**Category:** design_gap
+**Priority:** low
+**Status:** pending
+
+### Detail
+T12 created chart components at dashboard/components/VolumeChart.tsx and CategoryBreakdownChart.tsx (flat), not the design.md/tasks.md-declared dashboard/components/charts/VolumeChart.tsx nested path
+
+### Action
+Harmless naming/placement drift; consider nesting under components/charts/ in a later pass for consistency with design.md, or update design.md to match if flat placement is preferred going forward
+
+---
+
+## [L16] agent_issue — T12's coding agent did not self-commit its changes despit...
+
+**When:** 2026-09-11 22:06 UTC
+**Category:** agent_issue
+**Priority:** low
+**Status:** pending
+
+### Detail
+T12's coding agent did not self-commit its changes despite the standard build-context instruction to commit, unlike every other task's agent in this build
+
+### Action
+No action needed here (the build loop's own specclaw-build commit step covers this), but worth watching if it recurs across builds
+
+---
+
+## [L17] pattern — Two 'sweep'-style tasks (T13 responsive/dark-mode, T14 ke...
+
+**When:** 2026-09-11 22:06 UTC
+**Category:** pattern
+**Priority:** medium
+**Status:** pending
+
+### Detail
+Two 'sweep'-style tasks (T13 responsive/dark-mode, T14 keyboard/contrast) each found and fixed real bugs beyond their literally-flagged issue — T13 found a global dark-mode-not-applying bug and two overflow bugs, T14 found two missing-focus-ring bugs in the command palette — by actually running the app (Playwright against the dev server) rather than reading code
+
+### Action
+Keep specifying 'do a real sweep, not just a read-through' with a concrete verification method for any future cross-cutting polish/audit task
+
+---

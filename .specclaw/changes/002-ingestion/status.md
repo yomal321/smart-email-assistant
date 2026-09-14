@@ -13,7 +13,7 @@
 | Design | ✅ Done |  |
 | Tasks | ✅ Done |  |
 | Build | ✅ Done | 6/6 tasks |
-| Verify | 🟡 In Progress | 4/5 AC confirmed against production (AC1, AC2, AC3, AC5); AC4 pending a real 6-hour renewal tick |
+| Verify | ✅ Passed | PASS — 5/5 ACs live-verified; AC4 closed 2026-09-11 with 12 `renewed` rows, 0 failed. See verify-report.md |
 
 ## Task Progress
 

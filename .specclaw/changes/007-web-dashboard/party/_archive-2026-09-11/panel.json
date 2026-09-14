@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "4143163707 5551",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "An unresolved architectural decision on access model (anon key from browser vs. service-role key through server) would change the file layout and security boundary, a public-facing container now accesses an RLS-off database (first such client, new trust boundary), and a tsvector column is added to the persisted emails table.",
+  "domains": ["security", "data"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "fable"}
+  ],
+  "dropped": []
+}

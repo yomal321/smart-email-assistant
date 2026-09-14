@@ -1,0 +1,4 @@
+{"tier": "deep",
+ "domains": ["security", "data"],
+ "rationale": "An unresolved architectural decision on access model (anon key from browser vs. service-role key through server) would change the file layout and security boundary, a public-facing container now accesses an RLS-off database (first such client, new trust boundary), and a tsvector column is added to the persisted emails table.",
+ "signals": {"blast_radius": "New Next.js app (~20-30 files), one new migration adding tsvector column and GIN index to emails table, reads/writes to three existing tables (emails, tasks, drafts)", "unresolved": "Access model (anon key vs. service-role key) and whether draft modal allows inline editing; the former fundamentally changes the read/write architecture and which files get written", "irreversibility": "New migration adding tsvector column to emails is revertible but requires rollback migration in production; new deployable is deletable"}}

@@ -1,0 +1,130 @@
+{
+  "title": "Choose the visual world",
+  "question": "The roll assigned The Departure Board. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "The Departure Board",
+      "kicker": "THE ROLL",
+      "lineage": "Continental European station information design - SBB/DB timetable posters, split-flap boards, the Mondaine platform clock",
+      "thesis": "Your inbox is a station concourse, not a list. Every message is a scheduled departure with a platform, a time, and a delay figure, and the board's whole job is to tell you what is late and what is boarding now. It refuses the reverse-chronological feed that every mail client ships.",
+      "palette": ["#F2F0EB", "#14161A", "#C8102E", "#FFCC00", "#1B7F4C"],
+      "materials": ["split-flap flip", "yellow departure poster stock", "steel platform rail", "tabular numerals"],
+      "viewport": "A dense board: left a slim platform rail of the seven categories, centre the queue as timetable rows - sender, AI one-line summary, platform badge, and a right-aligned tabular delay column where overdue replies read +3d in signal red. Top-left the two-count balance, WAITING ON YOU against WAITING ON THEM, set as arrivals-white against departures-yellow. The station clock sits top-right: last sync time, its second hand pausing the way the real one does.",
+      "risk": "Transit nostalgia. If the split-flap becomes decoration rather than the state-change itself, it reads as a theme instead of a system.",
+      "raised": [
+        {
+          "from": "challenger-cloud-edge",
+          "raise": "Colour never touches the text field. Category and priority live on the rail and the flap only; sender, subject, and summary stay achromatic ink so a dense board never becomes a carnival."
+        },
+        {
+          "from": "challenger-cyclorama",
+          "raise": "Every state is named and doubly encoded. Each of the seven categories carries a letter code and each priority a shape alongside its colour, and every board state is deep-linkable - colour is never the sole signal, and no view is unreachable by URL."
+        },
+        {
+          "from": "challenger-darkroom",
+          "raise": "Commit is its own station. A drafted reply is staged against the original as a visible before-commit step, the way a test strip precedes the print - but reversible, because nothing here is fixer."
+        },
+        {
+          "from": "challenger-title-wall",
+          "raise": "Focus is the primary interaction. The focused row expands in place with its full AI reading while the board steps back around it, entirely keyboard-driven - J/K walks the board, and the board never scrolls out from under you."
+        },
+        {
+          "from": "challenger-club-sleeve",
+          "raise": "Handled work leaves a trace. A triaged row records its handling on the board rather than silently vanishing, and the audit log is a first-class surface, not a settings footnote."
+        }
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "The Strip Board",
+      "kicker": "IMPECCABLE'S PICK",
+      "lineage": "Air-traffic-control paper flight strips in coloured plastic holders, racked by urgency and physically moved as status changes",
+      "thesis": "Every message is a printed strip in a coloured holder. The holder colour is the category, the rack position is the priority, and working the inbox is physically moving strips down the rack until it is clear.",
+      "palette": ["#1C1F24", "#E4E0D6", "#D7482E", "#3E7CB1", "#E0A000"],
+      "materials": ["printed strip stock", "coloured holder plastic", "aluminium rack", "grease pencil annotation"],
+      "viewport": "A rack of strips, each one a fixed-height printed card in its coloured holder, ordered by consequence. Annotations are written straight onto the strip.",
+      "risk": "It topped my own grounded list, which is exactly the warning: ranked strips in coloured holders is the most legible answer here, and legible-plus-obvious is where most runs in this category land. It also fights small screens - a rack wants width."
+    },
+    {
+      "id": "challenger-emission-rail",
+      "label": "Emission Line Rail",
+      "verdict": "competitive",
+      "lineage": "Glass spectrogram plates on a low viewing box - a grey continuum crossed by needle-thin emission lines",
+      "thesis": "Seven wavelengths for seven categories. Everything registers against one off-centre calibrated rail, and state is carried in line height, dash, and doubling rather than hue.",
+      "palette": ["#22252A", "#E8E3D6", "#FFCC00", "#5AA9E6", "#C8102E"],
+      "materials": ["procedural charcoal continuum", "1px emission hairlines", "graphite matting"],
+      "viewport": "A charcoal plate, every message a hairline standing on the rail at its position; the urgent one doubled and standing brighter than its neighbours.",
+      "case": "Holds product clarity - encoding state as line form rather than hue beats the board outright on colourblind legibility, and seven wavelengths for seven categories is an uncanny fit. Loses audience identification: a solo consultant triaging client mail has never read a spectrogram, and one type size ranked only by tracking risks flattening a three-pane workspace where hierarchy must land instantly.",
+      "risk": "Single-size type across a dense app is brave until the user needs to find one thing fast.",
+      "hero": "https://impeccable.style/worlds/cards/operate-c-emission-line-rail-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/operate-c-emission-line-rail.webp"
+    },
+    {
+      "id": "challenger-darkroom",
+      "label": "Darkroom Safelight Bay",
+      "verdict": "declined",
+      "lineage": "A printing darkroom under amber safelight",
+      "palette": ["#2A1D0E", "#E8A33D", "#B9BCC0"],
+      "materials": ["amber safelight wash", "wet-print silver", "enamel tray white"],
+      "case": "Fuses poorly on both axes: an amber wash over dense mail rows is a legibility problem, and its central discipline - progress irreversible past marked points - directly contradicts the product's promise that every action can be undone.",
+      "kept": "Preview before committing, staged as its own visible station.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-darkroom-safelight-bay-hero.webp"
+    },
+    {
+      "id": "challenger-cloud-edge",
+      "label": "Iridescent Cloud Edge",
+      "verdict": "declined",
+      "lineage": "A cloud edge diffracting sunlight into pastel bands",
+      "palette": ["#FFFFFF", "#5A6472", "#B6E3D4", "#8B7FD4"],
+      "materials": ["achromatic text field", "hairline spectral fringe"],
+      "case": "Loses both axes: a consultant does not identify with droplet diffraction, and colour confined to hairline edges cannot carry seven categories plus three priorities plus sentiment.",
+      "kept": "Colour never touches the text field.",
+      "hero": "https://impeccable.style/worlds/cards/clouds-storms-auroras-iridescent-cloud-edge-hero.webp"
+    },
+    {
+      "id": "challenger-cyclorama",
+      "label": "Cyclorama Dawn",
+      "verdict": "declined",
+      "lineage": "A theatre cyclorama lit from black night through cobalt and rose into white day",
+      "palette": ["#0A0A0C", "#1B4F9C", "#E8A0B0", "#FFFFFF"],
+      "materials": ["horizon light bands", "lighting-plot stencil caps"],
+      "case": "Loses both axes: theatrical lighting is not the consultant's world, and stacking content into horizontal horizon bands fights a three-pane inbox at every turn.",
+      "kept": "Named discrete states, doubly encoded and deep-linkable.",
+      "hero": "https://impeccable.style/worlds/cards/stagecraft-theater-lighting-cyclorama-dawn-hero.webp"
+    },
+    {
+      "id": "challenger-title-wall",
+      "label": "Streaming Title Wall",
+      "verdict": "declined",
+      "lineage": "A catalog wall of horizontally scrolling poster rows",
+      "palette": ["#101014", "#FFFFFF", "#E50914"],
+      "materials": ["full-bleed poster artwork", "focus-lift accent"],
+      "case": "Loses both axes: it is the browse-and-graze posture, the exact opposite of triage, and poster tiles carry no data because email has no artwork.",
+      "kept": "Focus expands in place while the surround dims.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-streaming-title-card-wall-hero.webp"
+    },
+    {
+      "id": "challenger-club-sleeve",
+      "label": "Flash Scrawl Club Sleeve",
+      "verdict": "declined",
+      "lineage": "A French house label sleeve defaced with marker scrawl",
+      "palette": ["#0D0D0D", "#F2F2F2", "#CCFF00"],
+      "materials": ["blown flash photography", "fat marker scrawl", "sticker stock"],
+      "case": "Loses both axes by a distance: nothing about a consultant's client correspondence lives in club ephemera, and scrawl over dense tabular data is unreadable.",
+      "kept": "Used controls stay on the surface as history.",
+      "hero": "https://impeccable.style/worlds/cards/posters-covers-sleeves-flash-scrawl-club-sleeve-hero.webp"
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "The Linear/Superhuman rendition, executed impeccably: near-black or off-white ground, one grotesque, hairline borders, a single violet accent, rounded cards, generous whitespace, tiny muted labels.",
+    "palette": ["#0E0E11", "#FAFAFA", "#6E56CF", "#8B8B93"],
+    "materials": ["hairline border", "rounded-lg card", "subtle elevation"],
+    "viewport": "The three-pane inbox a visitor already expects, at full craft.",
+    "risk": "Indistinguishable from every other AI inbox tool by design."
+  },
+  "steer": true
+}
