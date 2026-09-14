@@ -382,3 +382,18 @@ Two parallel wave-3 agents (T4 and T5) independently hit and independently fixed
 When a shared client/type quirk is likely to recur across parallel tasks touching the same table (any future phase adding more routes over emails/tasks/drafts), consider noting the 'as unknown as X' cast convention once in the shared mapper module's own file comment, so future single-task agents don't have to rediscover it independently.
 
 ---
+
+## [L26] design_gap — design.md's FR2 description (fix action-extraction.json's...
+
+**When:** 2026-09-14 08:01 UTC
+**Category:** design_gap
+**Priority:** medium
+**Status:** pending
+
+### Detail
+design.md's FR2 description (fix action-extraction.json's Write task node) named the ON CONFLICT removal and the new priority/origin columns but didn't call out that the insert's literal status value ('open') would violate migration 0009's widened tasks_status_check (todo|in-progress|done|dismissed) -- 'open' isn't in the new enum. Caught and fixed during T2 implementation before it could break every subsequent extraction write in production.
+
+### Action
+When a migration narrows/replaces a check constraint, explicitly audit every existing INSERT/UPDATE literal against the new allowed values as part of design.md's Key Decisions or the task's own Notes -- don't rely on catching it during build.
+
+---

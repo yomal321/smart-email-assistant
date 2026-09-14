@@ -1,8 +1,8 @@
 {
   "change": "010-dashboard-actions-drafts-api",
-  "phase": "tasks",
+  "phase": "build",
   "branch": "",
   "phases": {
-    "tasks": {"status":"done","at":"2026-09-14T07:38:42Z"}
+    "build": {"status":"done","at":"2026-09-14T08:00:40Z","tasks":{"done":13,"total":13,"failed":0}}
   }
 }
