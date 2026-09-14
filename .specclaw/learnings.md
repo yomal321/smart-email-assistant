@@ -322,3 +322,18 @@ Passing large specclaw-build-context payloads (~3500 lines / ~90k tokens each) d
 Consider having specclaw-build-context write directly to a file path (or the build skill documenting the read-from-file dispatch pattern) rather than assuming the payload is always inlined into the prompt string.
 
 ---
+
+## [L22] agent_issue — specclaw-build setup's base_branch auto-detect (empty str...
+
+**When:** 2026-09-14 07:01 UTC
+**Category:** agent_issue
+**Priority:** high
+**Status:** pending
+
+### Detail
+specclaw-build setup's base_branch auto-detect (empty string -> origin/HEAD first) forked specclaw/009-dashboard-messages-api off a stale origin/main (last pushed before 008's work), silently dropping all of Phase 0's files (lib/supabase/, middleware.ts, app/api/) from the new branch's working tree. Caught before any build agent ran by noticing app/providers.tsx had reverted to its pre-008 content.
+
+### Action
+Pinned git.base_branch: "main" explicitly in config.yaml rather than relying on auto-detect, since local main is ahead of origin/main and nothing currently pushes to keep them in sync. Reset the branch with 'git reset --hard main' (safe since it had zero unique commits yet). Consider pushing main to origin regularly, or teaching auto-detect to prefer local main over a stale origin/HEAD.
+
+---
