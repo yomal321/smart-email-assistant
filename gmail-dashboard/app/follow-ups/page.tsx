@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Clock3, CheckCircle2 } from "lucide-react";
-import { getAwaitingReply, getCommitments, contactById } from "@/lib/data";
+import { useCommitments } from "@/components/board/commitments-provider";
 import { EmptyState } from "@/components/board/empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,20 +10,34 @@ import { Button } from "@/components/ui/button";
 
 interface NudgeTarget {
   label: string;
+  // "Awaiting reply" rows have no commitment (getAwaitingReply and
+  // getCommitments are separate concepts — see spec.md Overview), so the
+  // send target is either a real commitment id or a bare email id.
+  target: { commitmentId: string } | { emailId: string };
   counterpartyName: string;
   suggested: string;
 }
 
 export default function FollowUpsPage() {
-  const awaiting = getAwaitingReply();
-  const commitments = getCommitments();
+  const { commitments, awaitingReply: awaiting, isLoading, contactById, sendNudge } = useCommitments();
   const [nudgeTarget, setNudgeTarget] = React.useState<NudgeTarget | null>(null);
   const [nudgedIds, setNudgedIds] = React.useState<Set<string>>(new Set());
+  const [nudgeText, setNudgeText] = React.useState("");
+  const [isSending, setIsSending] = React.useState(false);
 
   const youPromised = commitments.filter((c) => c.direction === "you-promised");
   const promisedToYou = commitments.filter((c) => c.direction === "promised-to-you");
 
   const isEmpty = awaiting.length === 0 && youPromised.length === 0 && promisedToYou.length === 0;
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full flex-col">
+        <Header />
+        <p className="px-4 py-6 text-sm text-ink-secondary">Loading follow-ups…</p>
+      </div>
+    );
+  }
 
   if (isEmpty) {
     return (
@@ -45,21 +59,20 @@ export default function FollowUpsPage() {
       <Section title="Awaiting reply" count={awaiting.length}>
         {awaiting.map((w) => {
           const contact = contactById(w.counterpartyId);
+          const contactName = contact?.name ?? "Unknown";
           const id = `wr-${w.id}`;
           return (
             <FollowUpRow
               key={w.id}
-              sender={contact.name}
+              sender={contactName}
               text={w.subject}
               days={w.daysElapsed}
               nudged={nudgedIds.has(id)}
-              onNudge={() =>
-                setNudgeTarget({
-                  label: id,
-                  counterpartyName: contact.name,
-                  suggested: `Hi ${contact.name.split(" ")[0]},\n\nJust following up on "${w.subject}" — wanted to check if you'd had a chance to look yet.\n\nBest,\nYou`,
-                })
-              }
+              onNudge={() => {
+                const suggested = `Hi ${contactName.split(" ")[0]},\n\nJust following up on "${w.subject}" — wanted to check if you'd had a chance to look yet.\n\nBest,\nYou`;
+                setNudgeTarget({ label: id, target: { emailId: w.id }, counterpartyName: contactName, suggested });
+                setNudgeText(suggested);
+              }}
             />
           );
         })}
@@ -68,23 +81,22 @@ export default function FollowUpsPage() {
       <Section title="You promised" count={youPromised.length}>
         {youPromised.map((c) => {
           const contact = contactById(c.counterpartyId);
+          const contactName = contact?.name ?? "Unknown";
           const days = c.dueDate ? daysUntilOrPast(c.dueDate) : c.daysElapsed;
           return (
             <FollowUpRow
               key={c.id}
-              sender={contact.name}
+              sender={contactName}
               text={c.text}
               quote={c.triggerSentence}
               days={days}
               confidence={c.confidence}
               nudged={nudgedIds.has(c.id)}
-              onNudge={() =>
-                setNudgeTarget({
-                  label: c.id,
-                  counterpartyName: contact.name,
-                  suggested: `Hi ${contact.name.split(" ")[0]},\n\nCircling back on this — ${c.text.replace(/^I'll /i, "I will ")}\n\nBest,\nYou`,
-                })
-              }
+              onNudge={() => {
+                const suggested = `Hi ${contactName.split(" ")[0]},\n\nCircling back on this — ${c.text.replace(/^I'll /i, "I will ")}\n\nBest,\nYou`;
+                setNudgeTarget({ label: c.id, target: { commitmentId: c.id }, counterpartyName: contactName, suggested });
+                setNudgeText(suggested);
+              }}
             />
           );
         })}
@@ -93,24 +105,23 @@ export default function FollowUpsPage() {
       <Section title="Promised to you" count={promisedToYou.length}>
         {promisedToYou.map((c) => {
           const contact = contactById(c.counterpartyId);
+          const contactName = contact?.name ?? "Unknown";
           const days = c.dueDate ? daysUntilOrPast(c.dueDate) : c.daysElapsed;
           return (
             <FollowUpRow
               key={c.id}
-              sender={contact.name}
+              sender={contactName}
               text={c.text}
               quote={c.triggerSentence}
               days={days}
               confidence={c.confidence}
               status={c.status}
               nudged={nudgedIds.has(c.id)}
-              onNudge={() =>
-                setNudgeTarget({
-                  label: c.id,
-                  counterpartyName: contact.name,
-                  suggested: `Hi ${contact.name.split(" ")[0]},\n\nJust a nudge on this — ${c.text}\n\nBest,\nYou`,
-                })
-              }
+              onNudge={() => {
+                const suggested = `Hi ${contactName.split(" ")[0]},\n\nJust a nudge on this — ${c.text}\n\nBest,\nYou`;
+                setNudgeTarget({ label: c.id, target: { commitmentId: c.id }, counterpartyName: contactName, suggested });
+                setNudgeText(suggested);
+              }}
             />
           );
         })}
@@ -121,7 +132,11 @@ export default function FollowUpsPage() {
           <DialogHeader>
             <DialogTitle>Nudge {nudgeTarget?.counterpartyName}</DialogTitle>
           </DialogHeader>
-          <Textarea defaultValue={nudgeTarget?.suggested} className="min-h-32 rounded-lg text-sm" />
+          <Textarea
+            value={nudgeText}
+            onChange={(e) => setNudgeText(e.target.value)}
+            className="min-h-32 rounded-lg text-sm"
+          />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" className="rounded-lg" onClick={() => setNudgeTarget(null)}>
               Cancel
@@ -129,12 +144,17 @@ export default function FollowUpsPage() {
             <Button
               size="sm"
               className="rounded-lg"
-              onClick={() => {
-                if (nudgeTarget) setNudgedIds((s) => new Set([...s, nudgeTarget.label]));
+              disabled={isSending}
+              onClick={async () => {
+                if (!nudgeTarget) return;
+                setIsSending(true);
+                const ok = await sendNudge(nudgeTarget.target, nudgeText);
+                setIsSending(false);
+                if (ok) setNudgedIds((s) => new Set([...s, nudgeTarget.label]));
                 setNudgeTarget(null);
               }}
             >
-              Send nudge
+              {isSending ? "Sending…" : "Send nudge"}
             </Button>
           </div>
         </DialogContent>
