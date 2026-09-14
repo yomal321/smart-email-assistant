@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "3118661645 7730",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "Adds 21 columns to the persisted emails table and widens the category constraint, changing what data is stored and retrieved; alongside new API routes and frontend rewiring to use the enriched schema.",
+  "domains": ["data"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "fable"}
+  ],
+  "dropped": []
+}
