@@ -27,6 +27,27 @@ erDiagram
         text summary "written by triage"
         tsvector search_vector
         timestamptz received_at
+        text platform "7-value dashboard class, written by triage, distinct from category"
+        int confidence "0-100, written by triage"
+        text priority "urgent/normal/low, written by triage"
+        int priority_score "0-100, written by triage"
+        jsonb reasons "written by triage"
+        text tone "tense/neutral/warm, written by triage"
+        text tone_evidence "nullable, written by triage"
+        text tldr "nullable, long threads only, written by triage"
+        jsonb entities "written by triage"
+        jsonb attachments "honest placeholder, unwritten this phase"
+        text gmail_url "reserved, unwritten this phase"
+        boolean is_unread "dashboard state, default true"
+        boolean is_starred "dashboard state, written by PATCH .../star"
+        text status "open/archived/snoozed/done, written by mutation routes"
+        timestamptz snoozed_until "nullable, written by /snooze and /restore"
+        timestamptz handled_at "nullable, written by mutation routes"
+        text handled_action "archived/done/snoozed, nullable"
+        int sla_target_hours "honest placeholder, unwritten this phase"
+        text model_run "written by triage, from llm-gateway.json"
+        timestamptz processed_at "written by triage on success"
+        boolean is_from_user "honest placeholder, always false this phase"
     }
     TASKS {
         uuid id PK
@@ -49,11 +70,12 @@ erDiagram
 | Written by | Fields |
 |---|---|
 | Ingestion + Normaliser | `emails`: account_id, thread_id, sender, subject, body, received_at |
-| Triage Pipeline | `emails`: category, summary |
+| Triage Pipeline | `emails`: category, summary, platform, confidence, priority, priority_score, reasons, tone, tone_evidence, tldr, entities, model_run, processed_at |
 | Action Extraction | `tasks`: entire row |
 | Draft Generation | `drafts`: entire row |
 | Postgres | `emails.search_vector` (generated / trigger-maintained) |
-| Web Dashboard | nothing — reads only |
+| Web Dashboard (mutation routes, `009-dashboard-messages-api`) | `emails`: is_starred (`PATCH /api/messages/:id/star`), status/snoozed_until/handled_at/handled_action (`POST /api/messages/archive\|done\|snooze\|restore`) — otherwise reads only |
+| Unwritten this phase (honest placeholders) | `emails`: attachments, gmail_url, sla_target_hours, is_from_user, is_unread (stays at its default) |
 
 Splitting the table by writer this way makes the phasing obvious: Phase 1 fills the top block, Phase 2 the second, Phase 3 the third. Each phase is independently verifiable by querying one set of columns.
 
