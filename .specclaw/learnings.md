@@ -296,7 +296,9 @@ Future specs for derived enum fields should either state the exact derivation ru
 **When:** 2026-09-14 06:36 UTC
 **Category:** design_gap
 **Priority:** low
-**Status:** pending
+**Status:** resolved (2026-09-14, commit a6a7d80) — `app/providers.tsx` now checks
+`usePathname() === "/login"` and skips `<AppShell>`, rendering the login
+form's children directly instead.
 
 ### Detail
 The new /login page (T6) renders inside the existing AppShell (sidebar/nav) because app/layout.tsx wasn't in T6's file list, so an unauthenticated visitor sees the full dashboard chrome around the login form.
