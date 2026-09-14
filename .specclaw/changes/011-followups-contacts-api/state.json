@@ -1,0 +1,8 @@
+{
+  "change": "011-followups-contacts-api",
+  "phase": "build",
+  "branch": "specclaw/011-followups-contacts-api",
+  "phases": {
+    "build": {"status":"in-progress","at":"2026-09-14T15:27:19Z"}
+  }
+}
