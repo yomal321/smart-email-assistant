@@ -116,12 +116,64 @@
       "notesInFlow": true
     },
     {
+      "id": "a1b2c3d4-0008-4a1a-9c1a-000000000008",
+      "name": "Upsert contacts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1540,
+        300
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO contacts (account_id, name, email, domain, is_vip)\nSELECT\n  $1,\n  p->>'name',\n  p->>'address',\n  split_part(p->>'address', '@', 2),\n  false\nFROM jsonb_array_elements($2::jsonb) AS p\nWHERE NOT ($3 AND p->>'role' = 'from')\nON CONFLICT (account_id, email) DO UPDATE SET name = COALESCE(EXCLUDED.name, contacts.name);",
+        "options": {
+          "queryReplacement": "={{ [$('Normalize').item.json.account_id, JSON.stringify($('Normalize').item.json.participants), $('Normalize').item.json.is_from_user] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "011-followups-contacts-api, T5: runs after 'Inserted?'s true output (a genuinely new email only), before 'Insert thread_entries' and the fan-out to Triage Pipeline / Action Extraction. Upserts a contacts row per participant, keyed on (account_id, email); is_vip is never touched by the ON CONFLICT update so a dashboard-set VIP flag is never reverted by a later inbound email. $3 (is_from_user) excludes the 'from' participant when this email is one the account owner sent, since that participant IS the owner -- every other participant (to/cc, and every participant on an inbound email) is upserted.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a1b2c3d4-0009-4a1a-9c1a-000000000009",
+      "name": "Insert thread_entries",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1800,
+        300
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO thread_entries (email_id, author_is_you, author_name, at, gist)\nVALUES ($1, $2, $3, $4, $5);",
+        "options": {
+          "queryReplacement": "={{ [$('Format output').item.json.email_id, $('Normalize').item.json.is_from_user, ($('Normalize').item.json.participants.find(p => p.role === 'from') || {}).name || ($('Normalize').item.json.participants.find(p => p.role === 'from') || {}).address || 'unknown', $('Normalize').item.json.received_at, ($('Normalize').item.json.body || '').trim().length > 200 ? ($('Normalize').item.json.body || '').trim().slice(0, 200) + '…' : ($('Normalize').item.json.body || '').trim()] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "011-followups-contacts-api, T5: runs sequentially after 'Upsert contacts', before the fan-out to Triage Pipeline / Action Extraction. Records this email as a thread_entries row (author, timestamp, a gist truncated to 200 chars) for the followups feature. email_id is read via the explicit $('Format output') cross-node reference rather than $json, because this node's immediate predecessor ('Upsert contacts') is an INSERT with no RETURNING clause and its output does not carry email_id.",
+      "notesInFlow": true
+    },
+    {
       "id": "a1b2c3d4-0006-4a1a-9c1a-000000000006",
       "name": "Call Triage Pipeline",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1540,
+        2060,
         180
       ],
       "parameters": {
@@ -135,7 +187,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "email_id": "={{ $json.email_id }}",
+            "email_id": "={{ $('Format output').item.json.email_id }}",
             "subject": "={{ $('Normalize').item.json.subject }}",
             "body": "={{ $('Normalize').item.json.body }}"
           },
@@ -146,7 +198,7 @@
           "waitForSubWorkflow": false
         }
       },
-      "notes": "004-triage FR2/NFR2: fires Triage Pipeline non-blocking (waitForSubWorkflow: false) so Gemini's latency/availability can never affect this already-verified ingestion path (002-ingestion AC1-AC5). References the 'Triage Pipeline' sub-workflow BY NAME (cachedResultName), same placeholder pattern this file's own callers already use -- workflowId.value is left blank until triage-pipeline.json is imported and this node is re-pointed at it via n8n's resource picker.",
+      "notes": "004-triage FR2/NFR2: fires Triage Pipeline non-blocking (waitForSubWorkflow: false) so Gemini's latency/availability can never affect this already-verified ingestion path (002-ingestion AC1-AC5). References the 'Triage Pipeline' sub-workflow BY NAME (cachedResultName), same placeholder pattern this file's own callers already use -- workflowId.value is left blank until triage-pipeline.json is imported and this node is re-pointed at it via n8n's resource picker. 011-followups-contacts-api, T5: email_id now reads via the explicit $('Format output') reference instead of $json, since this node's immediate predecessor is now 'Insert thread_entries' (a Postgres node whose output no longer carries email_id) rather than 'Format output' directly.",
       "notesInFlow": true
     },
     {
@@ -155,7 +207,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1540,
+        2060,
         420
       ],
       "parameters": {
@@ -169,7 +221,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "email_id": "={{ $json.email_id }}",
+            "email_id": "={{ $('Format output').item.json.email_id }}",
             "subject": "={{ $('Normalize').item.json.subject }}",
             "body": "={{ $('Normalize').item.json.body }}",
             "received_at": "={{ $('Normalize').item.json.received_at }}"
@@ -181,7 +233,7 @@
           "waitForSubWorkflow": false
         }
       },
-      "notes": "005-action-items, T3: second parallel branch off 'Inserted?'s true output, alongside 'Call Triage Pipeline' -- same guard (a genuinely new, non-duplicate insert), same non-blocking pattern (waitForSubWorkflow: false) so this new call can never affect this already-verified ingestion path. References the 'Action Extraction' sub-workflow BY NAME (cachedResultName) -- workflowId.value is left blank until action-extraction.json is imported and this node is re-pointed at it via n8n's resource picker. Passes received_at (Normalize's ISO timestamp) as the reference date Action Extraction needs to resolve relative deadlines.",
+      "notes": "005-action-items, T3: second parallel branch off 'Inserted?'s true output, alongside 'Call Triage Pipeline' -- same guard (a genuinely new, non-duplicate insert), same non-blocking pattern (waitForSubWorkflow: false) so this new call can never affect this already-verified ingestion path. References the 'Action Extraction' sub-workflow BY NAME (cachedResultName) -- workflowId.value is left blank until action-extraction.json is imported and this node is re-pointed at it via n8n's resource picker. Passes received_at (Normalize's ISO timestamp) as the reference date Action Extraction needs to resolve relative deadlines. 011-followups-contacts-api, T5: email_id now reads via the explicit $('Format output') reference instead of $json, since this node's immediate predecessor is now 'Insert thread_entries' rather than 'Format output' directly.",
       "notesInFlow": true
     }
   ],
@@ -234,6 +286,29 @@
       "main": [
         [
           {
+            "node": "Upsert contacts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Upsert contacts": {
+      "main": [
+        [
+          {
+            "node": "Insert thread_entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert thread_entries": {
+      "main": [
+        [
+          {
             "node": "Call Triage Pipeline",
             "type": "main",
             "index": 0
@@ -243,8 +318,7 @@
             "type": "main",
             "index": 0
           }
-        ],
-        []
+        ]
       ]
     }
   },
