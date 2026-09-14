@@ -1,0 +1,8 @@
+{
+  "change": "008-dashboard-api-foundation",
+  "phase": "build",
+  "branch": "",
+  "phases": {
+    "build": {"status":"done","at":"2026-09-14T06:35:46Z","tasks":{"done":10,"total":10,"failed":0}}
+  }
+}

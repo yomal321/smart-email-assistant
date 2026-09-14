@@ -1,0 +1,10 @@
+{
+  "tier": "deep",
+  "domains": ["data"],
+  "rationale": "Drops the tasks table's email_id constraint, requiring coordinated migration and workflow-fix deployment to avoid write failures; all four open questions are tuning-knob choices that don't change the file list.",
+  "signals": {
+    "blast_radius": "2 migrations, 2 n8n workflow edits, 8 new API routes, 2 provider rewires, 1 doc update",
+    "unresolved": "All four open questions are tuning choices (UI handling, computation location, manual-add path, existing-row nulls); none change the file list",
+    "irreversibility": "Migrations are git-reversible but constraint drop couples with a required workflow fix; once deployed with multi-task rows, constraint recreation requires data migration"
+  }
+}

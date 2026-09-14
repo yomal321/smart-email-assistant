@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAwaitingReply, getVolumeTrend } from "@/lib/data";
+import { getAwaitingReply } from "@/lib/data";
 import { useBoard } from "@/components/board/board-provider";
 import { useActionItems } from "@/components/board/action-items-provider";
 import { BalanceBand } from "@/components/station/balance-band";
@@ -11,10 +12,45 @@ import { VolumeTrend } from "@/components/charts/volume-trend";
 import { Button } from "@/components/ui/button";
 import { daysFromNow } from "@/lib/data/now";
 
+type VolumeDay = { day: string; received: number; handled: number };
+
 export default function OverviewPage() {
   const board = useBoard();
   const actionItems = useActionItems();
   const router = useRouter();
+
+  const [volumeTrend, setVolumeTrend] = useState<VolumeDay[] | null>(null);
+  const [volumeLoading, setVolumeLoading] = useState(true);
+  const [volumeError, setVolumeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function load() {
+      setVolumeLoading(true);
+      setVolumeError(null);
+      try {
+        const res = await fetch("/api/analytics/volume", { signal: controller.signal });
+        const body = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(
+            (body && typeof body.error === "string" && body.error) ||
+              `request failed with status ${res.status}`
+          );
+        }
+        setVolumeTrend(body as VolumeDay[]);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setVolumeError(err instanceof Error ? err.message : "failed to load volume trend");
+      } finally {
+        setVolumeLoading(false);
+      }
+    }
+
+    load();
+
+    return () => controller.abort();
+  }, []);
 
   const open = board.messages.filter((m) => m.status === "open" || m.status === "snoozed");
   const onBoard = open.filter((m) => !(m.ai === null || (m.ai && m.ai.confidence < 50)));
@@ -33,7 +69,6 @@ export default function OverviewPage() {
   const timeSavedMinutes = Math.round(handled.length * 4 + onBoard.length * 1.5);
 
   const priorityQueue = [...onBoard].sort((a, b) => (b.ai?.priorityScore ?? 0) - (a.ai?.priorityScore ?? 0)).slice(0, 8);
-  const volumeTrend = getVolumeTrend();
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -86,7 +121,13 @@ export default function OverviewPage() {
 
       <div className="px-4 py-5">
         <div className="card-surface p-3.5">
-          <VolumeTrend data={volumeTrend} />
+          {volumeLoading ? (
+            <p className="p-6 text-center text-sm text-ink-secondary">Loading volume trend…</p>
+          ) : volumeError ? (
+            <p className="p-6 text-center text-sm text-ink-secondary">Couldn&apos;t load volume trend: {volumeError}</p>
+          ) : (
+            <VolumeTrend data={volumeTrend ?? []} />
+          )}
         </div>
       </div>
 

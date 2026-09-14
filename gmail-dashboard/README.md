@@ -13,6 +13,19 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). All data is mock fixture data (see `lib/data/fixtures/`) — there is no live Gmail connection or LLM call in this prototype.
 
+## Local setup — logging in
+
+Every page and every `/api/**` route is guarded by `middleware.ts`, which redirects (or, for `/api/**`, returns `401`) to `/login` unless a valid session cookie is present. To reach the app locally:
+
+1. Copy `.env.local.example` to `.env.local` and fill in real values:
+   - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — from your Supabase project's API settings. Read only by `lib/supabase/server.ts`, which is server-only (`server-only` import) so the service-role key never reaches the browser.
+   - `SESSION_SECRET` — signs the session cookie (`lib/auth/session.ts`, HMAC-SHA256 via Web Crypto). Generate one with `openssl rand -base64 32`.
+   - `DASHBOARD_LOGIN_SECRET` — the single operator's login password, checked by `POST /api/auth/login`.
+2. Run `npm run dev`, open `/login`, and sign in with `DASHBOARD_LOGIN_SECRET`. On success the server sets an `httpOnly` session cookie (24h expiry) and you're redirected to `/`.
+3. `POST /api/auth/logout` clears the cookie. Ten wrong-password attempts within 5 minutes trips a 5-minute cooldown that rejects every login attempt, including correct ones.
+
+`GET /api/sync` is the one route currently backed by real data (`accounts` + `sync_outcomes` in Supabase) rather than fixtures — it powers the sync clock in the app shell and on `/settings`.
+
 ## What's here
 
 Ten modules, in the build order [PRODUCT.md](PRODUCT.md) records:

@@ -260,3 +260,125 @@ Two 'sweep'-style tasks (T13 responsive/dark-mode, T14 keyboard/contrast) each f
 Keep specifying 'do a real sweep, not just a read-through' with a concrete verification method for any future cross-cutting polish/audit task
 
 ---
+
+## [L18] design_gap — File gmail-dashboard/.gitignore was modified but not decl...
+
+**When:** 2026-09-14 06:36 UTC
+**Category:** design_gap
+**Priority:** medium
+**Status:** pending
+
+### Detail
+File gmail-dashboard/.gitignore was modified but not declared in T10's file list — needed to add '!.env.local.example' so the blanket '.env*' rule didn't silently block committing the new example file the task required.
+
+### Action
+When a task creates a file whose name matches an existing ignore pattern, declare the .gitignore edit explicitly in tasks.md rather than leaving it implicit.
+
+---
+
+## [L19] spec_gap — spec.md FR8 didn't specify how to derive SyncState.status...
+
+**When:** 2026-09-14 06:36 UTC
+**Category:** spec_gap
+**Priority:** low
+**Status:** pending
+
+### Detail
+spec.md FR8 didn't specify how to derive SyncState.status ('synced'/'syncing'/'failed'/'offline') from the accounts/sync_outcomes schema, which has no in-progress or status column at all. The build agent reasonably defaulted to 'synced' whenever an accounts row exists, documented inline.
+
+### Action
+Future specs for derived enum fields should either state the exact derivation rule or explicitly flag it as an open question for the build agent to surface, as this one implicitly did.
+
+---
+
+## [L20] design_gap — The new /login page (T6) renders inside the existing AppS...
+
+**When:** 2026-09-14 06:36 UTC
+**Category:** design_gap
+**Priority:** low
+**Status:** resolved (2026-09-14, commit a6a7d80) — `app/providers.tsx` now checks
+`usePathname() === "/login"` and skips `<AppShell>`, rendering the login
+form's children directly instead.
+
+### Detail
+The new /login page (T6) renders inside the existing AppShell (sidebar/nav) because app/layout.tsx wasn't in T6's file list, so an unauthenticated visitor sees the full dashboard chrome around the login form.
+
+### Action
+A follow-up task (or a note in the next phase's proposal) should decide whether /login needs a route-group layout override for a standalone screen, or whether this is acceptable for a single-operator tool.
+
+---
+
+## [L21] pattern — Passing large specclaw-build-context payloads (~3500 line...
+
+**When:** 2026-09-14 06:36 UTC
+**Category:** pattern
+**Priority:** medium
+**Status:** pending
+
+### Detail
+Passing large specclaw-build-context payloads (~3500 lines / ~90k tokens each) directly in an Agent tool prompt is wasteful and can silently fail if constructed via unexecuted shell substitution. Writing the context to a scratchpad file and instructing the subagent to Read it itself worked reliably and kept orchestrator context small.
+
+### Action
+Consider having specclaw-build-context write directly to a file path (or the build skill documenting the read-from-file dispatch pattern) rather than assuming the payload is always inlined into the prompt string.
+
+---
+
+## [L22] agent_issue — specclaw-build setup's base_branch auto-detect (empty str...
+
+**When:** 2026-09-14 07:01 UTC
+**Category:** agent_issue
+**Priority:** high
+**Status:** pending
+
+### Detail
+specclaw-build setup's base_branch auto-detect (empty string -> origin/HEAD first) forked specclaw/009-dashboard-messages-api off a stale origin/main (last pushed before 008's work), silently dropping all of Phase 0's files (lib/supabase/, middleware.ts, app/api/) from the new branch's working tree. Caught before any build agent ran by noticing app/providers.tsx had reverted to its pre-008 content.
+
+### Action
+Pinned git.base_branch: "main" explicitly in config.yaml rather than relying on auto-detect, since local main is ahead of origin/main and nothing currently pushes to keep them in sync. Reset the branch with 'git reset --hard main' (safe since it had zero unique commits yet). Consider pushing main to origin regularly, or teaching auto-detect to prefer local main over a stale origin/HEAD.
+
+---
+
+## [L23] spec_gap — spec.md's Overview said migration 0005 adds ~20 columns w...
+
+**When:** 2026-09-14 07:23 UTC
+**Category:** spec_gap
+**Priority:** low
+**Status:** pending
+
+### Detail
+spec.md's Overview said migration 0005 adds ~20 columns while FR1's own prose and design.md's SQL block both list 21 -- a trivial counting inconsistency in the spec text itself, not a functional gap. T1's build agent correctly followed design.md's literal SQL rather than guessing which column to omit.
+
+### Action
+When a spec states an approximate/round count alongside an exact enumerated list, prefer the exact list and don't bother reconciling the round number -- or just drop round-number counts from spec prose entirely to avoid this class of non-issue.
+
+---
+
+## [L24] best_practice — Designing one shared row-mapper module (message-mapping.t...
+
+**When:** 2026-09-14 07:23 UTC
+**Category:** best_practice
+**Priority:** medium
+**Status:** pending
+
+### Detail
+Designing one shared row-mapper module (message-mapping.ts, T3) that every read and mutation route reuses -- rather than inline-mapping DB rows to the Message shape per route -- meant T4/T5's six-plus routes all built cleanly in parallel against a stable, already-typed contract with zero drift in the placeholder logic (Contact synthesis, SLA defaults, null ai handling).
+
+### Action
+For any future phase with multiple routes returning the same view-model shape (e.g. tasks/drafts/contacts in Phases 2-3), plan a shared mapper module as its own early task before the routes that consume it -- same pattern as this phase's T3.
+
+---
+
+## [L25] pattern — Two parallel wave-3 agents (T4 and T5) independently hit ...
+
+**When:** 2026-09-14 07:23 UTC
+**Category:** pattern
+**Priority:** low
+**Status:** pending
+
+### Detail
+Two parallel wave-3 agents (T4 and T5) independently hit and independently fixed the same TypeScript quirk: supabase-js's untyped client returns a GenericStringError fallback type for string-built .select() calls, requiring an 'as unknown as EmailRow' double-cast instead of a direct 'as EmailRow'. Both agents converged on the identical fix without coordination, and a whole-project tsc --noEmit after the wave confirmed zero remaining errors.
+
+### Action
+When a shared client/type quirk is likely to recur across parallel tasks touching the same table (any future phase adding more routes over emails/tasks/drafts), consider noting the 'as unknown as X' cast convention once in the shared mapper module's own file comment, so future single-task agents don't have to rediscover it independently.
+
+---

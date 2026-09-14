@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "1143307534 6615",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "Establishes foundational security infrastructure (session auth, service-role key held server-side only) that resolves the project's critical architectural blocker and makes the API layer the trust boundary that all Phase 1-5 routes will depend on.",
+  "domains": ["security"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "fable"}
+  ],
+  "dropped": []
+}

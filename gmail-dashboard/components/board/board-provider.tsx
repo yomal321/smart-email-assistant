@@ -2,8 +2,42 @@
 
 import * as React from "react";
 import type { Message, Platform } from "@/lib/data";
-import { getMessages } from "@/lib/data";
 import { NOW } from "@/lib/data/now";
+
+// Fire-and-forget mutation helper: fires a T5 mutation route in the
+// background after the reducer has already applied the optimistic update
+// (spec FR10). Mirrors lib/data/use-sync-state.ts's response-parsing shape
+// (read body, surface `body.error` on failure) but does not gate any UI —
+// a failed background call is logged, not retried or rolled back.
+async function fireMutation(path: string, init: RequestInit): Promise<void> {
+  try {
+    const res = await fetch(path, init);
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(
+        (body && typeof body.error === "string" && body.error) || `request failed with status ${res.status}`
+      );
+    }
+  } catch (err) {
+    console.error(`[board-provider] ${path} failed`, err);
+  }
+}
+
+function postIds(path: string, payload: Record<string, unknown>): void {
+  void fireMutation(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+function patchMessage(path: string, payload: Record<string, unknown>): void {
+  void fireMutation(path, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
 
 interface UndoAction {
   id: string;
@@ -18,6 +52,7 @@ interface BoardState {
 }
 
 type BoardAction =
+  | { type: "hydrate"; messages: Message[] }
   | { type: "archive"; ids: string[] }
   | { type: "done"; ids: string[] }
   | { type: "snooze"; ids: string[]; until: string }
@@ -32,6 +67,8 @@ type BoardAction =
 
 function reducer(state: BoardState, action: BoardAction): BoardState {
   switch (action.type) {
+    case "hydrate":
+      return { ...state, messages: action.messages };
     case "archive":
       return {
         ...state,
@@ -135,12 +172,41 @@ const BoardContext = React.createContext<BoardContextValue | null>(null);
 
 export function BoardProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = React.useReducer(reducer, undefined, (): BoardState => ({
-    messages: getMessages(),
+    messages: [],
     selectedIds: new Set<string>(),
     vipOverrides: {},
   }));
   const [undoStack, setUndoStack] = React.useState<UndoAction[]>([]);
   const timers = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Fetch-on-mount, replacing the getMessages() fixture seed (spec FR10).
+  // Follows lib/data/use-sync-state.ts's established read-hook pattern:
+  // AbortController to cancel on unmount, parse body.error on failure.
+  // Called with no query params — matches what getMessages() returned
+  // (everything); filtering/sorting stays client-side (spec FR7).
+  React.useEffect(() => {
+    const controller = new AbortController();
+
+    async function load() {
+      try {
+        const res = await fetch("/api/messages", { signal: controller.signal });
+        const body = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(
+            (body && typeof body.error === "string" && body.error) || `request failed with status ${res.status}`
+          );
+        }
+        dispatch({ type: "hydrate", messages: body as Message[] });
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("[board-provider] failed to load messages", err);
+      }
+    }
+
+    load();
+
+    return () => controller.abort();
+  }, []);
 
   const pushUndo = React.useCallback((label: string, undo: () => void) => {
     const id = `undo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -168,27 +234,42 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     [undoStack, dismissUndo]
   );
 
+  // Shared by the `restore` action and by archive/markDone/snooze's undo
+  // callbacks below, so clicking undo also fires the real restore route
+  // (spec FR10) instead of only reverting local state.
+  const restore = (ids: string[]) => {
+    dispatch({ type: "restore", ids });
+    postIds("/api/messages/restore", { ids });
+  };
+
   const value: BoardContextValue = {
     messages: state.messages,
     selectedIds: state.selectedIds,
     isVip: (contactId, fallback) => state.vipOverrides[contactId] ?? fallback,
     archive: (ids) => {
       dispatch({ type: "archive", ids });
-      pushUndo(ids.length > 1 ? `${ids.length} archived` : "Archived", () => dispatch({ type: "restore", ids }));
+      pushUndo(ids.length > 1 ? `${ids.length} archived` : "Archived", () => restore(ids));
+      postIds("/api/messages/archive", { ids });
     },
     markDone: (ids) => {
       dispatch({ type: "done", ids });
-      pushUndo(ids.length > 1 ? `${ids.length} marked done` : "Marked done", () =>
-        dispatch({ type: "restore", ids })
-      );
+      pushUndo(ids.length > 1 ? `${ids.length} marked done` : "Marked done", () => restore(ids));
+      postIds("/api/messages/done", { ids });
     },
     snooze: (ids, until) => {
       dispatch({ type: "snooze", ids, until });
-      pushUndo(ids.length > 1 ? `${ids.length} snoozed` : "Snoozed", () => dispatch({ type: "restore", ids }));
+      pushUndo(ids.length > 1 ? `${ids.length} snoozed` : "Snoozed", () => restore(ids));
+      postIds("/api/messages/snooze", { ids, until });
     },
-    restore: (ids) => dispatch({ type: "restore", ids }),
-    reassign: (id, platform) => dispatch({ type: "reassign", id, platform }),
-    toggleStar: (id, value) => dispatch({ type: "star", id, value }),
+    restore,
+    reassign: (id, platform) => {
+      dispatch({ type: "reassign", id, platform });
+      patchMessage(`/api/messages/${id}/platform`, { platform });
+    },
+    toggleStar: (id, value) => {
+      dispatch({ type: "star", id, value });
+      patchMessage(`/api/messages/${id}/star`, { value });
+    },
     toggleVip: (contactId) => dispatch({ type: "toggleVip", contactId }),
     toggleSelect: (id) => dispatch({ type: "select", id }),
     clearSelection: () => dispatch({ type: "clearSelection" }),
