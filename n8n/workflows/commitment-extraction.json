@@ -1,0 +1,396 @@
+{
+  "name": "Commitment Extraction",
+  "nodes": [
+    {
+      "id": "c1a2b3c4-0001-4a1a-9c1a-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "email_id",
+              "type": "string"
+            },
+            {
+              "name": "subject",
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "type": "string"
+            },
+            {
+              "name": "received_at",
+              "type": "string"
+            },
+            {
+              "name": "is_from_user",
+              "type": "boolean"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "participants",
+              "type": "object"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c1a2b3c4-0002-4a1a-9c1a-000000000002",
+      "name": "Build extraction prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Field minimization: only subject + a truncated plain-text body + received_at\n// ever leave this workflow toward LLM Gateway (same convention as Action\n// Extraction's 'Build extraction prompt'). email_id/account_id/participants/\n// is_from_user are carried forward in THIS node's own output json (rather\n// than via $('Execute Workflow Trigger') back-references) so later nodes can\n// read them without re-resolving the trigger -- picked as the simpler of the\n// two allowed conventions, and used consistently by every node below.\nconst input = $json || {};\nconst emailId = input.email_id;\nconst accountId = input.account_id;\nconst participants = input.participants;\nconst isFromUser = input.is_from_user === true;\n\n// Malformed input (null/missing subject, body, or received_at) must never\n// throw here (mirrors Action Extraction's own field-minimization node).\nconst subject = input.subject === null || input.subject === undefined ? '' : String(input.subject);\nconst bodyRaw = input.body === null || input.body === undefined ? '' : String(input.body);\nconst receivedAt = input.received_at === null || input.received_at === undefined ? '' : String(input.received_at);\nconst truncatedBody = bodyRaw.slice(0, 2000);\n\nconst directionContext = isFromUser\n  ? 'This email was SENT by the account owner.'\n  : 'This email was RECEIVED by the account owner.';\n\nconst systemPrompt = 'You are an email commitment-detection assistant. Read the email and decide whether it contains AT MOST ONE promise-like commitment -- someone explicitly committing to do something for the other party. There are two possible directions: \"you-promised\" (the account owner is the one making the promise) and \"promised-to-you\" (the other party is the one making the promise, i.e. a promise made TO the account owner). ' + directionContext + ' Use that fact together with who is actually making the promise in the email text to resolve direction -- do not assume direction from sender alone (a sent email can relay or quote the other party\\'s promise, and a received email can restate the account owner\\'s own prior promise). If a commitment is found, set has_commitment to true, direction to exactly \"you-promised\" or \"promised-to-you\", text to a short paraphrase of the commitment, trigger_sentence to the EXACT verbatim sentence copied from the email body that the detection is based on (it must be a literal substring of the body below, not paraphrased or reworded in any way), confidence to an integer from 0 to 100, and optionally due_date in YYYY-MM-DD format. Today\\'s date / the email\\'s reference date is ' + receivedAt + '. Only include due_date if a date for the commitment is clearly and confidently stated in the email, or unambiguously implied relative to the reference date above (for example \"by Friday\") -- resolve any such relative date against the reference date, do not invent one. If you cannot produce a confident due_date in YYYY-MM-DD format, omit the field entirely rather than guess. If no commitment is found, set has_commitment to false and omit every other field entirely. Respond only with JSON matching the given schema.';\n\nconst userContent = `Email received: ${receivedAt}\\n\\nSubject: ${subject}\\n\\nBody:\\n${truncatedBody}`;\n\n// direction/text/trigger_sentence are constrained to plain strings;\n// due_date is pinned to YYYY-MM-DD via pattern as defense-in-depth (the\n// actual enforcement point is 'Validate extraction result' below, not this\n// schema) -- same convention Action Extraction's prompt builder uses for\n// its own deadline field.\nconst responseSchema = {\n  type: 'object',\n  properties: {\n    has_commitment: {\n      type: 'boolean',\n    },\n    direction: {\n      type: 'string',\n      enum: ['you-promised', 'promised-to-you'],\n    },\n    text: {\n      type: 'string',\n    },\n    trigger_sentence: {\n      type: 'string',\n    },\n    confidence: {\n      type: 'integer',\n    },\n    due_date: {\n      type: 'string',\n      pattern: '^\\\\d{4}-\\\\d{2}-\\\\d{2}$',\n    },\n  },\n  required: ['has_commitment'],\n};\n\nreturn {\n  json: {\n    email_id: emailId,\n    account_id: accountId,\n    participants: participants,\n    is_from_user: isFromUser,\n    system_prompt: systemPrompt,\n    user_content: userContent,\n    response_schema: responseSchema,\n  },\n};\n"
+      }
+    },
+    {
+      "id": "c1a2b3c4-0003-4a1a-9c1a-000000000003",
+      "name": "Call LLM Gateway",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "LLM Gateway"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "system_prompt": "={{ $json.system_prompt }}",
+            "user_content": "={{ $json.user_content }}",
+            "response_schema": "={{ $json.response_schema }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "notes": "References the 'LLM Gateway' sub-workflow BY NAME (cachedResultName), same placeholder pattern Action Extraction's and Triage Pipeline's 'Call LLM Gateway' nodes use -- workflowId.value is left blank since no live n8n instance/workflow ID exists yet. Once llm-gateway.json is imported, re-point this node at the real workflow via the resource picker. Passes { system_prompt, user_content, response_schema } per LLM Gateway's generic contract -- this node's own JSON shape is otherwise unmodified from llm-gateway.json's contract.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c1a2b3c4-0004-4a1a-9c1a-000000000004",
+      "name": "Validate extraction result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Never throws unhandled (same convention as Action Extraction's 'Validate\n// extraction result') -- any unexpected error still produces an { outcome:\n// 'error', ... } item that routes to the error branch.\ntry {\n  const gatewayResult = $json || {};\n\n  // .first() rather than .item: with multiple items in flight, .item cannot\n  // resolve a single unambiguous upstream match and n8n throws 'Multiple\n  // matches' -- same convention Action Extraction's 'Validate extraction\n  // result' uses (fixed this way after 004-triage hit the bug live).\n  let emailId = null;\n  let accountId = null;\n  let participants = null;\n  let isFromUser = null;\n  try {\n    const built = $('Build extraction prompt').first().json;\n    emailId = built.email_id;\n    accountId = built.account_id;\n    participants = built.participants;\n    isFromUser = built.is_from_user;\n  } catch (refErr) {\n    emailId = null;\n  }\n\n  if (!gatewayResult.success) {\n    const message = gatewayResult.error || 'LLM Gateway call failed';\n    return { json: { outcome: 'error', email_id: emailId, error: String(message) } };\n  }\n\n  const data = gatewayResult.data || {};\n\n  // No commitment found is the common, successful case -- no write at all,\n  // not an error (mirrors Action Extraction's has_task:false handling).\n  if (!data.has_commitment) {\n    return { json: { outcome: 'none', email_id: emailId } };\n  }\n\n  const direction = data.direction;\n  if (direction !== 'you-promised' && direction !== 'promised-to-you') {\n    return {\n      json: {\n        outcome: 'error',\n        email_id: emailId,\n        error: `direction '${direction}' is not a recognized value`,\n      },\n    };\n  }\n\n  const text = data.text;\n  if (typeof text !== 'string' || text.trim().length === 0) {\n    return {\n      json: {\n        outcome: 'error',\n        email_id: emailId,\n        error: 'has_commitment true but text missing/empty',\n      },\n    };\n  }\n\n  const triggerSentence = data.trigger_sentence;\n  if (typeof triggerSentence !== 'string' || triggerSentence.trim().length === 0) {\n    return {\n      json: {\n        outcome: 'error',\n        email_id: emailId,\n        error: 'has_commitment true but trigger_sentence missing/empty',\n      },\n    };\n  }\n\n  const confidence = data.confidence;\n  if (typeof confidence !== 'number' || Number.isNaN(confidence)) {\n    return {\n      json: {\n        outcome: 'error',\n        email_id: emailId,\n        error: `confidence '${confidence}' is not a number`,\n      },\n    };\n  }\n\n  const dueDate = data.due_date;\n  const hasDueDate = dueDate !== undefined && dueDate !== null && dueDate !== '';\n\n  if (hasDueDate) {\n    if (typeof dueDate !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)) {\n      return {\n        json: {\n          outcome: 'error',\n          email_id: emailId,\n          error: `due_date '${dueDate}' does not match YYYY-MM-DD`,\n        },\n      };\n    }\n  }\n\n  return {\n    json: {\n      outcome: 'commitment',\n      email_id: emailId,\n      account_id: accountId,\n      participants: participants,\n      is_from_user: isFromUser,\n      direction,\n      text,\n      trigger_sentence: triggerSentence,\n      due_date: hasDueDate ? dueDate : null,\n      confidence,\n    },\n  };\n} catch (err) {\n  let emailId = null;\n  try {\n    emailId = $('Build extraction prompt').first().json.email_id;\n  } catch (refErr) {\n    emailId = null;\n  }\n  return {\n    json: {\n      outcome: 'error',\n      email_id: emailId,\n      error: (err && err.message) || 'Unknown Commitment Extraction error',\n    },\n  };\n}\n"
+      }
+    },
+    {
+      "id": "c1a2b3c4-0005-4a1a-9c1a-000000000005",
+      "name": "Outcome?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1280,
+        300
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "c1a2b3c4-cond-1",
+                    "leftValue": "={{ $json.outcome }}",
+                    "rightValue": "commitment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "commitment"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "c1a2b3c4-cond-2",
+                    "leftValue": "={{ $json.outcome }}",
+                    "rightValue": "none",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "none"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "c1a2b3c4-cond-3",
+                    "leftValue": "={{ $json.outcome }}",
+                    "rightValue": "error",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "error"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c1a2b3c4-0006-4a1a-9c1a-000000000006",
+      "name": "Resolve counterparty email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Never throws -- a missing/malformed participants value produces\n// counterparty_email: null rather than blocking the write (spec Edge Cases:\n// a commitment with no resolvable counterparty still gets written, with\n// counterparty_id resolved to null by 'Write commitment''s subquery).\nconst input = $json || {};\n\n// participants may arrive as a native array (declared object-shaped input)\n// or, if it crossed a boundary that serialized it, as a JSON string --\n// accept either, same defensive parsing convention Email Normaliser's\n// 'Normalize' node uses for its own object-shaped inputs.\nfunction asArray(value) {\n  if (Array.isArray(value)) return value;\n  if (typeof value === 'string') {\n    try {\n      const parsed = JSON.parse(value);\n      return Array.isArray(parsed) ? parsed : [];\n    } catch (e) {\n      return [];\n    }\n  }\n  return [];\n}\n\nconst participants = asArray(input.participants);\nconst isFromUser = input.is_from_user === true;\n\nfunction firstAddressForRole(role) {\n  const match = participants.find((p) => p && p.role === role && p.address);\n  return match ? match.address : null;\n}\n\n// is_from_user true: counterparty is the first 'to' participant, falling\n// back to the first 'cc' participant if there is no 'to' entry.\n// is_from_user false: counterparty is the 'from' participant.\nlet counterpartyEmail = null;\nif (isFromUser) {\n  counterpartyEmail = firstAddressForRole('to') || firstAddressForRole('cc');\n} else {\n  counterpartyEmail = firstAddressForRole('from');\n}\n\nreturn { json: { ...input, counterparty_email: counterpartyEmail } };\n"
+      }
+    },
+    {
+      "id": "c1a2b3c4-0007-4a1a-9c1a-000000000007",
+      "name": "Write commitment",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1800,
+        120
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO commitments (email_id, direction, text, trigger_sentence, counterparty_id, due_date, status, confidence)\nVALUES (\n  $1, $2, $3, $4,\n  (SELECT id FROM contacts WHERE account_id = $5 AND email = $6),\n  $7, 'open', $8\n);",
+        "options": {
+          "queryReplacement": "={{ [$json.email_id, $json.direction, $json.text, $json.trigger_sentence, $json.account_id, $json.counterparty_email, $json.due_date, $json.confidence] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "The scalar subquery resolves counterparty_id to NULL when no matching contacts row exists (account_id + email match fails) rather than failing the INSERT -- matches this repo's 'fall back rather than throw' convention (see Resolve counterparty email's and Validate extraction result's notes). Commitments are always written even when the counterparty can't be resolved yet (counterparty_email null, or no matching contacts row): the subquery degrades to NULL, it never raises. Reuses the same 'Supabase Postgres' credential (same name + placeholder id) Action Extraction's 'Write task' and Email Normaliser's 'Upsert email' node use, per this repo's shared-credential convention.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c1a2b3c4-0008-4a1a-9c1a-000000000008",
+      "name": "Format commitment output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// .first() rather than .item -- see 'Validate extraction result' node's\n// note: .item cannot resolve a single unambiguous upstream match when\n// multiple items are in flight.\nconst emailId = $('Validate extraction result').first().json.email_id;\nreturn { json: { email_id: emailId, extracted: true } };\n"
+      }
+    },
+    {
+      "id": "c1a2b3c4-0009-4a1a-9c1a-000000000009",
+      "name": "No commitment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// No commitment found -- no DB write at all, just a minimal output.\n// .first() rather than .item -- see 'Validate extraction result' node's note.\nconst emailId = $('Validate extraction result').first().json.email_id;\nreturn { json: { email_id: emailId, extracted: false } };\n"
+      }
+    },
+    {
+      "id": "c1a2b3c4-000a-4a1a-9c1a-00000000000a",
+      "name": "Format error output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// No error-logging DB write this phase: unlike Action Extraction (which has\n// an 'action_extraction_error' column to write to) there is no\n// 'commitment_extraction_error' column on emails, and adding one is a schema\n// change out of scope for this task -- see Sticky Note. This node simply\n// formats the error outcome for the caller instead of a Postgres write.\n// .first() rather than .item -- see 'Validate extraction result' node's note.\nconst emailId = $('Validate extraction result').first().json.email_id;\nreturn { json: { email_id: emailId, extracted: false } };\n"
+      }
+    },
+    {
+      "id": "c1a2b3c4-000b-4a1a-9c1a-00000000000b",
+      "name": "Sticky Note - placeholders",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        560
+      ],
+      "parameters": {
+        "content": "### Placeholders to fill in on import\n\n- **Supabase Postgres** credential (name 'Supabase Postgres', placeholder id REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID) -- reuse the same credential Action Extraction's 'Write task', Triage Pipeline's write nodes, and Email Normaliser's 'Upsert email' node already hold, do not create a new one.\n- 'Call LLM Gateway' targets the 'LLM Gateway' sub-workflow by name only (workflowId.value is blank) -- re-point it at the real workflow via the resource picker once llm-gateway.json is imported.\n- This workflow is called NON-BLOCKING (waitForSubWorkflow: false) by Email Normaliser's (future) 'Call Commitment Extraction' branch with { email_id, subject, body, received_at, is_from_user, account_id, participants } -- received_at must match the ISO timestamp shape Email Normaliser's 'Normalize' node produces, and participants must match the { role, name, address }[] shape that same node produces (this workflow accepts it either as a native array/object or, defensively, as a JSON string).\n- Deliberately NO error-logging database write this phase: there is no 'commitment_extraction_error' column on emails (action_extraction_error/triage_error are extraction-specific to other workflows), and adding one is a schema change out of scope for this task -- 'Format error output' just formats { email_id, extracted: false } for the caller instead of writing anywhere.\n- No pinData is included here by design -- pin mock data directly on nodes in the n8n editor when testing.",
+        "height": 340,
+        "width": 520,
+        "color": 7
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build extraction prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build extraction prompt": {
+      "main": [
+        [
+          {
+            "node": "Call LLM Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call LLM Gateway": {
+      "main": [
+        [
+          {
+            "node": "Validate extraction result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate extraction result": {
+      "main": [
+        [
+          {
+            "node": "Outcome?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outcome?": {
+      "main": [
+        [
+          {
+            "node": "Resolve counterparty email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No commitment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format error output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve counterparty email": {
+      "main": [
+        [
+          {
+            "node": "Write commitment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write commitment": {
+      "main": [
+        [
+          {
+            "node": "Format commitment output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}
