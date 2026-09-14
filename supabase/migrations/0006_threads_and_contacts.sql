@@ -33,6 +33,9 @@ create table contact_tone_history (
   primary key (contact_id, month)
 );
 
+-- Joins on the 'address' key, matching the shape email-normaliser.json's
+-- Normalize node actually writes into emails.participants ({role, name,
+-- address} per element) -- not 'email', which no participant object uses.
 create view contact_aggregates as
   select
     c.id as contact_id,
@@ -40,7 +43,7 @@ create view contact_aggregates as
     max(e.received_at) as last_contact_at
   from contacts c
   left join emails e
-    on e.participants @> jsonb_build_array(jsonb_build_object('email', c.email))
+    on e.participants @> jsonb_build_array(jsonb_build_object('address', c.email))
   group by c.id;
 -- yourAvgReplyHours / openThreadIds are computed in contact-mapping.ts (a later
 -- task), not here — reply-pairing logic doesn't belong in a group-by view.
