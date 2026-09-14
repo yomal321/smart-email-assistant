@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { Star } from "lucide-react";
-import { getContacts, getMessages, type Contact, type Tone } from "@/lib/data";
+import { type Contact, type Tone } from "@/lib/data";
 import { useBoard } from "@/components/board/board-provider";
+import { useContacts } from "@/components/board/contacts-provider";
 import { InitialsAvatar } from "@/components/station/initials-avatar";
 import { formatFullDateTime } from "@/lib/format/relative-time";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,12 +18,11 @@ const TONE_COLOR: Record<Tone, string> = {
 };
 
 export default function ContactsPage() {
-  const board = useBoard();
+  const messages = useBoard().messages;
+  const { contacts, isLoading, setVip } = useContacts();
   const [sort, setSort] = React.useState<SortKey>("messages");
   const [groupByDomain, setGroupByDomain] = React.useState(false);
   const [selected, setSelected] = React.useState<Contact | null>(null);
-  const contacts = getContacts();
-  const messages = getMessages();
 
   const sorted = [...contacts].sort((a, b) => {
     switch (sort) {
@@ -62,7 +62,9 @@ export default function ContactsPage() {
         </label>
       </div>
 
-      {groups.map(([domain, list]) => (
+      {isLoading && <p className="px-4 py-3 text-sm text-ink-secondary">Loading contacts…</p>}
+
+      {!isLoading && groups.map(([domain, list]) => (
         <div key={domain}>
           {groupByDomain && (
             <div className="rule-b bg-surface px-4 py-1.5 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">
@@ -85,7 +87,7 @@ export default function ContactsPage() {
               </thead>
               <tbody>
                 {list.map((c) => {
-                  const isVip = board.isVip(c.id, c.isVip);
+                  const isVip = c.isVip;
                   return (
                     <tr key={c.id} className="rule-b cursor-pointer hover:bg-surface" onClick={() => setSelected(c)}>
                       <td className="px-4 py-2">
@@ -105,7 +107,7 @@ export default function ContactsPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            board.toggleVip(c.id);
+                            setVip(c.id, !c.isVip);
                           }}
                           aria-label={isVip ? "Remove VIP" : "Mark VIP"}
                           className="inline-flex"

@@ -38,7 +38,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "// Maps a raw Gmail messages.get payload to the normalized `emails` row shape.\n// Input item: { account_id, raw_message }\n// Output item: { account_id, provider, provider_message_id, thread_id, participants, subject, body, raw_payload, labels, received_at }\n\nfunction decodeBase64Url(data) {\n  if (!data) return '';\n  const normalized = data.replace(/-/g, '+').replace(/_/g, '/');\n  return Buffer.from(normalized, 'base64').toString('utf-8');\n}\n\n// Splits a header like \"Name <a@b.com>, other@b.com\" into address parts.\n// Simple comma split is sufficient here: quoted display names containing\n// commas are not expected in this pipeline's inputs (out of scope, per task).\nfunction parseAddressList(headerValue, role) {\n  if (!headerValue) return [];\n  return headerValue\n    .split(',')\n    .map((part) => part.trim())\n    .filter(Boolean)\n    .map((part) => {\n      const match = part.match(/^(.*)<(.+)>$/);\n      if (match) {\n        const name = match[1].trim().replace(/^\"|\"$/g, '');\n        const address = match[2].trim();\n        return { role, name: name || null, address };\n      }\n      return { role, name: null, address: part };\n    });\n}\n\nfunction getHeader(headers, headerName) {\n  const found = (headers || []).find(\n    (h) => (h.name || '').toLowerCase() === headerName.toLowerCase()\n  );\n  return found ? found.value : null;\n}\n\n// Depth-first search for the first part matching a MIME type (handles\n// both flat multipart/alternative and nested multipart structures).\nfunction findPartByMimeType(parts, mimeType) {\n  if (!parts) return null;\n  for (const part of parts) {\n    if (part.mimeType === mimeType && part.body && part.body.data) {\n      return part;\n    }\n    if (part.parts) {\n      const nested = findPartByMimeType(part.parts, mimeType);\n      if (nested) return nested;\n    }\n  }\n  return null;\n}\n\n// --- Input resolution ------------------------------------------------------\n// n8n versions differ in how a sub-workflow's declared inputs reach a Code\n// node ($json vs $input.item.json - pairedItem metadata does not always\n// survive crossing the execution boundary), and an \"Object\" input can arrive\n// serialised as a JSON string. Accept every one of those shapes, and fall\n// back to the item itself being the raw Gmail message (unwrapped passthrough).\nconst input =\n  $json && Object.keys($json).length\n    ? $json\n    : ($input.item && $input.item.json) || {};\n\nfunction asObject(value) {\n  if (!value) return null;\n  if (typeof value === 'string') {\n    try {\n      return JSON.parse(value);\n    } catch (e) {\n      return null;\n    }\n  }\n  return typeof value === 'object' ? value : null;\n}\n\nlet rawMessage = asObject(input.raw_message);\nconst accountId = input.account_id;\n\nif (!rawMessage && input.payload) {\n  rawMessage = input;\n}\n\nif (!rawMessage) {\n  throw new Error(\n    'Email Normaliser: no usable raw_message. Top-level keys received: ' +\n      JSON.stringify(Object.keys(input))\n  );\n}\n\nconst payload = rawMessage.payload || {};\nconst headers = payload.headers || [];\n\nconst fromHeader = getHeader(headers, 'From');\nconst toHeader = getHeader(headers, 'To');\nconst ccHeader = getHeader(headers, 'Cc');\n\nconst participants = [\n  ...parseAddressList(fromHeader, 'from'),\n  ...parseAddressList(toHeader, 'to'),\n  ...parseAddressList(ccHeader, 'cc'),\n];\n\nconst subject = getHeader(headers, 'Subject');\n\n// Prefer text/plain. Fall back to text/html as-is (no HTML stripping - out\n// of scope). Fall back to a non-multipart message's top-level body last.\nlet body = '';\nconst plainPart = findPartByMimeType(payload.parts, 'text/plain');\nif (plainPart) {\n  body = decodeBase64Url(plainPart.body.data);\n} else {\n  const htmlPart = findPartByMimeType(payload.parts, 'text/html');\n  if (htmlPart) {\n    body = decodeBase64Url(htmlPart.body.data);\n  } else if (payload.body && payload.body.data) {\n    body = decodeBase64Url(payload.body.data);\n  }\n}\n\nconst receivedAt = rawMessage.internalDate\n  ? new Date(Number(rawMessage.internalDate)).toISOString()\n  : null;\n\nreturn {\n  json: {\n    account_id: accountId,\n    provider: 'gmail',\n    provider_message_id: rawMessage.id,\n    thread_id: rawMessage.threadId || null,\n    participants,\n    subject: subject || null,\n    body: body || null,\n    raw_payload: rawMessage,\n    labels: rawMessage.labelIds || [],\n    received_at: receivedAt,\n  },\n};\n"
+        "jsCode": "// Maps a raw Gmail messages.get payload to the normalized `emails` row shape.\n// Input item: { account_id, raw_message }\n// Output item: { account_id, provider, provider_message_id, thread_id, participants, subject, body, raw_payload, labels, received_at }\n\nfunction decodeBase64Url(data) {\n  if (!data) return '';\n  const normalized = data.replace(/-/g, '+').replace(/_/g, '/');\n  return Buffer.from(normalized, 'base64').toString('utf-8');\n}\n\n// Splits a header like \"Name <a@b.com>, other@b.com\" into address parts.\n// Simple comma split is sufficient here: quoted display names containing\n// commas are not expected in this pipeline's inputs (out of scope, per task).\nfunction parseAddressList(headerValue, role) {\n  if (!headerValue) return [];\n  return headerValue\n    .split(',')\n    .map((part) => part.trim())\n    .filter(Boolean)\n    .map((part) => {\n      const match = part.match(/^(.*)<(.+)>$/);\n      if (match) {\n        const name = match[1].trim().replace(/^\"|\"$/g, '');\n        const address = match[2].trim();\n        return { role, name: name || null, address };\n      }\n      return { role, name: null, address: part };\n    });\n}\n\nfunction getHeader(headers, headerName) {\n  const found = (headers || []).find(\n    (h) => (h.name || '').toLowerCase() === headerName.toLowerCase()\n  );\n  return found ? found.value : null;\n}\n\n// Depth-first search for the first part matching a MIME type (handles\n// both flat multipart/alternative and nested multipart structures).\nfunction findPartByMimeType(parts, mimeType) {\n  if (!parts) return null;\n  for (const part of parts) {\n    if (part.mimeType === mimeType && part.body && part.body.data) {\n      return part;\n    }\n    if (part.parts) {\n      const nested = findPartByMimeType(part.parts, mimeType);\n      if (nested) return nested;\n    }\n  }\n  return null;\n}\n\n// --- Input resolution ------------------------------------------------------\n// n8n versions differ in how a sub-workflow's declared inputs reach a Code\n// node ($json vs $input.item.json - pairedItem metadata does not always\n// survive crossing the execution boundary), and an \"Object\" input can arrive\n// serialised as a JSON string. Accept every one of those shapes, and fall\n// back to the item itself being the raw Gmail message (unwrapped passthrough).\nconst input =\n  $json && Object.keys($json).length\n    ? $json\n    : ($input.item && $input.item.json) || {};\n\nfunction asObject(value) {\n  if (!value) return null;\n  if (typeof value === 'string') {\n    try {\n      return JSON.parse(value);\n    } catch (e) {\n      return null;\n    }\n  }\n  return typeof value === 'object' ? value : null;\n}\n\nlet rawMessage = asObject(input.raw_message);\nconst accountId = input.account_id;\n\nif (!rawMessage && input.payload) {\n  rawMessage = input;\n}\n\nif (!rawMessage) {\n  throw new Error(\n    'Email Normaliser: no usable raw_message. Top-level keys received: ' +\n      JSON.stringify(Object.keys(input))\n  );\n}\n\nconst payload = rawMessage.payload || {};\nconst headers = payload.headers || [];\n\nconst fromHeader = getHeader(headers, 'From');\nconst toHeader = getHeader(headers, 'To');\nconst ccHeader = getHeader(headers, 'Cc');\n\nconst participants = [\n  ...parseAddressList(fromHeader, 'from'),\n  ...parseAddressList(toHeader, 'to'),\n  ...parseAddressList(ccHeader, 'cc'),\n];\n\nconst subject = getHeader(headers, 'Subject');\n\n// Prefer text/plain. Fall back to text/html as-is (no HTML stripping - out\n// of scope). Fall back to a non-multipart message's top-level body last.\nlet body = '';\nconst plainPart = findPartByMimeType(payload.parts, 'text/plain');\nif (plainPart) {\n  body = decodeBase64Url(plainPart.body.data);\n} else {\n  const htmlPart = findPartByMimeType(payload.parts, 'text/html');\n  if (htmlPart) {\n    body = decodeBase64Url(htmlPart.body.data);\n  } else if (payload.body && payload.body.data) {\n    body = decodeBase64Url(payload.body.data);\n  }\n}\n\nconst receivedAt = rawMessage.internalDate\n  ? new Date(Number(rawMessage.internalDate)).toISOString()\n  : null;\n\nreturn {\n  json: {\n    account_id: accountId,\n    provider: 'gmail',\n    provider_message_id: rawMessage.id,\n    thread_id: rawMessage.threadId || null,\n    participants,\n    subject: subject || null,\n    body: body || null,\n    raw_payload: rawMessage,\n    labels: rawMessage.labelIds || [],\n    is_from_user: (rawMessage.labelIds || []).includes('SENT'),\n    received_at: receivedAt,\n  },\n};\n"
       }
     },
     {
@@ -53,9 +53,9 @@
       "alwaysOutputData": true,
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO emails (account_id, provider, provider_message_id, thread_id, participants, subject, body, raw_payload, labels, received_at)\nVALUES ($1, 'gmail', $2, $3, $4, $5, $6, $7, $8, $9)\nON CONFLICT (account_id, provider, provider_message_id) DO NOTHING\nRETURNING id;",
+        "query": "INSERT INTO emails (account_id, provider, provider_message_id, thread_id, participants, subject, body, raw_payload, labels, received_at, is_from_user)\nVALUES ($1, 'gmail', $2, $3, $4, $5, $6, $7, $8, $9, $10)\nON CONFLICT (account_id, provider, provider_message_id) DO NOTHING\nRETURNING id;",
         "options": {
-          "queryReplacement": "={{ [$json.account_id, $json.provider_message_id, $json.thread_id, JSON.stringify($json.participants), $json.subject, $json.body, JSON.stringify($json.raw_payload), JSON.stringify($json.labels), $json.received_at] }}"
+          "queryReplacement": "={{ [$json.account_id, $json.provider_message_id, $json.thread_id, JSON.stringify($json.participants), $json.subject, $json.body, JSON.stringify($json.raw_payload), JSON.stringify($json.labels), $json.received_at, $json.is_from_user] }}"
         }
       },
       "credentials": {
@@ -116,12 +116,64 @@
       "notesInFlow": true
     },
     {
+      "id": "a1b2c3d4-0008-4a1a-9c1a-000000000008",
+      "name": "Upsert contacts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1540,
+        300
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO contacts (account_id, name, email, domain, is_vip)\nSELECT\n  $1,\n  p->>'name',\n  p->>'address',\n  split_part(p->>'address', '@', 2),\n  false\nFROM jsonb_array_elements($2::jsonb) AS p\nWHERE NOT ($3 AND p->>'role' = 'from')\nON CONFLICT (account_id, email) DO UPDATE SET name = COALESCE(EXCLUDED.name, contacts.name);",
+        "options": {
+          "queryReplacement": "={{ [$('Normalize').item.json.account_id, JSON.stringify($('Normalize').item.json.participants), $('Normalize').item.json.is_from_user] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "011-followups-contacts-api, T5: runs after 'Inserted?'s true output (a genuinely new email only), before 'Insert thread_entries' and the fan-out to Triage Pipeline / Action Extraction. Upserts a contacts row per participant, keyed on (account_id, email); is_vip is never touched by the ON CONFLICT update so a dashboard-set VIP flag is never reverted by a later inbound email. $3 (is_from_user) excludes the 'from' participant when this email is one the account owner sent, since that participant IS the owner -- every other participant (to/cc, and every participant on an inbound email) is upserted.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a1b2c3d4-0009-4a1a-9c1a-000000000009",
+      "name": "Insert thread_entries",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1800,
+        300
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO thread_entries (email_id, author_is_you, author_name, at, gist)\nVALUES ($1, $2, $3, $4, $5);",
+        "options": {
+          "queryReplacement": "={{ [$('Format output').item.json.email_id, $('Normalize').item.json.is_from_user, ($('Normalize').item.json.participants.find(p => p.role === 'from') || {}).name || ($('Normalize').item.json.participants.find(p => p.role === 'from') || {}).address || 'unknown', $('Normalize').item.json.received_at, ($('Normalize').item.json.body || '').trim().length > 200 ? ($('Normalize').item.json.body || '').trim().slice(0, 200) + '…' : ($('Normalize').item.json.body || '').trim()] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "011-followups-contacts-api, T5: runs sequentially after 'Upsert contacts', before the fan-out to Triage Pipeline / Action Extraction. Records this email as a thread_entries row (author, timestamp, a gist truncated to 200 chars) for the followups feature. email_id is read via the explicit $('Format output') cross-node reference rather than $json, because this node's immediate predecessor ('Upsert contacts') is an INSERT with no RETURNING clause and its output does not carry email_id.",
+      "notesInFlow": true
+    },
+    {
       "id": "a1b2c3d4-0006-4a1a-9c1a-000000000006",
       "name": "Call Triage Pipeline",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1540,
+        2060,
         180
       ],
       "parameters": {
@@ -135,7 +187,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "email_id": "={{ $json.email_id }}",
+            "email_id": "={{ $('Format output').item.json.email_id }}",
             "subject": "={{ $('Normalize').item.json.subject }}",
             "body": "={{ $('Normalize').item.json.body }}"
           },
@@ -146,7 +198,7 @@
           "waitForSubWorkflow": false
         }
       },
-      "notes": "004-triage FR2/NFR2: fires Triage Pipeline non-blocking (waitForSubWorkflow: false) so Gemini's latency/availability can never affect this already-verified ingestion path (002-ingestion AC1-AC5). References the 'Triage Pipeline' sub-workflow BY NAME (cachedResultName), same placeholder pattern this file's own callers already use -- workflowId.value is left blank until triage-pipeline.json is imported and this node is re-pointed at it via n8n's resource picker.",
+      "notes": "004-triage FR2/NFR2: fires Triage Pipeline non-blocking (waitForSubWorkflow: false) so Gemini's latency/availability can never affect this already-verified ingestion path (002-ingestion AC1-AC5). References the 'Triage Pipeline' sub-workflow BY NAME (cachedResultName), same placeholder pattern this file's own callers already use -- workflowId.value is left blank until triage-pipeline.json is imported and this node is re-pointed at it via n8n's resource picker. 011-followups-contacts-api, T5: email_id now reads via the explicit $('Format output') reference instead of $json, since this node's immediate predecessor is now 'Insert thread_entries' (a Postgres node whose output no longer carries email_id) rather than 'Format output' directly.",
       "notesInFlow": true
     },
     {
@@ -155,7 +207,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1540,
+        2060,
         420
       ],
       "parameters": {
@@ -169,7 +221,7 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "email_id": "={{ $json.email_id }}",
+            "email_id": "={{ $('Format output').item.json.email_id }}",
             "subject": "={{ $('Normalize').item.json.subject }}",
             "body": "={{ $('Normalize').item.json.body }}",
             "received_at": "={{ $('Normalize').item.json.received_at }}"
@@ -181,7 +233,45 @@
           "waitForSubWorkflow": false
         }
       },
-      "notes": "005-action-items, T3: second parallel branch off 'Inserted?'s true output, alongside 'Call Triage Pipeline' -- same guard (a genuinely new, non-duplicate insert), same non-blocking pattern (waitForSubWorkflow: false) so this new call can never affect this already-verified ingestion path. References the 'Action Extraction' sub-workflow BY NAME (cachedResultName) -- workflowId.value is left blank until action-extraction.json is imported and this node is re-pointed at it via n8n's resource picker. Passes received_at (Normalize's ISO timestamp) as the reference date Action Extraction needs to resolve relative deadlines.",
+      "notes": "005-action-items, T3: second parallel branch off 'Inserted?'s true output, alongside 'Call Triage Pipeline' -- same guard (a genuinely new, non-duplicate insert), same non-blocking pattern (waitForSubWorkflow: false) so this new call can never affect this already-verified ingestion path. References the 'Action Extraction' sub-workflow BY NAME (cachedResultName) -- workflowId.value is left blank until action-extraction.json is imported and this node is re-pointed at it via n8n's resource picker. Passes received_at (Normalize's ISO timestamp) as the reference date Action Extraction needs to resolve relative deadlines. 011-followups-contacts-api, T5: email_id now reads via the explicit $('Format output') reference instead of $json, since this node's immediate predecessor is now 'Insert thread_entries' rather than 'Format output' directly.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a1b2c3d4-000a-4a1a-9c1a-00000000000a",
+      "name": "Call Commitment Extraction",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2060,
+        660
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Commitment Extraction"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_id": "={{ $('Format output').item.json.email_id }}",
+            "subject": "={{ $('Normalize').item.json.subject }}",
+            "body": "={{ $('Normalize').item.json.body }}",
+            "received_at": "={{ $('Normalize').item.json.received_at }}",
+            "is_from_user": "={{ $('Normalize').item.json.is_from_user }}",
+            "account_id": "={{ $('Normalize').item.json.account_id }}",
+            "participants": "={{ $('Normalize').item.json.participants }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "011-followups-contacts-api, T7: third parallel branch off 'Insert thread_entries', alongside 'Call Triage Pipeline' and 'Call Action Extraction' -- same guard (a genuinely new, non-duplicate insert), same non-blocking pattern (waitForSubWorkflow: false) so this new call can never affect this already-verified ingestion path. References the 'Commitment Extraction' sub-workflow BY NAME (cachedResultName) -- workflowId.value is left blank until commitment-extraction.json is imported and this node is re-pointed at it via n8n's resource picker. Passes email_id via the explicit $('Format output') reference (same reason as its two siblings: the immediate predecessor is 'Insert thread_entries', a Postgres node with no email_id in its own output), and the remaining inputs (subject, body, received_at, is_from_user, account_id, participants) directly from 'Normalize'.",
       "notesInFlow": true
     }
   ],
@@ -234,6 +324,29 @@
       "main": [
         [
           {
+            "node": "Upsert contacts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Upsert contacts": {
+      "main": [
+        [
+          {
+            "node": "Insert thread_entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert thread_entries": {
+      "main": [
+        [
+          {
             "node": "Call Triage Pipeline",
             "type": "main",
             "index": 0
@@ -242,9 +355,13 @@
             "node": "Call Action Extraction",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Call Commitment Extraction",
+            "type": "main",
+            "index": 0
           }
-        ],
-        []
+        ]
       ]
     }
   },

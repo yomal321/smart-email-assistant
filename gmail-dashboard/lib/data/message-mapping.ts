@@ -4,13 +4,14 @@
 // response, instead of being reimplemented per-route.
 //
 // Real per-contact aggregation (VIP, message counts, reply times, tone
-// history) needs the `contacts` table, which does not exist yet
-// (BACKEND-REQUIREMENTS.md §4: "Contacts | `participants` jsonb only |
-// Missing — no contacts table, no aggregates"). Until then, sender/recipient
-// Contact objects here are a minimal, honestly-placeholder synthesis from
-// `emails.participants` — never real per-contact data (design.md Risk 3).
+// history) now reads from the `contacts` table (migration 0006,
+// contact-mapping.ts's `mapContactRowToContact`). Sender/recipient Contact
+// objects here fall back to a minimal, honestly-placeholder synthesis from
+// `emails.participants` only when no matching `contacts` row exists yet
+// (design.md Risk 3).
 import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { mapContactRowToContact, type ContactRow } from "@/lib/data/contact-mapping";
 import type {
   Attachment,
   Contact,
@@ -21,6 +22,7 @@ import type {
   Platform,
   Priority,
   Sla,
+  ThreadEntry,
   Tone,
 } from "@/lib/data/types";
 
@@ -34,12 +36,14 @@ interface Participant {
 }
 
 // The subset of an `emails` row this mapper needs. Deliberately narrower than
-// `select *` — omits `account_id`, `provider`, `body`, `raw_payload`, `labels`,
-// `category`, and `is_from_user`, none of which the `Message` contract needs
-// (NFR1's field-minimization convention: never select more than the shape
-// requires, and never `raw_payload` in particular).
+// `select *` — omits `provider`, `body`, `raw_payload`, `labels`, `category`,
+// and `is_from_user`, none of which the `Message` contract needs (NFR1's
+// field-minimization convention: never select more than the shape requires,
+// and never `raw_payload` in particular). `account_id` is kept — buildContact
+// needs it to scope the `contacts` lookup to this row's account.
 export interface EmailRow {
   id: string;
+  account_id: string;
   thread_id: string | null;
   provider_message_id: string;
   participants: Participant[];
@@ -71,9 +75,10 @@ export interface EmailRow {
 }
 
 // Minimal Contact synthesis from one participant — id/name/email/domain are
-// real, everything else is a fixed honest placeholder until the `contacts`
-// table (Phase 3) exists (design.md Key Decision 3, Risk 3).
-function buildContact(participant: Participant, lastContactAt: string): Contact {
+// real, everything else is a fixed honest placeholder. Used only when
+// `buildContact` finds no matching `contacts` row (design.md Key Decision 3,
+// Risk 3).
+function buildPlaceholderContact(participant: Participant, lastContactAt: string): Contact {
   const address = participant.address;
   const domain = address.includes("@") ? address.slice(address.indexOf("@") + 1) : "";
 
@@ -83,7 +88,7 @@ function buildContact(participant: Participant, lastContactAt: string): Contact 
     email: address,
     domain,
     avatarUrl: null,
-    // Placeholder only — no `contacts` table to read real values from yet.
+    // Placeholder only — no matching `contacts` row to read real values from.
     isVip: false,
     messageCount: 0,
     yourAvgReplyHours: null,
@@ -91,6 +96,30 @@ function buildContact(participant: Participant, lastContactAt: string): Contact 
     openThreadIds: [],
     toneHistory: [],
   };
+}
+
+// Real `contacts` lookup (migration 0006) for one participant, scoped to this
+// row's account — falls back to the honest placeholder synthesis above when
+// no row matches (should be rare post-migration, but a sender/recipient
+// Contact must never fail to render over a contacts-lookup miss).
+async function buildContact(
+  participant: Participant,
+  accountId: string,
+  lastContactAt: string,
+): Promise<Contact> {
+  const supabase = getSupabaseServerClient();
+  const { data: row } = await supabase
+    .from("contacts")
+    .select("id, account_id, name, email, domain, avatar_url, is_vip")
+    .eq("account_id", accountId)
+    .eq("email", participant.address)
+    .maybeSingle();
+
+  if (row) {
+    return mapContactRowToContact(row as unknown as ContactRow);
+  }
+
+  return buildPlaceholderContact(participant, lastContactAt);
 }
 
 // `entities` sub-arrays the model omits entirely default to `[]`, not a
@@ -160,6 +189,39 @@ async function buildAi(row: EmailRow): Promise<MessageAi> {
   };
 }
 
+// `thread_entries` (migration 0006) rows one per normalized email, keyed by
+// `email_id` — not by conversation thread. To get every entry for this
+// message's conversation, first find every `emails.id` sharing this
+// `thread_id`, then read `thread_entries` for those ids. Ordered
+// chronologically; empty when there are none (never throws — a `Message`'s
+// `thread` must never fail to render over a lookup miss).
+//
+// `ownEmailId` is always folded into the id set: a standalone email (no
+// `thread_id`, i.e. `threadId` falls back to `row.id` at the call site) would
+// otherwise never match `emails.thread_id = threadId` against its own row
+// (whose `thread_id` is null, not its own id), silently excluding its own
+// `thread_entries` row from its own `thread`.
+async function buildThread(threadId: string, ownEmailId: string): Promise<ThreadEntry[]> {
+  const supabase = getSupabaseServerClient();
+
+  const { data: threadEmails } = await supabase.from("emails").select("id").eq("thread_id", threadId);
+  const emailIds = Array.from(new Set([...(threadEmails ?? []).map((e) => e.id as string), ownEmailId]));
+
+  const { data: entries } = await supabase
+    .from("thread_entries")
+    .select("id, author_is_you, author_name, at, gist")
+    .in("email_id", emailIds)
+    .order("at", { ascending: true });
+
+  return (entries ?? []).map((row) => ({
+    id: row.id as string,
+    authorIsYou: row.author_is_you as boolean,
+    authorName: row.author_name as string,
+    at: row.at as string,
+    gist: row.gist as string,
+  }));
+}
+
 // Maps one `emails` row (post-migration-0005 shape) to the dashboard's
 // `Message` interface (lib/data/types.ts), per spec FR6.
 export async function mapEmailRowToMessage(row: EmailRow): Promise<Message> {
@@ -186,8 +248,10 @@ export async function mapEmailRowToMessage(row: EmailRow): Promise<Message> {
     // scheme built from the real provider_message_id until a later phase
     // starts writing this column at ingestion time.
     gmailUrl: row.gmail_url ?? `https://mail.google.com/mail/u/0/#all/${row.provider_message_id}`,
-    sender: buildContact(fromParticipant, receivedAt),
-    recipients: recipientParticipants.map((p) => buildContact(p, receivedAt)),
+    sender: await buildContact(fromParticipant, row.account_id, receivedAt),
+    recipients: await Promise.all(
+      recipientParticipants.map((p) => buildContact(p, row.account_id, receivedAt)),
+    ),
     subject: row.subject ?? "",
     receivedAt,
     isUnread: row.is_unread,
@@ -195,8 +259,7 @@ export async function mapEmailRowToMessage(row: EmailRow): Promise<Message> {
     // Honest placeholder (spec FR2) — nothing writes a non-null value this
     // phase (that's Gmail MIME data, not something Triage infers).
     attachments: row.attachments ?? [],
-    // Needs thread_entries (Phase 3) — design.md "Data Model Changes".
-    thread: [],
+    thread: await buildThread(row.thread_id ?? row.id, row.id),
     ai,
     parseFailureReason: row.triage_error ?? null,
     sla: buildSla(receivedAt, row.sla_target_hours),

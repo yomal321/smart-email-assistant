@@ -6,7 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PreferencesProvider } from "@/components/board/preferences-provider";
 import { BoardProvider } from "@/components/board/board-provider";
 import { ActionItemsProvider } from "@/components/board/action-items-provider";
+import { ContactsProvider } from "@/components/board/contacts-provider";
 import { DraftsProvider } from "@/components/board/drafts-provider";
+import { CommitmentsProvider } from "@/components/board/commitments-provider";
 import { AppShell } from "@/components/board/app-shell";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -20,11 +22,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <PreferencesProvider>
       <BoardProvider>
         <ActionItemsProvider>
-          <DraftsProvider>
-            <TooltipProvider delayDuration={300}>
-              {isLoginPage ? children : <AppShell>{children}</AppShell>}
-            </TooltipProvider>
-          </DraftsProvider>
+          <ContactsProvider>
+            <DraftsProvider>
+              <CommitmentsProvider>
+                <TooltipProvider delayDuration={300}>
+                  {isLoginPage ? children : <AppShell>{children}</AppShell>}
+                </TooltipProvider>
+              </CommitmentsProvider>
+            </DraftsProvider>
+          </ContactsProvider>
         </ActionItemsProvider>
       </BoardProvider>
     </PreferencesProvider>

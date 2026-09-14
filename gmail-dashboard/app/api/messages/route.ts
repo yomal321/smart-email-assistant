@@ -23,6 +23,7 @@ const MESSAGE_LIMIT = 500;
 // the field-minimization convention 006-draft-generation established).
 const MESSAGE_COLUMNS = [
   "id",
+  "account_id",
   "thread_id",
   "provider_message_id",
   "participants",

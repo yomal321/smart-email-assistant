@@ -12,7 +12,7 @@ import { mapEmailRowToMessage, type EmailRow } from "@/lib/data/message-mapping"
 // Mirrors EmailRow's field list exactly (lib/data/message-mapping.ts) —
 // never `select("*")`/`raw_payload` (NFR1's field-minimization convention).
 const SELECT_COLUMNS =
-  "id, thread_id, provider_message_id, participants, subject, received_at, created_at, summary, " +
+  "id, account_id, thread_id, provider_message_id, participants, subject, received_at, created_at, summary, " +
   "triage_error, platform, confidence, priority, priority_score, reasons, tone, tone_evidence, tldr, " +
   "entities, attachments, gmail_url, is_unread, is_starred, status, snoozed_until, handled_at, " +
   "handled_action, sla_target_hours, model_run, processed_at";

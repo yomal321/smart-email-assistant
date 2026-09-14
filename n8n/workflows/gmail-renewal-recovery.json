@@ -49,7 +49,7 @@
         "options": {},
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"topicName\": \"projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications\", \"labelIds\": [\"INBOX\"] } }}",
+        "jsonBody": "={{ { \"topicName\": \"projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications\", \"labelIds\": [\"INBOX\",\"SENT\"] } }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "gmailOAuth2"
       },
@@ -136,7 +136,7 @@
         "options": {},
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"topicName\": \"projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications\", \"labelIds\": [\"INBOX\"] } }}",
+        "jsonBody": "={{ { \"topicName\": \"projects/REPLACE_WITH_GCP_PROJECT_ID/topics/gmail-push-notifications\", \"labelIds\": [\"INBOX\",\"SENT\"] } }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "gmailOAuth2"
       },

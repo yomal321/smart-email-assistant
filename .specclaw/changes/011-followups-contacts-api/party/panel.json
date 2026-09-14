@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "657267064 6620",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "Adds five new persisted tables (contacts, thread_entries, contact_tone_history, commitments, nudges), a new aggregation view, and new column on existing emails table; modifies email-normaliser workflow to add a third branch to already-verified ingestion path (must stay non-blocking); widens Gmail ingestion scope to include sent mail.",
+  "domains": ["data"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "fable"}
+  ],
+  "dropped": []
+}
