@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "2699067131 11318",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "Drops the tasks table's email_id constraint, requiring coordinated migration and workflow-fix deployment to avoid write failures; all four open questions are tuning-knob choices that don't change the file list.",
+  "domains": ["data"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "fable"}
+  ],
+  "dropped": []
+}
