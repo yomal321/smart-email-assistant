@@ -21,7 +21,7 @@ flowchart TB
     gemini["<b>Gemini Flash API</b><br/><i>[External System]</i>"]
 
     user -->|"Uses · HTTPS"| web
-    web -->|"Reads emails and tasks<br/>Supabase client"| db
+    web -->|"Reads emails and tasks<br/>via its own API routes"| db
     web -->|"Requests a draft reply<br/>HTTPS webhook"| n8n
     n8n -->|"Writes normalised emails,<br/>tasks and drafts · SQL"| db
 
@@ -54,7 +54,7 @@ flowchart TB
 
 **n8n owns every credential.** OAuth tokens for both providers and the Gemini API key live in one container. The dashboard has none of them. If a provider changes its auth model, exactly one container changes.
 
-**The database is the interface.** The dashboard does not ask n8n for the inbox — it reads Supabase directly. n8n does not render anything — it writes rows. Neither needs to be running for the other to be useful, and phases 1–4 are verifiable with no frontend at all.
+**The database is the interface.** The dashboard does not ask n8n for the inbox — it reads Supabase directly, through its own server-side API routes rather than a browser-held Supabase credential (`008-dashboard-api-foundation`). n8n does not render anything — it writes rows. Neither needs to be running for the other to be useful, and phases 1–4 are verifiable with no frontend at all.
 
 **One synchronous call between containers.** The dashboard calls n8n for exactly one thing: draft generation, on demand. Everything else is asynchronous through the database. That single webhook is the only place where a slow n8n makes the UI wait.
 
