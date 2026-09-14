@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PlatformRail, type RailCounts } from "@/components/station/platform-rail";
 import { SyncClock } from "@/components/station/sync-clock";
-import { getSyncState } from "@/lib/data";
+import { useSyncState } from "@/lib/data/use-sync-state";
 import { usePreferences } from "./preferences-provider";
 
 export function ConcourseBar({
@@ -25,7 +25,7 @@ export function ConcourseBar({
 }) {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const { theme, setTheme, density, setDensity } = usePreferences();
-  const sync = getSyncState();
+  const { data: sync, loading: syncLoading } = useSyncState();
 
   return (
     <div className="flex h-16 shrink-0 items-center gap-2 border-b border-rule bg-surface px-4">
@@ -63,7 +63,13 @@ export function ConcourseBar({
       </button>
 
       <div className="ml-auto flex items-center gap-1">
-        <SyncClock state={sync} onResync={() => {}} />
+        {sync ? (
+          <SyncClock state={sync} onResync={() => {}} />
+        ) : (
+          <span className="hidden px-2 py-1.5 text-xs text-ink-tertiary tabular sm:inline">
+            {syncLoading ? "Syncing…" : "—"}
+          </span>
+        )}
 
         <button
           onClick={onOpenShortcuts}
