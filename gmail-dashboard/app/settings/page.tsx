@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { getSyncState, getActivityLog } from "@/lib/data";
+import { getActivityLog } from "@/lib/data";
+import { useSyncState } from "@/lib/data/use-sync-state";
 import { formatFullDateTime } from "@/lib/format/relative-time";
 import { usePreferences } from "@/components/board/preferences-provider";
 import { Switch } from "@/components/ui/switch";
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/select";
 
 export default function SettingsPage() {
-  const sync = getSyncState();
+  const { data: sync, loading: syncLoading } = useSyncState();
   const activity = getActivityLog();
   const { theme, setTheme, density, setDensity } = usePreferences();
   const [purgeConfirm, setPurgeConfirm] = React.useState("");
@@ -35,7 +36,13 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm font-medium text-ink">yomal@bistecglobal.com</p>
               <p className="tabular text-xs text-ink-tertiary">
-                {sync.status === "synced" ? `Synced ${formatFullDateTime(sync.lastSyncAt)}` : sync.status}
+                {sync
+                  ? sync.status === "synced"
+                    ? `Synced ${sync.lastSyncAt ? formatFullDateTime(sync.lastSyncAt) : "Never"}`
+                    : sync.status
+                  : syncLoading
+                    ? "Loading…"
+                    : "Unavailable"}
               </p>
             </div>
             <Button size="sm" variant="secondary" className="rounded-lg">

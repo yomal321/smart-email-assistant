@@ -12,7 +12,7 @@ flowchart TB
         tasks["<b>Action Item Sidebar</b><br/><i>[Component]</i><br/>Tasks shown beside<br/>their source email"]
         review["<b>Draft Review Modal</b><br/><i>[Client Component]</i><br/>Requests a draft, shows it<br/>next to the thread. Never sends."]
         search["<b>Search</b><br/><i>[Component]</i><br/>Postgres full-text query (tsvector)"]
-        data["<b>Data Access Layer</b><br/><i>[Supabase client]</i><br/>Typed reads, auth session"]
+        data["<b>Data Access Layer</b><br/><i>[fetches the dashboard's own Route Handlers]</i><br/>Typed reads, auth session"]
     end
 
     user(["<b>User</b><br/><i>[Person]</i>"])
@@ -28,7 +28,7 @@ flowchart TB
     tasks --> data
     search --> data
     review --> data
-    data -->|"SQL over HTTPS · read-only"| db
+    data -->|"HTTPS · via own Route Handlers, read-only"| db
     review -->|"POST draft request · HTTPS"| hook
 
     classDef component fill:#85BBF0,stroke:#5D82A8,color:#000000
@@ -49,7 +49,7 @@ flowchart TB
 | Action Item Sidebar | Component | `tasks`, joined to source `emails` |
 | Draft Review Modal | Client Component | n8n webhook + `emails` |
 | Search | Component | `emails.search_vector` (tsvector) |
-| Data Access Layer | Supabase client | The single typed read path |
+| Data Access Layer | Own API routes (Route Handlers, `008-dashboard-api-foundation`) | The single typed read path |
 
 ## One write path
 

@@ -13,10 +13,10 @@ function round3(n: number): number {
 }
 
 const LABELS: Record<SyncState["status"], (s: SyncState) => string> = {
-  synced: (s) => `Synced ${formatFullDateTime(s.lastSyncAt)}`,
+  synced: (s) => `Synced ${s.lastSyncAt ? formatFullDateTime(s.lastSyncAt) : "Never"}`,
   syncing: (s) => `Syncing · ${s.queueDepth} queued`,
   failed: () => "Sync failed · Retry",
-  offline: (s) => `Offline · last synced ${formatFullDateTime(s.lastSyncAt)}`,
+  offline: (s) => `Offline · last synced ${s.lastSyncAt ? formatFullDateTime(s.lastSyncAt) : "Never"}`,
 };
 
 /**
@@ -49,7 +49,7 @@ export function SyncClock({ state, onResync }: { state: SyncState; onResync?: ()
           <dl className="space-y-1.5 text-xs text-ink-secondary">
             <div className="flex justify-between">
               <dt>Last synced</dt>
-              <dd className="tabular">{formatRelativeToNow(state.lastSyncAt)}</dd>
+              <dd className="tabular">{state.lastSyncAt ? formatRelativeToNow(state.lastSyncAt) : "Never"}</dd>
             </div>
             <div className="flex justify-between">
               <dt>Queue depth</dt>

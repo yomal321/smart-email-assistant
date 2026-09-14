@@ -167,7 +167,7 @@ export type SyncStatus = "synced" | "syncing" | "failed" | "offline";
 
 export interface SyncState {
   status: SyncStatus;
-  lastSyncAt: string;
+  lastSyncAt: string | null;
   queueDepth: number;
   failedCount: number;
   nextRetryAt: string | null;
