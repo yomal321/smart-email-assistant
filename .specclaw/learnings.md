@@ -260,3 +260,63 @@ Two 'sweep'-style tasks (T13 responsive/dark-mode, T14 keyboard/contrast) each f
 Keep specifying 'do a real sweep, not just a read-through' with a concrete verification method for any future cross-cutting polish/audit task
 
 ---
+
+## [L18] design_gap — File gmail-dashboard/.gitignore was modified but not decl...
+
+**When:** 2026-09-14 06:36 UTC
+**Category:** design_gap
+**Priority:** medium
+**Status:** pending
+
+### Detail
+File gmail-dashboard/.gitignore was modified but not declared in T10's file list — needed to add '!.env.local.example' so the blanket '.env*' rule didn't silently block committing the new example file the task required.
+
+### Action
+When a task creates a file whose name matches an existing ignore pattern, declare the .gitignore edit explicitly in tasks.md rather than leaving it implicit.
+
+---
+
+## [L19] spec_gap — spec.md FR8 didn't specify how to derive SyncState.status...
+
+**When:** 2026-09-14 06:36 UTC
+**Category:** spec_gap
+**Priority:** low
+**Status:** pending
+
+### Detail
+spec.md FR8 didn't specify how to derive SyncState.status ('synced'/'syncing'/'failed'/'offline') from the accounts/sync_outcomes schema, which has no in-progress or status column at all. The build agent reasonably defaulted to 'synced' whenever an accounts row exists, documented inline.
+
+### Action
+Future specs for derived enum fields should either state the exact derivation rule or explicitly flag it as an open question for the build agent to surface, as this one implicitly did.
+
+---
+
+## [L20] design_gap — The new /login page (T6) renders inside the existing AppS...
+
+**When:** 2026-09-14 06:36 UTC
+**Category:** design_gap
+**Priority:** low
+**Status:** pending
+
+### Detail
+The new /login page (T6) renders inside the existing AppShell (sidebar/nav) because app/layout.tsx wasn't in T6's file list, so an unauthenticated visitor sees the full dashboard chrome around the login form.
+
+### Action
+A follow-up task (or a note in the next phase's proposal) should decide whether /login needs a route-group layout override for a standalone screen, or whether this is acceptable for a single-operator tool.
+
+---
+
+## [L21] pattern — Passing large specclaw-build-context payloads (~3500 line...
+
+**When:** 2026-09-14 06:36 UTC
+**Category:** pattern
+**Priority:** medium
+**Status:** pending
+
+### Detail
+Passing large specclaw-build-context payloads (~3500 lines / ~90k tokens each) directly in an Agent tool prompt is wasteful and can silently fail if constructed via unexecuted shell substitution. Writing the context to a scratchpad file and instructing the subagent to Read it itself worked reliably and kept orchestrator context small.
+
+### Action
+Consider having specclaw-build-context write directly to a file path (or the build skill documenting the read-from-file dispatch pattern) rather than assuming the payload is always inlined into the prompt string.
+
+---

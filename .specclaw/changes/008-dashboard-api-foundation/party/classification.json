@@ -1,0 +1,4 @@
+{"tier": "deep",
+ "domains": ["security"],
+ "rationale": "Establishes foundational security infrastructure (session auth, service-role key held server-side only) that resolves the project's critical architectural blocker and makes the API layer the trust boundary that all Phase 1-5 routes will depend on.",
+ "signals": {"blast_radius": "Six to nine files: new auth route, session middleware, server Supabase client, /api/sync endpoint, login page; edited: sync-clock component, docs, one data function", "unresolved": "Session library choice (hand-rolled vs dependency), deployment credential convention, and login page timing, but all are tuning knobs that do not change what is built", "irreversibility": "Purely git-revertible within this phase (no migrations or schema changes), but establishes auth infrastructure that all subsequent phases will build on top of, making later architectural changes to access control more costly"}}

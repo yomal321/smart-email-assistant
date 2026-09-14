@@ -1,7 +1,7 @@
 # 🦞 SpecClaw Dashboard
 
 **Project:** Smart Email Assistant
-**Last Updated:** 2026-09-11 22:06 UTC
+**Last Updated:** 2026-09-14 06:36 UTC
 
 ## Active Changes
 
@@ -13,6 +13,7 @@
 - ✅ **005-action-items** — 4/4 tasks (100%) | 0 failed | PR #command requires
 - ✅ **006-draft-generation** — 4/4 tasks (100%) | 0 failed | PR #command requires
 - ✅ **007-web-dashboard** — 15/15 tasks (100%) | 0 failed | PR #command requires
+- ✅ **008-dashboard-api-foundation** — 10/10 tasks (100%) | 0 failed | PR #command requires
 
 ## Pending Proposals
 
@@ -24,6 +25,6 @@ _None._
 
 ## Stats
 
-- **Total changes:** 7
-- **Active:** 7
+- **Total changes:** 8
+- **Active:** 8
 - **Completed:** 0
