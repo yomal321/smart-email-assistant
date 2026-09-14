@@ -1,8 +1,8 @@
 {
   "change": "009-dashboard-messages-api",
-  "phase": "tasks",
+  "phase": "build",
   "branch": "",
   "phases": {
-    "tasks": {"status":"done","at":"2026-09-14T06:58:11Z"}
+    "build": {"status":"done","at":"2026-09-14T07:22:56Z","tasks":{"done":9,"total":9,"failed":0}}
   }
 }
