@@ -195,7 +195,7 @@
       "alwaysOutputData": true,
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO tasks (email_id, task_text, deadline, status) VALUES ($1, $2, $3, 'open') ON CONFLICT (email_id) DO NOTHING;",
+        "query": "INSERT INTO tasks (email_id, task_text, deadline, status, priority, origin) VALUES ($1, $2, $3, 'todo', 'normal', 'extracted');",
         "options": {
           "queryReplacement": "={{ [$json.email_id, $json.task_text, $json.deadline] }}"
         }
@@ -206,7 +206,7 @@
           "name": "Supabase Postgres"
         }
       },
-      "notes": "AC1: ON CONFLICT (email_id) DO NOTHING makes the write idempotent -- a re-run against an already-extracted email is a no-op. Reuses the same 'Supabase Postgres' credential (same name + placeholder id) Triage Pipeline's write nodes and Email Normaliser's 'Upsert email' node use, per NFR3.",
+      "notes": "010-dashboard-actions-drafts-api spec FR2: ON CONFLICT (email_id) DO NOTHING is removed -- migration 0009 drops tasks_email_id_key, so that clause would target a non-existent constraint and error on every write. Every extraction now inserts unconditionally; dropping the old UNIQUE constraint is what makes repeated single-task extraction across a thread safe without colliding, not this node retrying idempotently. status is now 'todo' (0009 widens tasks_status_check to todo|in-progress|done|dismissed; 'open' is no longer a valid value). priority/origin are written explicitly rather than relying on 0009's column defaults, matching this workflow's existing convention. This migration (0009) and this edit must deploy together -- see 0009_tasks_enrichment.sql's header comment. Reuses the same 'Supabase Postgres' credential (same name + placeholder id) Triage Pipeline's write nodes and Email Normaliser's 'Upsert email' node use, per NFR3.",
       "notesInFlow": true
     },
     {

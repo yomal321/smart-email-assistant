@@ -51,17 +51,27 @@ erDiagram
     }
     TASKS {
         uuid id PK
-        uuid email_id FK
+        uuid email_id FK "nullable -- null only for origin='manual' (010)"
         text task_text
         date deadline "nullable"
-        text status
+        text status "todo/in-progress/done/dismissed (010)"
+        text owner_name "nullable, unwritten this phase"
+        text owner_email "nullable, unwritten this phase"
+        text priority "urgent/normal/low, default normal (010)"
+        text origin "extracted/manual (010)"
+        int confidence "nullable, unwritten this phase"
     }
     DRAFTS {
         uuid id PK
         uuid email_id FK "no unique constraint -- multiple per email"
         text draft_body
-        text status "pending/sent/discarded"
+        text generated_body "nullable, immutable original (010)"
+        text tone "formal/friendly/brief/firm, nullable (010)"
+        text length "brief/standard/detailed, nullable (010)"
+        text status "pending/approved/sent/discarded (010)"
         timestamptz created_at
+        timestamptz approved_at "nullable, set once (010)"
+        int edit_distance "nullable, recomputed per edit (010)"
     }
 ```
 
@@ -71,17 +81,18 @@ erDiagram
 |---|---|
 | Ingestion + Normaliser | `emails`: account_id, thread_id, sender, subject, body, received_at |
 | Triage Pipeline | `emails`: category, summary, platform, confidence, priority, priority_score, reasons, tone, tone_evidence, tldr, entities, model_run, processed_at |
-| Action Extraction | `tasks`: entire row |
-| Draft Generation | `drafts`: entire row |
+| Action Extraction | `tasks`: email_id, task_text, deadline, status='todo', priority='normal', origin='extracted' (`010-dashboard-actions-drafts-api`) |
+| Draft Generation | `drafts`: email_id, draft_body, generated_body, status='pending', tone, length (`010-dashboard-actions-drafts-api`) |
 | Postgres | `emails.search_vector` (generated / trigger-maintained) |
 | Web Dashboard (mutation routes, `009-dashboard-messages-api`) | `emails`: is_starred (`PATCH /api/messages/:id/star`), status/snoozed_until/handled_at/handled_action (`POST /api/messages/archive\|done\|snooze\|restore`) — otherwise reads only |
-| Unwritten this phase (honest placeholders) | `emails`: attachments, gmail_url, sla_target_hours, is_from_user, is_unread (stays at its default) |
+| Web Dashboard (action-item/draft routes, `010-dashboard-actions-drafts-api`) | `tasks`: email_id=null/task_text/deadline/status/priority/origin='manual' (`POST\|PATCH /api/action-items*`); `drafts`: draft_body/edit_distance/tone/length (`PATCH /api/drafts/:id`), status/approved_at (`POST /api/drafts/:id/status`) — otherwise reads only |
+| Unwritten this phase (honest placeholders) | `emails`: attachments, gmail_url, sla_target_hours, is_from_user, is_unread (stays at its default); `tasks`: owner_name, owner_email, confidence |
 
 Splitting the table by writer this way makes the phasing obvious: Phase 1 fills the top block, Phase 2 the second, Phase 3 the third. Each phase is independently verifiable by querying one set of columns.
 
 ## The FK that matters
 
-`tasks.email_id` is not bookkeeping — it is the hallucination mitigation. Every extracted action item can be shown beside the email it was drawn from, so a wrong task is visibly wrong rather than quietly authoritative. If that link were optional, the task list would become a set of unverifiable claims.
+`tasks.email_id` is not bookkeeping — it is the hallucination mitigation. Every *extracted* action item can be shown beside the email it was drawn from, so a wrong task is visibly wrong rather than quietly authoritative. `010-dashboard-actions-drafts-api` makes the column nullable, but only for `origin = 'manual'` rows — a manually-typed item has no extraction behind it to be hallucinated in the first place, so there is nothing for the link to verify. Action Extraction itself never writes a null `email_id`; the guarantee holds for every row it's actually about.
 
 ## Open questions, still unresolved in the proposal
 
