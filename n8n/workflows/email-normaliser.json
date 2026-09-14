@@ -235,6 +235,44 @@
       },
       "notes": "005-action-items, T3: second parallel branch off 'Inserted?'s true output, alongside 'Call Triage Pipeline' -- same guard (a genuinely new, non-duplicate insert), same non-blocking pattern (waitForSubWorkflow: false) so this new call can never affect this already-verified ingestion path. References the 'Action Extraction' sub-workflow BY NAME (cachedResultName) -- workflowId.value is left blank until action-extraction.json is imported and this node is re-pointed at it via n8n's resource picker. Passes received_at (Normalize's ISO timestamp) as the reference date Action Extraction needs to resolve relative deadlines. 011-followups-contacts-api, T5: email_id now reads via the explicit $('Format output') reference instead of $json, since this node's immediate predecessor is now 'Insert thread_entries' rather than 'Format output' directly.",
       "notesInFlow": true
+    },
+    {
+      "id": "a1b2c3d4-000a-4a1a-9c1a-00000000000a",
+      "name": "Call Commitment Extraction",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2060,
+        660
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Commitment Extraction"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_id": "={{ $('Format output').item.json.email_id }}",
+            "subject": "={{ $('Normalize').item.json.subject }}",
+            "body": "={{ $('Normalize').item.json.body }}",
+            "received_at": "={{ $('Normalize').item.json.received_at }}",
+            "is_from_user": "={{ $('Normalize').item.json.is_from_user }}",
+            "account_id": "={{ $('Normalize').item.json.account_id }}",
+            "participants": "={{ $('Normalize').item.json.participants }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "011-followups-contacts-api, T7: third parallel branch off 'Insert thread_entries', alongside 'Call Triage Pipeline' and 'Call Action Extraction' -- same guard (a genuinely new, non-duplicate insert), same non-blocking pattern (waitForSubWorkflow: false) so this new call can never affect this already-verified ingestion path. References the 'Commitment Extraction' sub-workflow BY NAME (cachedResultName) -- workflowId.value is left blank until commitment-extraction.json is imported and this node is re-pointed at it via n8n's resource picker. Passes email_id via the explicit $('Format output') reference (same reason as its two siblings: the immediate predecessor is 'Insert thread_entries', a Postgres node with no email_id in its own output), and the remaining inputs (subject, body, received_at, is_from_user, account_id, participants) directly from 'Normalize'.",
+      "notesInFlow": true
     }
   ],
   "connections": {
@@ -315,6 +353,11 @@
           },
           {
             "node": "Call Action Extraction",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Call Commitment Extraction",
             "type": "main",
             "index": 0
           }
