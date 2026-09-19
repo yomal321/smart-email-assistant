@@ -21,8 +21,15 @@ export function useMessage(messageId: string | null): UseMessageResult {
 
   useEffect(() => {
     if (!messageId) {
+      // Deliberate setState-in-effect: this resets state to the "no id"
+      // shape as a direct, synchronous consequence of messageId itself
+      // changing (e.g. a modal closing) -- there's no async result to await
+      // before clearing a previous id's stale message, unlike the fetch
+      // path below.
+      /* eslint-disable react-hooks/set-state-in-effect */
       setMessage(null);
       setLoading(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
 
