@@ -197,10 +197,14 @@ jobs:
 
       # A deploy that returns 200 on /login proves the bundle boots and the
       # middleware runs; anything deeper needs a session and real data.
+      # Checks the stable production alias, not steps.deploy.outputs.url --
+      # this project's Deployment Protection puts every raw per-deployment
+      # URL behind Vercel SSO (a 302 to vercel.com/sso-api), so only the
+      # aliased production domain is reachable without authenticating.
       - name: Smoke-test the deployment
         run: |
           for attempt in 1 2 3 4 5; do
-            status=$(curl -s -o /dev/null -w '%{http_code}' "${{ steps.deploy.outputs.url }}/login") && \
+            status=$(curl -s -o /dev/null -w '%{http_code}' "https://gmail-dashboard-tau.vercel.app/login") && \
               [ "$status" = "200" ] && echo "OK ($status)" && exit 0
             echo "attempt $attempt: got ${status:-no response}, retrying"
             sleep 5
