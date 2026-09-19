@@ -1,23 +1,15 @@
 "use client";
 
+// Phase 5: data now comes from GET /api/analytics/busiest-hours
+// (app/analytics/page.tsx) instead of the synthetic cellValue() formula.
 import * as React from "react";
-
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-// Deterministic fixture activity — heavier midweek mornings, quiet weekends.
-function cellValue(day: number, hour: number): number {
-  const weekday = day < 5;
-  const workHour = hour >= 8 && hour <= 18;
-  let base = weekday && workHour ? 6 : weekday ? 1 : 0.5;
-  if (weekday && (hour === 9 || hour === 10 || hour === 14)) base += 3;
-  if (day === 2 && hour === 10) base += 4; // Wednesday 10am spike
-  return Math.round(base);
-}
+import type { BusiestHoursResult } from "@/lib/data/use-analytics";
 
 /** Single-hue sequential ramp — never a rainbow. design-spec.md §9.8 */
-export function BusiestHoursHeatmap() {
+export function BusiestHoursHeatmap({ data }: { data: BusiestHoursResult }) {
+  const { days, grid, max } = data;
   const [showTable, setShowTable] = React.useState(false);
-  const max = 13;
+  const hasAnyData = grid.some((row) => row.some((v) => v > 0));
 
   return (
     <div>
@@ -29,7 +21,9 @@ export function BusiestHoursHeatmap() {
           {showTable ? "Hide data" : "Show data"}
         </button>
       </div>
-      {showTable ? (
+      {!hasAnyData ? (
+        <p className="py-8 text-center text-xs text-ink-tertiary">Not enough mail history yet to plot activity by hour.</p>
+      ) : showTable ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-xs">
             <thead>
@@ -41,11 +35,11 @@ export function BusiestHoursHeatmap() {
               </tr>
             </thead>
             <tbody>
-              {DAYS.map((d, di) => (
+              {days.map((d, di) => (
                 <tr key={d}>
                   <td className="text-ink-tertiary">{d}</td>
                   {[...Array(24)].map((_, h) => (
-                    <td key={h} className="tabular text-center text-ink">{cellValue(di, h)}</td>
+                    <td key={h} className="tabular text-center text-ink">{grid[di][h]}</td>
                   ))}
                 </tr>
               ))}
@@ -61,11 +55,11 @@ export function BusiestHoursHeatmap() {
                 {h % 3 === 0 ? h : ""}
               </div>
             ))}
-            {DAYS.map((d, di) => (
+            {days.map((d, di) => (
               <React.Fragment key={d}>
                 <div className="flex items-center text-[10px] text-ink-tertiary">{d}</div>
                 {[...Array(24)].map((_, h) => {
-                  const v = cellValue(di, h);
+                  const v = grid[di][h];
                   const alpha = Math.min(1, v / max);
                   return (
                     <div

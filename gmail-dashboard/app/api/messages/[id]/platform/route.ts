@@ -5,6 +5,13 @@
 // "API Changes"). Called by board-provider.tsx's optimistic reassign action
 // (FR10) once that rewiring lands.
 //
+// Phase 5 (PHASE-5-IMPLEMENTATION-PLAN.md Wave 4): also logs to
+// activity_log when the platform actually changes — this is the
+// "reassignment" signal GET /api/analytics/ai-performance's classification
+// accuracy figure counts against. A reassignment to the *same* platform
+// (the reducer allows re-selecting the current value) isn't a correction,
+// so it isn't logged.
+//
 // Auth is enforced by middleware.ts (deny-by-default) before this handler
 // ever runs — this route does not re-check the session cookie itself.
 import { NextResponse } from "next/server";
@@ -33,6 +40,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 
   const supabase = getSupabaseServerClient();
+
+  const { data: before } = await supabase.from("emails").select("account_id, subject, platform").eq("id", id).maybeSingle();
+
   const { data, error } = await supabase
     .from("emails")
     .update({ platform, confidence: 100 })
@@ -49,6 +59,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   // reducer's own tolerant behavior on an unknown id (spec FR8, Edge Cases).
   if (rows.length === 0) {
     return NextResponse.json({ updated: {} });
+  }
+
+  if (before && before.platform !== platform) {
+    await supabase.from("activity_log").insert({
+      account_id: before.account_id,
+      action: "Reassigned platform",
+      target: `"${before.subject}" — ${before.platform ?? "(unclassified)"} → ${platform}`,
+      cause: "Manual correction",
+      undoable: false,
+    });
   }
 
   const updated = await mapEmailRowToMessage(rows[0]);

@@ -5,6 +5,7 @@
 // to pre-fetch everything.
 import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { computeReplyGapsHours } from "@/lib/data/reply-gaps";
 import type { Contact, MessageStatus, Tone } from "@/lib/data/types";
 
 // The subset of a `contacts` row this mapper needs (migration 0006). No
@@ -105,38 +106,15 @@ function computeOpenThreadIds(rows: ContactEmailRow[]): string[] {
   return Array.from(new Set(ids));
 }
 
-// Pure and separately readable/testable from the Supabase query that feeds
-// it. For each thread, walk emails in received_at order; whenever an inbound
-// message from the contact (`is_from_user: false`) is immediately followed
-// by an outbound message from the user (`is_from_user: true`) in that same
-// thread, that gap is one "reply time" sample. Averages all samples across
-// all of the contact's threads; `null` (never `0`) when there are none, so
-// "no reply pairs yet" is never confused with "replies instantly".
+// Averages this contact's reply-gap samples (lib/data/reply-gaps.ts's shared
+// thread-pairing walk — also used account-wide by
+// GET /api/analytics/response-times, Phase 5). `null` (never `0`) when there
+// are none, so "no reply pairs yet" is never confused with "replies
+// instantly".
 export function computeAvgReplyHours(
   rows: { thread_id: string | null; is_from_user: boolean; received_at: string | null }[],
 ): number | null {
-  const byThread = new Map<string, { is_from_user: boolean; received_at: string }[]>();
-  for (const row of rows) {
-    if (row.thread_id === null || row.received_at === null) continue;
-    const list = byThread.get(row.thread_id) ?? [];
-    list.push({ is_from_user: row.is_from_user, received_at: row.received_at });
-    byThread.set(row.thread_id, list);
-  }
-
-  const gapHours: number[] = [];
-  for (const list of byThread.values()) {
-    list.sort((a, b) => new Date(a.received_at).getTime() - new Date(b.received_at).getTime());
-
-    for (let i = 0; i < list.length - 1; i++) {
-      const current = list[i];
-      const next = list[i + 1];
-      if (!current.is_from_user && next.is_from_user) {
-        const gapMs = new Date(next.received_at).getTime() - new Date(current.received_at).getTime();
-        gapHours.push(gapMs / 3_600_000);
-      }
-    }
-  }
-
+  const gapHours = computeReplyGapsHours(rows);
   if (gapHours.length === 0) return null;
   return gapHours.reduce((sum, hours) => sum + hours, 0) / gapHours.length;
 }

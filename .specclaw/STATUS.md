@@ -1,7 +1,9 @@
 # 🦞 SpecClaw Dashboard
 
 **Project:** Smart Email Assistant
-**Last Updated:** 2026-09-14 16:02 UTC
+**Last Updated:** 2026-09-19 04:27 UTC
+
+_1 unnumbered change · run `/specclaw:renumber` to order them_
 
 ## Active Changes
 
@@ -17,6 +19,7 @@
 - ✅ **009-dashboard-messages-api** — 9/9 tasks (100%) | 0 failed | PR #command requires
 - ✅ **010-dashboard-actions-drafts-api** — 13/13 tasks (100%) | 0 failed | PR #command requires
 - ✅ **011-followups-contacts-api** — 15/15 tasks (100%) | 0 failed | PR #command requires
+- 🔀 **eval** — PR #command requires
 
 ## Pending Proposals
 
@@ -28,6 +31,6 @@ _None._
 
 ## Stats
 
-- **Total changes:** 11
-- **Active:** 11
+- **Total changes:** 12
+- **Active:** 12
 - **Completed:** 0

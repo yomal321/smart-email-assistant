@@ -16,6 +16,14 @@ erDiagram
     CONTACTS ||--o{ COMMITMENTS : "involved in (nullable)"
     COMMITMENTS ||--o{ NUDGES : has
     EMAILS   ||--o{ NUDGES : has
+    ACCOUNTS ||--o{ RULES : has
+    RULES    ||--o{ RULE_RUNS : has
+    EMAILS   ||--o{ RULE_RUNS : "matched by (nullable)"
+    ACCOUNTS ||--|| SETTINGS : has
+    ACCOUNTS ||--o{ ACTIVITY_LOG : has
+    ACCOUNTS ||--o{ SAVED_VIEWS : has
+    ACCOUNTS ||--o{ CATEGORIES : has
+    CATEGORIES ||--o{ CATEGORIES : "merged into (nullable)"
 
     ACCOUNTS {
         uuid id PK
@@ -55,6 +63,7 @@ erDiagram
         text model_run "written by triage, from llm-gateway.json"
         timestamptz processed_at "written by triage on success"
         boolean is_from_user "sent mail, written by Normalize from Gmail labelIds (011)"
+        tsvector search_vector "generated always as, subject+body, GIN-indexed (Phase 4)"
     }
     TASKS {
         uuid id PK
@@ -120,6 +129,62 @@ erDiagram
         text body
         timestamptz sent_at "nullable, always null this phase -- no send credential (011)"
     }
+    RULES {
+        uuid id PK
+        uuid account_id FK
+        boolean enabled "default true"
+        jsonb conditions "[{field, operator, value}] -- single-condition only, this phase's builder (Phase 4)"
+        jsonb actions "[{type, params}] (Phase 4)"
+        text condition_summary
+        text action_summary
+        int daily_cap "nullable"
+        int confidence_floor "nullable, required by the API for any auto-reply action (Phase 4)"
+    }
+    RULE_RUNS {
+        uuid id PK
+        uuid rule_id FK
+        uuid email_id FK "nullable"
+        timestamptz ran_at "backs 'N runs / 30d' -- written by the Rule Engine (Phase 5), live-verified 2026-09-19"
+    }
+    SETTINGS {
+        uuid account_id PK, FK
+        text signature "nullable"
+        text style_samples "nullable"
+        text summary_length "one-line/short, default one-line"
+        boolean digest_enabled "default false -- no scheduled Daily Digest workflow yet (Phase 4)"
+        text digest_time "nullable"
+        jsonb exclusion_rules "default []"
+        int retention_days "nullable -- 'Not set' is a real, permanent option, unresolved product question"
+        text timezone "default Asia/Colombo"
+        time work_hours_start "default 09:00"
+        time work_hours_end "default 18:00"
+        jsonb priority_weights "{vip,deadline,direct_question,age}"
+    }
+    ACTIVITY_LOG {
+        uuid id PK
+        uuid account_id FK
+        timestamptz at "default now()"
+        text action
+        text target
+        text cause
+        boolean undoable "default false"
+        jsonb undo_payload "nullable -- {table,action,ids}, consumed by POST /api/undo/:actionId (Phase 4)"
+    }
+    SAVED_VIEWS {
+        uuid id PK
+        uuid account_id FK
+        text slug
+        text label
+        jsonb filters
+    }
+    CATEGORIES {
+        uuid id PK
+        uuid account_id FK
+        text key "one of the 7 built-in platform keys, or a custom key"
+        text label
+        int number
+        uuid merged_into FK "nullable -- Merge stays unimplemented, semantics undecided (Phase 4)"
+    }
 ```
 
 `contact_aggregates` (a SQL view, not a table, so it doesn't appear above) computes `message_count`/`last_contact_at` per contact from `emails.participants`; `yourAvgReplyHours`/`openThreadIds` are computed in `contact-mapping.ts` instead, not in SQL (`011-followups-contacts-api`).
@@ -138,6 +203,10 @@ erDiagram
 | Web Dashboard (mutation routes, `009-dashboard-messages-api`) | `emails`: is_starred (`PATCH /api/messages/:id/star`), status/snoozed_until/handled_at/handled_action (`POST /api/messages/archive\|done\|snooze\|restore`) — otherwise reads only |
 | Web Dashboard (action-item/draft routes, `010-dashboard-actions-drafts-api`) | `tasks`: email_id=null/task_text/deadline/status/priority/origin='manual' (`POST\|PATCH /api/action-items*`); `drafts`: draft_body/edit_distance/tone/length (`PATCH /api/drafts/:id`), status/approved_at (`POST /api/drafts/:id/status`) — otherwise reads only |
 | Web Dashboard (follow-ups/contacts routes, `011-followups-contacts-api`) | `commitments.status` (`PATCH /api/commitments/:id`); `nudges`: commitment_id (nullable)/email_id/body/sent_at=null (`POST /api/nudges`); `contacts.is_vip` (`PATCH /api/contacts/:id/vip`) — otherwise reads only |
+| Web Dashboard (rules/settings/activity/search routes, Phase 4 — `PHASE-4-IMPLEMENTATION-PLAN.md`) | `rules`: full row (`POST /api/rules`), `enabled` (`PATCH /api/rules/:id`); `settings`: full row on first read, then whichever fields a `PATCH /api/settings` call sends; `activity_log`: written by the message mutation routes (archive/done/snooze) and by `/api/sync/resync`/`/api/settings/purge` themselves, not by n8n; `saved_views`: full row (`POST /api/saved-views`); `categories`: `label` (`PATCH /api/categories/rename`), full row for a custom category (`POST /api/categories`) |
+| Web Dashboard (reassignment logging, Phase 5 — `PHASE-5-IMPLEMENTATION-PLAN.md`) | `activity_log`: one row per real platform reassignment (`PATCH /api/messages/:id/platform`, only when the value actually changes) — the signal `GET /api/analytics/ai-performance`'s classification-accuracy figure counts against |
+| Rule Engine (`rule-engine.json`, Phase 5 — `PHASE-5-IMPLEMENTATION-PLAN.md`) | `rule_runs`: one row per applied (matched, under daily_cap) rule; `activity_log`: one row per applied rule, `undoable=true` only for Auto-archive; `emails`: status/handled_at/handled_action (Auto-archive), priority/priority_score (Auto-prioritise) — Auto-label is detected but never applied (no target-category value exists to apply); Auto-draft calls `draft-generation.json`'s existing webhook rather than writing `drafts` itself |
+| Postgres (via n8n, on-demand) | `accounts` fields refreshed by `gmail-renewal-recovery.json`'s new webhook-triggered path (Phase 4) — same columns the 6-hourly schedule path already writes, just reachable on demand via `POST /api/sync/resync` too |
 | Unwritten this phase (honest placeholders) | `emails`: attachments, gmail_url, sla_target_hours, is_unread (stays at its default); `tasks`: owner_name, owner_email, confidence; `nudges.sent_at` (always null — no send credential exists, `011-followups-contacts-api`) |
 
 Splitting the table by writer this way makes the phasing obvious: Phase 1 fills the top block, Phase 2 the second, Phase 3 the third. Each phase is independently verifiable by querying one set of columns.

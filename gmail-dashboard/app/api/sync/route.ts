@@ -32,8 +32,6 @@ export async function GET() {
     const offlineState: SyncState = {
       status: "offline",
       lastSyncAt: null,
-      // No backing counter table yet (BACKEND-REQUIREMENTS.md §5.4, a later
-      // migration). Returned as honest placeholders, never invented.
       queueDepth: 0,
       failedCount: 0,
       nextRetryAt: null,
@@ -44,24 +42,34 @@ export async function GET() {
 
   const since = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
 
-  const [{ count: failedCount, error: failedCountError }, { data: latestOutcome, error: latestOutcomeError }] =
-    await Promise.all([
-      supabase
-        .from("sync_outcomes")
-        .select("*", { count: "exact", head: true })
-        .eq("account_id", account.id)
-        .eq("outcome", "failed")
-        .gt("occurred_at", since),
-      supabase
-        .from("sync_outcomes")
-        .select("outcome, occurred_at")
-        .eq("account_id", account.id)
-        .order("occurred_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+  const [
+    { count: failedCount, error: failedCountError },
+    { data: latestOutcome, error: latestOutcomeError },
+    { count: queueDepth, error: queueDepthError },
+  ] = await Promise.all([
+    supabase
+      .from("sync_outcomes")
+      .select("*", { count: "exact", head: true })
+      .eq("account_id", account.id)
+      .eq("outcome", "failed")
+      .gt("occurred_at", since),
+    supabase
+      .from("sync_outcomes")
+      .select("outcome, occurred_at")
+      .eq("account_id", account.id)
+      .order("occurred_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Phase 4 (PHASE-4-IMPLEMENTATION-PLAN.md §7 judgment call #2): this
+    // push-based, single-mailbox system has no message broker to
+    // instrument as a literal queue — Pub/Sub delivery is fire-and-forget
+    // (002-ingestion's own design). Ingested-but-not-yet-triaged rows are a
+    // truthful, always-available proxy for "backlog depth" that needs no
+    // new counter column.
+    supabase.from("emails").select("*", { count: "exact", head: true }).is("processed_at", null),
+  ]);
 
-  if (failedCountError || latestOutcomeError) {
+  if (failedCountError || latestOutcomeError || queueDepthError) {
     return NextResponse.json({ error: "failed to read sync state" }, { status: 500 });
   }
 
@@ -72,9 +80,7 @@ export async function GET() {
   const syncState: SyncState = {
     status: "synced",
     lastSyncAt: account.last_successful_sync,
-    // No backing counter table yet (BACKEND-REQUIREMENTS.md §5.4, a later
-    // migration). Returned as an honest placeholder, never invented.
-    queueDepth: 0,
+    queueDepth: queueDepth ?? 0,
     failedCount: failedCount ?? 0,
     nextRetryAt: null,
     error:

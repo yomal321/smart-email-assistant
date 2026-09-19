@@ -8,9 +8,6 @@ import { CONTACTS, contactById } from "./fixtures/contacts";
 import { ACTION_ITEMS } from "./fixtures/action-items";
 import { DRAFTS } from "./fixtures/drafts";
 import { COMMITMENTS, AWAITING_REPLY } from "./fixtures/commitments";
-import { SYNC_STATE } from "./fixtures/sync";
-import { RULES } from "./fixtures/rules";
-import { ACTIVITY_LOG } from "./fixtures/activity";
 import { PLATFORMS, platformMeta } from "./types";
 import type { Message, Platform, Contact } from "./types";
 
@@ -45,18 +42,6 @@ export function getCommitments() {
 
 export function getAwaitingReply() {
   return AWAITING_REPLY;
-}
-
-export function getSyncState() {
-  return SYNC_STATE;
-}
-
-export function getRules() {
-  return RULES;
-}
-
-export function getActivityLog() {
-  return ACTIVITY_LOG;
 }
 
 // ---- Derived selectors ------------------------------------------------
@@ -149,14 +134,6 @@ export function getKpis() {
     processedToday,
     timeSavedMinutes: Math.round(timeSavedMinutes),
   };
-}
-
-/** 14 days of received vs handled — Overview's volume trend. Deterministic, fixture-authored. */
-export function getVolumeTrend(): { day: string; received: number; handled: number }[] {
-  const received = [22, 19, 27, 31, 18, 12, 9, 24, 29, 33, 21, 17, 14, 26];
-  const handled = [18, 19, 22, 24, 20, 10, 8, 20, 25, 27, 22, 16, 12, 19];
-  const days = ["Aug 31", "Sep 1", "Sep 2", "Sep 3", "Sep 4", "Sep 5", "Sep 6", "Sep 7", "Sep 8", "Sep 9", "Sep 10", "Sep 11", "Sep 12", "Sep 13"];
-  return days.map((day, i) => ({ day, received: received[i], handled: handled[i] }));
 }
 
 export { platformMeta, PLATFORMS };

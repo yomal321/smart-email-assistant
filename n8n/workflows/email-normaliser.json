@@ -237,6 +237,38 @@
       "notesInFlow": true
     },
     {
+      "id": "b1c2d3e4-0001-4a1a-9c1a-000000000001",
+      "name": "Wait before Action Extraction",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2060,
+        420
+      ],
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "notes": "Live deployment (011-followups-contacts-api) found all 3 extraction branches firing Gemini calls within milliseconds of each other trips the free-tier 429 rate limit on every one simultaneously -- retryOnFail's synchronized retries don't help since all 3 branches retry in lockstep too. Staggers this branch 5s behind Call Triage Pipeline (immediate) so the 3 Gemini calls per email don't burst together.",
+      "notesInFlow": true
+    },
+    {
+      "id": "b1c2d3e4-0002-4a1a-9c1a-000000000002",
+      "name": "Wait before Commitment Extraction",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2060,
+        540
+      ],
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "notes": "Same rate-limit fix as 'Wait before Action Extraction', staggered further back (10s) so all 3 branches' Gemini calls land at distinct times.",
+      "notesInFlow": true
+    },
+    {
       "id": "a1b2c3d4-000a-4a1a-9c1a-00000000000a",
       "name": "Call Commitment Extraction",
       "type": "n8n-nodes-base.executeWorkflow",
@@ -352,10 +384,32 @@
             "index": 0
           },
           {
-            "node": "Call Action Extraction",
+            "node": "Wait before Action Extraction",
             "type": "main",
             "index": 0
           },
+          {
+            "node": "Wait before Commitment Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait before Action Extraction": {
+      "main": [
+        [
+          {
+            "node": "Call Action Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait before Commitment Extraction": {
+      "main": [
+        [
           {
             "node": "Call Commitment Extraction",
             "type": "main",

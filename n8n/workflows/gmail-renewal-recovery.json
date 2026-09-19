@@ -552,6 +552,106 @@
         -1620,
         480
       ]
+    },
+    {
+      "id": "a1b2c3d4-0001-4a1a-9c1a-resync000001",
+      "name": "Resync Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        700
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resync",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "notes": "PHASE-4-IMPLEMENTATION-PLAN.md Wave 2: backs POST /api/sync/resync (\"Resync now\" on the Settings page and command palette). Fire-and-forget from the caller's perspective once authed -- responds 200 immediately on a successful auth check while the actual renewal/catch-up logic (shared with the 6-hourly schedule path) continues in the background, same responseNode convention as draft-generation.json.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a1b2c3d4-0002-4a1a-9c1a-resync000002",
+      "name": "Verify resync secret",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1360,
+        700
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Phase 4 (PHASE-4-IMPLEMENTATION-PLAN.md Wave 2): gates the on-demand\n// resync path only -- the existing 6-hourly schedule path is unauthenticated\n// (internal cron, no external caller) and is completely unaffected by this\n// node; it isn't wired into this branch at all.\n//\n// Same constant-time-comparison + fail-closed pattern as draft-generation.json's\n// 'Verify secret' node: RESYNC_WEBHOOK_SECRET is an n8n environment variable\n// (not an n8n credential -- a Code node can't read a credential's value\n// directly), read via $env.\ntry {\n  const crypto = require('crypto');\n  const item = $json || {};\n  const headers = item.headers || {};\n  const providedSecret = headers['x-resync-webhook-secret'] || '';\n  const expectedSecret = $env.RESYNC_WEBHOOK_SECRET || '';\n\n  const providedHash = crypto.createHash('sha256').update(String(providedSecret)).digest();\n  const expectedHash = crypto.createHash('sha256').update(String(expectedSecret)).digest();\n\n  const isValid = Boolean(expectedSecret) && Boolean(providedSecret) &&\n    crypto.timingSafeEqual(providedHash, expectedHash);\n\n  return { json: { authFailed: !isValid } };\n} catch (err) {\n  return { json: { authFailed: true, error: (err && err.message) || 'Unknown auth error' } };\n}\n"
+      },
+      "notes": "Constant-time comparison against RESYNC_WEBHOOK_SECRET (n8n environment variable, not a credential) -- same pattern as draft-generation.json's \"Verify secret\" node."
+    },
+    {
+      "id": "a1b2c3d4-0003-4a1a-9c1a-resync000003",
+      "name": "Resync auth ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        700
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "resync-auth-cond-1",
+              "leftValue": "={{ $json.authFailed }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0004-4a1a-9c1a-resync000004",
+      "name": "Respond 401 - resync",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        860
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"unauthorized\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0005-4a1a-9c1a-resync000005",
+      "name": "Respond 200 - resync",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        620
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"started\" } }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
     }
   ],
   "connections": {
@@ -763,6 +863,51 @@
         [
           {
             "node": "Record failed — catch-up incomplete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resync Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify resync secret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify resync secret": {
+      "main": [
+        [
+          {
+            "node": "Resync auth ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resync auth ok?": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 - resync",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read account state",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401 - resync",
             "type": "main",
             "index": 0
           }

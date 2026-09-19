@@ -6,8 +6,11 @@
 -- Deploy together with the email-normaliser.json edit in the same wave (spec NFR5) —
 -- these tables/column must exist before that workflow's new write nodes run,
 -- or every subsequent ingested email fails outright.
+-- IF NOT EXISTS: this column was already added live by an earlier partial
+-- run of this migration, outside CLI-tracked history. Idempotent so a clean
+-- re-run (this deploy, or a fresh environment) both work unchanged.
 alter table emails
-  add column is_from_user boolean not null default false;
+  add column if not exists is_from_user boolean not null default false;
 
 create table thread_entries (
   id uuid primary key default gen_random_uuid(),

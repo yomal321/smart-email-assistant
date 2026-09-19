@@ -222,6 +222,50 @@
         "width": 480,
         "color": 7
       }
+    },
+    {
+      "id": "d4e5f6a7-000b-4a1a-9c1a-rule-engine01",
+      "name": "Call Rule Engine",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1800,
+        60
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Rule Engine"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_id": "={{ $('Validate triage result').first().json.email_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "email_id",
+              "displayName": "email_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "PHASE-5-IMPLEMENTATION-PLAN.md Wave 1: second output of Write triage success, alongside the existing Format success output -- non-blocking (waitForSubWorkflow: false), same convention as every other post-write fan-out in this codebase, so a slow or failing Rule Engine run never delays or breaks this already-verified triage path. Must run AFTER this node (not fanned out in parallel like email-normaliser.json fans out to Action/Commitment Extraction) because rules match on platform/confidence, which Write triage success is what just wrote. References the Rule Engine sub-workflow BY NAME (cachedResultName), same placeholder pattern every other executeWorkflow node in this codebase uses -- workflowId.value is left blank until rule-engine.json is imported and this node is re-pointed at it via n8n's resource picker.",
+      "notesInFlow": true
     }
   ],
   "connections": {
@@ -292,6 +336,11 @@
         [
           {
             "node": "Format success output",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Call Rule Engine",
             "type": "main",
             "index": 0
           }

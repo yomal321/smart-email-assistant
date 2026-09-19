@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { getActivityLog } from "@/lib/data";
 import { useSyncState } from "@/lib/data/use-sync-state";
+import { useSettings } from "@/lib/data/use-settings";
+import { useActivityLog } from "@/lib/data/use-activity-log";
 import { formatFullDateTime } from "@/lib/format/relative-time";
 import { usePreferences } from "@/components/board/preferences-provider";
 import { Switch } from "@/components/ui/switch";
@@ -20,9 +21,41 @@ import {
 
 export default function SettingsPage() {
   const { data: sync, loading: syncLoading } = useSyncState();
-  const activity = getActivityLog();
+  const { data: settings, update: updateSettings } = useSettings();
+  const { data: activity } = useActivityLog();
   const { theme, setTheme, density, setDensity } = usePreferences();
   const [purgeConfirm, setPurgeConfirm] = React.useState("");
+  const [purging, setPurging] = React.useState(false);
+  const [purgeError, setPurgeError] = React.useState<string | null>(null);
+  const [resyncing, setResyncing] = React.useState(false);
+
+  async function handleResync() {
+    setResyncing(true);
+    try {
+      await fetch("/api/sync/resync", { method: "POST" });
+    } finally {
+      setResyncing(false);
+    }
+  }
+
+  async function handlePurge() {
+    setPurging(true);
+    setPurgeError(null);
+    try {
+      const res = await fetch("/api/settings/purge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: purgeConfirm }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error((body && body.error) || "purge failed");
+      setPurgeConfirm("");
+    } catch (err) {
+      setPurgeError(err instanceof Error ? err.message : "purge failed");
+    } finally {
+      setPurging(false);
+    }
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -45,8 +78,8 @@ export default function SettingsPage() {
                     : "Unavailable"}
               </p>
             </div>
-            <Button size="sm" variant="secondary" className="rounded-lg">
-              Resync
+            <Button size="sm" variant="secondary" className="rounded-lg" onClick={handleResync} disabled={resyncing}>
+              {resyncing ? "Resyncing…" : "Resync"}
             </Button>
           </div>
         </SettingsSection>
@@ -63,7 +96,10 @@ export default function SettingsPage() {
             </Select>
           </Field>
           <Field label="Summary length">
-            <Select defaultValue="one-line">
+            <Select
+              value={settings?.summaryLength ?? "one-line"}
+              onValueChange={(v) => updateSettings({ summaryLength: v as "one-line" | "short" })}
+            >
               <SelectTrigger className="rounded-lg">
                 <SelectValue />
               </SelectTrigger>
@@ -74,20 +110,37 @@ export default function SettingsPage() {
             </Select>
           </Field>
           <Field label="Signature">
-            <Textarea defaultValue={"Best,\nYou"} className="rounded-lg" rows={3} />
+            <Textarea
+              value={settings?.signature ?? ""}
+              onChange={(e) => updateSettings({ signature: e.target.value })}
+              className="rounded-lg"
+              rows={3}
+            />
           </Field>
           <Field label="Writing style samples">
-            <Textarea placeholder="Paste a few emails you've written, so replies sound like you." className="rounded-lg" rows={4} />
+            <Textarea
+              value={settings?.styleSamples ?? ""}
+              onChange={(e) => updateSettings({ styleSamples: e.target.value })}
+              placeholder="Paste a few emails you've written, so replies sound like you."
+              className="rounded-lg"
+              rows={4}
+            />
           </Field>
         </SettingsSection>
 
         <SettingsSection title="Notifications">
           <div className="flex items-center justify-between">
             <Label className="text-sm text-ink-secondary">Daily digest</Label>
-            <Switch defaultChecked />
+            <Switch
+              checked={settings?.digestEnabled ?? false}
+              onCheckedChange={(v) => updateSettings({ digestEnabled: v })}
+            />
           </div>
           <Field label="Digest schedule">
-            <Select defaultValue="0800">
+            <Select
+              value={settings?.digestTime ?? "0800"}
+              onValueChange={(v) => updateSettings({ digestTime: v })}
+            >
               <SelectTrigger className="rounded-lg">
                 <SelectValue />
               </SelectTrigger>
@@ -102,10 +155,18 @@ export default function SettingsPage() {
 
         <SettingsSection title="Privacy">
           <Field label="Exclusion rules — mail that never goes to the model">
-            <Input placeholder={'e.g. from:legal@, subject contains "confidential"'} className="rounded-lg" />
+            <Input
+              value={settings?.exclusionRules?.[0] ?? ""}
+              onChange={(e) => updateSettings({ exclusionRules: e.target.value ? [e.target.value] : [] })}
+              placeholder={'e.g. from:legal@, subject contains "confidential"'}
+              className="rounded-lg"
+            />
           </Field>
           <Field label="Data retention period">
-            <Select defaultValue="unset">
+            <Select
+              value={settings?.retentionDays == null ? "unset" : String(settings.retentionDays)}
+              onValueChange={(v) => updateSettings({ retentionDays: v === "unset" ? null : Number(v) })}
+            >
               <SelectTrigger className="rounded-lg">
                 <SelectValue />
               </SelectTrigger>
@@ -125,32 +186,50 @@ export default function SettingsPage() {
                 placeholder='Type "PURGE" to confirm'
                 className="h-8 max-w-48 rounded-lg"
               />
-              <Button size="sm" variant="destructive" className="rounded-lg" disabled={purgeConfirm !== "PURGE"}>
-                Purge
+              <Button
+                size="sm"
+                variant="destructive"
+                className="rounded-lg"
+                disabled={purgeConfirm !== "PURGE" || purging}
+                onClick={handlePurge}
+              >
+                {purging ? "Purging…" : "Purge"}
               </Button>
             </div>
+            {purgeError && <p className="mt-2 text-xs" style={{ color: "var(--signal)" }}>{purgeError}</p>}
           </div>
         </SettingsSection>
 
         <SettingsSection title="Working hours & timezone">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Timezone">
-              <Select defaultValue="colombo">
+              <Select
+                value={settings?.timezone ?? "Asia/Colombo"}
+                onValueChange={(v) => updateSettings({ timezone: v })}
+              >
                 <SelectTrigger className="rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="colombo">Asia/Colombo (GMT+5:30)</SelectItem>
-                  <SelectItem value="london">Europe/London</SelectItem>
-                  <SelectItem value="ny">America/New_York</SelectItem>
+                  <SelectItem value="Asia/Colombo">Asia/Colombo (GMT+5:30)</SelectItem>
+                  <SelectItem value="Europe/London">Europe/London</SelectItem>
+                  <SelectItem value="America/New_York">America/New_York</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
             <Field label="Hours">
               <div className="flex items-center gap-2">
-                <Input defaultValue="09:00" className="h-9 rounded-lg" />
+                <Input
+                  value={settings?.workHoursStart ?? "09:00"}
+                  onChange={(e) => updateSettings({ workHoursStart: e.target.value })}
+                  className="h-9 rounded-lg"
+                />
                 <span className="text-ink-tertiary">–</span>
-                <Input defaultValue="18:00" className="h-9 rounded-lg" />
+                <Input
+                  value={settings?.workHoursEnd ?? "18:00"}
+                  onChange={(e) => updateSettings({ workHoursEnd: e.target.value })}
+                  className="h-9 rounded-lg"
+                />
               </div>
             </Field>
           </div>
@@ -196,6 +275,13 @@ export default function SettingsPage() {
                 </tr>
               </thead>
               <tbody>
+                {activity.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-4 text-center text-ink-tertiary">
+                      Nothing logged yet — this fills in as the assistant (or you) act on mail.
+                    </td>
+                  </tr>
+                )}
                 {activity.map((a) => (
                   <tr key={a.id} className="rule-b">
                     <td className="whitespace-nowrap px-3 py-1.5 tabular text-ink-secondary">{formatFullDateTime(a.at)}</td>

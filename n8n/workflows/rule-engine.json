@@ -1,0 +1,588 @@
+{
+  "name": "Rule Engine",
+  "nodes": [
+    {
+      "id": "re000001-0001-4a1a-9c1a-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "email_id",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "re000001-0002-4a1a-9c1a-000000000002",
+      "name": "Read email",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, account_id, subject, participants, platform, confidence, attachments FROM emails WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ [$json.email_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Single row. Every condition test and every downstream action-apply query reads this row via $('Read email').first().json rather than the current item once later nodes fan out to one item per rule."
+    },
+    {
+      "id": "re000001-0003-4a1a-9c1a-000000000003",
+      "name": "Read matching rules",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.id AS rule_id, r.conditions, r.actions, r.daily_cap, r.condition_summary, r.action_summary,\n  (SELECT count(*) FROM rule_runs rr WHERE rr.rule_id = r.id AND rr.ran_at > now() - interval '1 day')::int AS run_count_today\nFROM rules r\nWHERE r.account_id = $1 AND r.enabled = true",
+        "options": {
+          "queryReplacement": "={{ [$json.account_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "One row per enabled rule for this email's account, with the daily_cap run-count computed inline (a scalar subquery) rather than a second query -- zero rows here (no enabled rules, or every one already over its cap) means nothing downstream executes for this email at all."
+    },
+    {
+      "id": "re000001-0004-4a1a-9c1a-000000000004",
+      "name": "Evaluate rule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Phase 5 (PHASE-5-IMPLEMENTATION-PLAN.md Wave 1): single-condition,\n// single-action evaluation -- the same scope app/rules/page.tsx's builder\n// (and POST /api/rules/preview) actually supports today. Runs once per\n// enabled-rule item from 'Read matching rules' -- '.item' (not '.first()')\n// is deliberate here: unlike triage-pipeline.json's single-email items,\n// multiple rules genuinely can be in flight in the same execution, and\n// each must resolve against its OWN paired-item lineage downstream, not\n// always the first one (see learnings.md L6 for the case where '.first()'\n// was the right call instead -- opposite situation, single item always).\nconst email = $('Read email').first().json;\nconst rule = $json;\n\nfunction fieldMatches(condition, email) {\n  const { field, operator, value } = condition;\n  switch (field) {\n    case 'Sender domain': {\n      const participants = email.participants || [];\n      const from = participants.find((p) => p.role === 'from');\n      const address = from ? from.address : '';\n      return operator === 'equals' ? address === value : address.includes(value);\n    }\n    case 'Subject': {\n      const subject = email.subject || '';\n      return operator === 'equals' ? subject === value : subject.toLowerCase().includes(String(value).toLowerCase());\n    }\n    case 'Category': {\n      const platform = email.platform || '';\n      return operator === 'equals' ? platform === value : platform.toLowerCase().includes(String(value).toLowerCase());\n    }\n    case 'Confidence': {\n      const confidence = email.confidence;\n      if (confidence === null || confidence === undefined) return false;\n      const n = Number(value);\n      if (Number.isNaN(n)) return false;\n      return operator === 'is above' ? confidence > n : confidence < n;\n    }\n    case 'Has attachment': {\n      const attachments = email.attachments || [];\n      return Array.isArray(attachments) && attachments.length > 0;\n    }\n    default:\n      return false;\n  }\n}\n\nconst conditions = Array.isArray(rule.conditions) ? rule.conditions : [];\nconst condition = conditions[0];\nconst conditionMatched = condition ? fieldMatches(condition, email) : false;\n\nconst underCap = rule.daily_cap === null || rule.daily_cap === undefined || rule.run_count_today < rule.daily_cap;\n\nconst actions = Array.isArray(rule.actions) ? rule.actions : [];\n// 'Auto-label' has no target value the builder ever collects (see the\n// plan's Wave 1 note) -- it matches the same as any other action type\n// here, but 'Route by action' below has no output for it, so it simply\n// runs no further, writes no rule_runs row, and logs nothing.\nconst actionType = actions[0] ? actions[0].type : null;\n\nreturn {\n  json: {\n    ruleId: rule.rule_id,\n    emailId: email.id,\n    actionType,\n    matched: conditionMatched && underCap && actionType !== null,\n    conditionSummary: rule.condition_summary,\n    actionSummary: rule.action_summary,\n  },\n};\n"
+      }
+    },
+    {
+      "id": "re000001-0005-4a1a-9c1a-000000000005",
+      "name": "Matched?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "re-cond-1",
+              "leftValue": "={{ $json.matched }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "re000001-0006-4a1a-9c1a-000000000006",
+      "name": "Route by action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "re-sw-1",
+                    "leftValue": "={{ $json.actionType }}",
+                    "rightValue": "Auto-archive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Auto-archive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "re-sw-2",
+                    "leftValue": "={{ $json.actionType }}",
+                    "rightValue": "Auto-prioritise",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Auto-prioritise"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "re-sw-3",
+                    "leftValue": "={{ $json.actionType }}",
+                    "rightValue": "Auto-draft",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Auto-draft"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "notes": "No fallback output -- an actionType of 'Auto-label' (or anything else unrecognized) simply produces no further execution for that item: no email mutation, no rule_runs row, no activity_log row. See Evaluate rule's comment for why."
+    },
+    {
+      "id": "re000001-a001-4a1a-9c1a-branch0a01",
+      "name": "Apply archive",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1800,
+        120
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE emails SET status = 'archived', handled_at = now(), handled_action = 'archived' WHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ [$json.emailId] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "id": "re000001-a02-4a1a-9c1a-brancha002",
+      "name": "Record Auto-archive run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2060,
+        120
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO rule_runs (rule_id, email_id) VALUES ($1, $2);",
+        "options": {
+          "queryReplacement": "={{ [$('Evaluate rule').item.json.ruleId, $('Evaluate rule').item.json.emailId] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "id": "re000001-a03-4a1a-9c1a-brancha003",
+      "name": "Log Auto-archive activity",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2320,
+        120
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO activity_log (account_id, action, target, cause, undoable, undo_payload) VALUES ($1, $2, $3, $4, $5, $6);",
+        "options": {
+          "queryReplacement": "={{ [$('Read email').first().json.account_id, 'Auto-archive', '\"' + $('Read email').first().json.subject + '\"', 'Rule: ' + $('Evaluate rule').item.json.conditionSummary, true, JSON.stringify({ table: 'emails', action: 'restore', ids: [$('Evaluate rule').item.json.emailId] })] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "undo_payload reuses the exact {table,action,ids} shape lib/data/activity-log.ts already writes for a manual archive (Phase 4) -- POST /api/undo/:actionId handles a rule-driven archive with no new code on the dashboard side."
+    },
+    {
+      "id": "re000001-p001-4a1a-9c1a-branch0p01",
+      "name": "Apply prioritise",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1800,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE emails SET priority = 'urgent', priority_score = greatest(coalesce(priority_score, 0), 90) WHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ [$json.emailId] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "id": "re000001-p02-4a1a-9c1a-branchp002",
+      "name": "Record Auto-prioritise run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2060,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO rule_runs (rule_id, email_id) VALUES ($1, $2);",
+        "options": {
+          "queryReplacement": "={{ [$('Evaluate rule').item.json.ruleId, $('Evaluate rule').item.json.emailId] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "id": "re000001-p03-4a1a-9c1a-branchp003",
+      "name": "Log Auto-prioritise activity",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2320,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO activity_log (account_id, action, target, cause, undoable, undo_payload) VALUES ($1, $2, $3, $4, $5, $6);",
+        "options": {
+          "queryReplacement": "={{ [$('Read email').first().json.account_id, 'Auto-prioritise', '\"' + $('Read email').first().json.subject + '\"', 'Rule: ' + $('Evaluate rule').item.json.conditionSummary, false, null] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "id": "re000001-d001-4a1a-9c1a-branch0d01",
+      "name": "Call draft webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SELF_BASE_URL }}/webhook/generate-draft",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-draft-webhook-secret",
+              "value": "={{ $env.DRAFT_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { email_id: $json.emailId } }}",
+        "options": {}
+      },
+      "notes": "Calls draft-generation.json's public webhook over HTTP rather than an internal Execute Workflow node -- that workflow's only entry point is its webhook trigger (no Execute Workflow Trigger exists on it), same reasoning gmail-renewal-recovery.json's new resync webhook (Phase 4) used for the opposite direction. Reuses DRAFT_WEBHOOK_SECRET (already required by draft-generation.json itself) -- no new secret. Requires a new SELF_BASE_URL n8n environment variable (this n8n instance's own reachable base URL, e.g. http://localhost:5678) so this workflow can call a sibling webhook on the same instance; tone/length are omitted from the body and default inside draft-generation.json's own Verify secret node (friendly/standard)."
+    },
+    {
+      "id": "re000001-d02-4a1a-9c1a-branchd002",
+      "name": "Record Auto-draft run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2060,
+        480
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO rule_runs (rule_id, email_id) VALUES ($1, $2);",
+        "options": {
+          "queryReplacement": "={{ [$('Evaluate rule').item.json.ruleId, $('Evaluate rule').item.json.emailId] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "id": "re000001-d03-4a1a-9c1a-branchd003",
+      "name": "Log Auto-draft activity",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2320,
+        480
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO activity_log (account_id, action, target, cause, undoable, undo_payload) VALUES ($1, $2, $3, $4, $5, $6);",
+        "options": {
+          "queryReplacement": "={{ [$('Read email').first().json.account_id, 'Auto-draft', '\"' + $('Read email').first().json.subject + '\"', 'Rule: ' + $('Evaluate rule').item.json.conditionSummary, false, null] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "id": "re000001-s001-4a1a-9c1a-stickynote01",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -140
+      ],
+      "parameters": {
+        "content": "## Rule Engine\n\nCalled non-blocking by triage-pipeline.json right after it writes platform/confidence/priority (this workflow's conditions match on those fields, so it must run after Triage, not in parallel with it like Action/Commitment Extraction).\n\nSingle condition, single action per rule -- matches the real capability of app/rules/page.tsx's builder (Phase 4). Auto-label is detected but never applied (no target-category UI exists to collect one). Auto-draft calls draft-generation.json's public webhook over HTTP (requires a new SELF_BASE_URL env var). Auto-archive's activity_log row is undoable (reuses the same undo_payload shape manual archive/done/snooze already write); auto-prioritise and auto-draft are not.\n\nSee PHASE-5-IMPLEMENTATION-PLAN.md Wave 1.",
+        "height": 300,
+        "width": 480,
+        "color": 4
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read email": {
+      "main": [
+        [
+          {
+            "node": "Read matching rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read matching rules": {
+      "main": [
+        [
+          {
+            "node": "Evaluate rule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate rule": {
+      "main": [
+        [
+          {
+            "node": "Matched?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Matched?": {
+      "main": [
+        [
+          {
+            "node": "Route by action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Route by action": {
+      "main": [
+        [
+          {
+            "node": "Apply archive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply prioritise",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call draft webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply archive": {
+      "main": [
+        [
+          {
+            "node": "Record Auto-archive run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Auto-archive run": {
+      "main": [
+        [
+          {
+            "node": "Log Auto-archive activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply prioritise": {
+      "main": [
+        [
+          {
+            "node": "Record Auto-prioritise run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Auto-prioritise run": {
+      "main": [
+        [
+          {
+            "node": "Log Auto-prioritise activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call draft webhook": {
+      "main": [
+        [
+          {
+            "node": "Record Auto-draft run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Auto-draft run": {
+      "main": [
+        [
+          {
+            "node": "Log Auto-draft activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

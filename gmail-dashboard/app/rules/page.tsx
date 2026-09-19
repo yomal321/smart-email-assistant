@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { Pencil } from "lucide-react";
-import { getRules, getMessages, PLATFORMS } from "@/lib/data";
+import { useRules } from "@/lib/data/use-rules";
+import { useCategories } from "@/lib/data/use-categories";
+import { useSettings } from "@/lib/data/use-settings";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,12 +22,9 @@ const OPERATORS = ["contains", "equals", "is above", "is below"];
 const ACTIONS = ["Auto-label", "Auto-archive", "Auto-prioritise", "Auto-draft"];
 
 export default function RulesPage() {
-  const [rules, setRules] = React.useState(() => getRules());
-  const messages = getMessages();
-
-  function toggle(id: string) {
-    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)));
-  }
+  const { data: rules, toggle } = useRules();
+  const { data: categories, rename } = useCategories();
+  const { data: settings, update: updateSettings } = useSettings();
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -54,7 +53,7 @@ export default function RulesPage() {
       </div>
 
       {/* Inline builder */}
-      <RuleBuilder totalMessages={messages.length} />
+      <RuleBuilder />
 
       {/* Category management */}
       <div className="rule-t px-4 py-5">
@@ -62,18 +61,8 @@ export default function RulesPage() {
           Category management
         </h2>
         <div className="space-y-1.5">
-          {PLATFORMS.map((p) => (
-            <div key={p.platform} className="flex items-center gap-3 rounded-lg border px-3 py-1.5" style={{ borderColor: "var(--rule)" }}>
-              <span
-                className="flex h-5 w-5 items-center justify-center rounded-lg text-[10px] font-bold"
-                style={{ background: `var(--platform-${p.number})`, color: `var(--platform-${p.number}-ink)` }}
-              >
-                {p.number}
-              </span>
-              <span className="flex-1 text-sm text-ink">{p.label}</span>
-              <button className="text-xs text-ink-tertiary hover:text-ink">Rename</button>
-              <button className="text-xs text-ink-tertiary hover:text-ink">Merge</button>
-            </div>
+          {categories.map((c) => (
+            <CategoryRow key={c.key} category={c} onRename={(label) => rename(c.key, label)} />
           ))}
         </div>
         <Button variant="secondary" size="sm" className="mt-2 rounded-lg">
@@ -87,14 +76,34 @@ export default function RulesPage() {
           Priority weighting
         </h2>
         <div className="max-w-md space-y-4">
-          <WeightSlider label="VIP sender" defaultValue={80} />
-          <WeightSlider label="Deadline mentioned" defaultValue={65} />
-          <WeightSlider label="Direct question awaiting answer" defaultValue={70} />
-          <WeightSlider label="Message age" defaultValue={40} />
+          <WeightSlider
+            label="VIP sender"
+            value={settings?.priorityWeights.vip ?? 80}
+            onChange={(v) => updateSettings({ priorityWeights: { ...defaultWeights(settings), vip: v } })}
+          />
+          <WeightSlider
+            label="Deadline mentioned"
+            value={settings?.priorityWeights.deadline ?? 65}
+            onChange={(v) => updateSettings({ priorityWeights: { ...defaultWeights(settings), deadline: v } })}
+          />
+          <WeightSlider
+            label="Direct question awaiting answer"
+            value={settings?.priorityWeights.directQuestion ?? 70}
+            onChange={(v) => updateSettings({ priorityWeights: { ...defaultWeights(settings), directQuestion: v } })}
+          />
+          <WeightSlider
+            label="Message age"
+            value={settings?.priorityWeights.age ?? 40}
+            onChange={(v) => updateSettings({ priorityWeights: { ...defaultWeights(settings), age: v } })}
+          />
         </div>
       </div>
 
-      {/* Auto-reply rules */}
+      {/* Auto-reply rules — a global on/off + cap/floor, distinct from the
+          per-condition `rules` table above; not yet mapped onto a single
+          persisted resource (would need a decision about whether this is
+          itself a `rules` row or its own settings field), so this section
+          stays local UI state, same as before this phase. */}
       <div className="rule-t px-4 py-5">
         <h2 className="mb-2 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">
           Auto-reply rules
@@ -120,27 +129,138 @@ export default function RulesPage() {
   );
 }
 
-function WeightSlider({ label, defaultValue }: { label: string; defaultValue: number }) {
-  const [value, setValue] = React.useState(defaultValue);
+function defaultWeights(settings: ReturnType<typeof useSettings>["data"]) {
   return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-sm">
-        <span className="text-ink-secondary">{label}</span>
-        <span className="tabular font-semibold text-ink">{value}</span>
+    settings?.priorityWeights ?? { vip: 80, deadline: 65, directQuestion: 70, age: 40 }
+  );
+}
+
+function CategoryRow({
+  category,
+  onRename,
+}: {
+  category: { key: string; label: string; number: number };
+  onRename: (label: string) => void;
+}) {
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState(category.label);
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5" style={{ borderColor: "var(--rule)" }}>
+        <Input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="h-7 flex-1 rounded-lg"
+          autoFocus
+        />
+        <button
+          className="text-xs text-ink-tertiary hover:text-ink"
+          onClick={() => {
+            onRename(value);
+            setEditing(false);
+          }}
+        >
+          Save
+        </button>
+        <button className="text-xs text-ink-tertiary hover:text-ink" onClick={() => setEditing(false)}>
+          Cancel
+        </button>
       </div>
-      <Slider value={[value]} onValueChange={([v]) => setValue(v)} max={100} step={5} />
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border px-3 py-1.5" style={{ borderColor: "var(--rule)" }}>
+      <span
+        className="flex h-5 w-5 items-center justify-center rounded-lg text-[10px] font-bold"
+        style={{ background: `var(--platform-${category.number})`, color: `var(--platform-${category.number}-ink)` }}
+      >
+        {category.number}
+      </span>
+      <span className="flex-1 text-sm text-ink">{category.label}</span>
+      <button className="text-xs text-ink-tertiary hover:text-ink" onClick={() => setEditing(true)}>
+        Rename
+      </button>
+      <button className="text-xs text-ink-tertiary hover:text-ink" disabled title="Merge semantics not yet decided">
+        Merge
+      </button>
     </div>
   );
 }
 
-function RuleBuilder({ totalMessages }: { totalMessages: number }) {
+function WeightSlider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  const [local, setLocal] = React.useState(value);
+  // Reset the in-drag local value when the committed prop changes (e.g. a
+  // settings refetch) — adjusting state during render instead of an effect,
+  // per React's guidance on syncing state to a changed prop.
+  const [prevValue, setPrevValue] = React.useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setLocal(value);
+  }
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-sm">
+        <span className="text-ink-secondary">{label}</span>
+        <span className="tabular font-semibold text-ink">{local}</span>
+      </div>
+      <Slider value={[local]} onValueChange={([v]) => setLocal(v)} onValueCommit={([v]) => onChange(v)} max={100} step={5} />
+    </div>
+  );
+}
+
+function RuleBuilder() {
+  const { create } = useRules();
   const [field, setField] = React.useState(FIELDS[0]);
   const [operator, setOperator] = React.useState(OPERATORS[0]);
   const [value, setValue] = React.useState("");
   const [action, setAction] = React.useState(ACTIONS[0]);
+  const [preview, setPreview] = React.useState<{ count: number; partial: boolean } | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
 
-  // A deterministic, illustrative preview count derived from the current inputs.
-  const previewCount = value ? Math.max(1, Math.round((value.length * 7 + field.length) % totalMessages)) : 0;
+  React.useEffect(() => {
+    // Nothing to debounce with an empty value — render already shows the
+    // "enter a value" prompt in that case regardless of stale `preview`
+    // state, so there's no need to clear it here.
+    if (!value) return;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      fetch("/api/rules/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ conditions: [{ field, operator, value }] }),
+      })
+        .then((res) => res.json())
+        .then((body) => setPreview(body))
+        .catch(() => {});
+    }, 300);
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [field, operator, value]);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    const result = await create({
+      conditions: [{ field, operator, value }],
+      actions: [{ type: action }],
+      conditionSummary: `${field} ${operator} "${value}"`,
+      actionSummary: action,
+    });
+    setSaving(false);
+    if (result.ok) {
+      setValue("");
+      setPreview(null);
+    } else {
+      setSaveError(result.error ?? "failed to save rule");
+    }
+  }
 
   return (
     <div className="rule-t px-4 py-5">
@@ -195,19 +315,24 @@ function RuleBuilder({ totalMessages }: { totalMessages: number }) {
       </div>
       <div className="mt-3 flex items-center justify-between">
         <p className="text-xs text-ink-tertiary">
-          {value ? (
+          {!value ? (
+            "Enter a value to preview this rule against the last 30 days."
+          ) : preview === null ? (
+            "Checking…"
+          ) : preview.partial ? (
+            "Preview not available for this combination yet."
+          ) : (
             <>
-              Would have matched <span className="tabular font-semibold text-ink">{previewCount}</span> messages in the
+              Would have matched <span className="tabular font-semibold text-ink">{preview.count}</span> messages in the
               last 30 days.
             </>
-          ) : (
-            "Enter a value to preview this rule against the last 30 days."
           )}
         </p>
-        <Button size="sm" className="rounded-lg" disabled={!value}>
-          Save rule
+        <Button size="sm" className="rounded-lg" disabled={!value || saving} onClick={handleSave}>
+          {saving ? "Saving…" : "Save rule"}
         </Button>
       </div>
+      {saveError && <p className="mt-2 text-xs" style={{ color: "var(--signal)" }}>{saveError}</p>}
     </div>
   );
 }

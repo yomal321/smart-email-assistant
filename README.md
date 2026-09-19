@@ -233,7 +233,7 @@ Two conventions carry real weight:
 
 - **Phase 5 — Web dashboard.** Next.js on Vercel: unified inbox, action-item sidebar, draft review modal calling the endpoint above.
 - **Outlook ingestion.** Proposed and reviewed; parked with three unresolved blocking findings.
-- **Fallback model router.** Designed but not built — it attaches inside the LLM Gateway when free-tier 429s actually appear, not before.
+- **Fallback model router.** Was "designed but not built, when 429s actually appear" — they have. Live testing confirmed Gemini's free tier caps at 20 requests/day per model (`gemini-3.6-flash`), exhausted by ordinary volume (3 calls/email × Triage/Action/Commitment). Now being built: OpenRouter as the fallback provider, triggered specifically on quota exhaustion, attaching inside the LLM Gateway per `architect/03a-component-automation-engine.md`.
 - **Semantic search, calendar integration, learned sender priority.** Explicitly out of scope for v1.
 
 ---

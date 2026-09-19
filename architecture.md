@@ -162,7 +162,7 @@ flowchart TB
     class n8nbox boundary
 ```
 
-**The one rule enforced from day one:** triage, extraction and drafting never call a model directly — they call the **LLM Gateway**. The fallback router (local Ollama, paid escalation) is designed but *not built* in v1; this box is where it attaches later without touching any pipeline.
+**The one rule enforced from day one:** triage, extraction and drafting never call a model directly — they call the **LLM Gateway**. The fallback router (OpenRouter, triggered on Gemini's free-tier daily quota being exhausted — confirmed live at 20 requests/day for `gemini-3.6-flash`, see `architect/03a-component-automation-engine.md`) attaches inside this box without touching any pipeline.
 
 Two normalisation points are worth noting: provider differences die at the **Email Normaliser**, and model differences die at the **LLM Gateway**. Everything between those two boxes is provider- and model-agnostic.
 
@@ -289,4 +289,4 @@ sequenceDiagram
 
 ## Deliberately absent from these diagrams
 
-Auto-send, multi-tenancy, a mobile app, calendar integration, semantic/vector search, learned per-sender priority rules, and the fallback model router are all out of scope for v1. The router is *designed* — it attaches at the LLM Gateway — but is not drawn because it is not built.
+Auto-send, multi-tenancy, a mobile app, calendar integration, semantic/vector search, and learned per-sender priority rules are out of scope for v1. The fallback model router (OpenRouter, on Gemini quota exhaustion) is designed and now being built — see `architect/03a-component-automation-engine.md` for the live-confirmed quota that triggered it — but isn't drawn here yet because it isn't merged.

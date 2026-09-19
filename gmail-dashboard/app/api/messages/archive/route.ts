@@ -7,6 +7,8 @@
 // ever runs — this route does not re-check the session cookie itself.
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAccountId } from "@/lib/supabase/account";
+import { logMessageAction } from "@/lib/data/activity-log";
 import { mapEmailRowToMessage, type EmailRow } from "@/lib/data/message-mapping";
 
 // Mirrors EmailRow's field list exactly (lib/data/message-mapping.ts) —
@@ -41,5 +43,11 @@ export async function POST(request: Request) {
   // the reducer's own tolerant behavior on an unknown id (spec FR8, Edge
   // Cases).
   const updated = await Promise.all(((data ?? []) as unknown as EmailRow[]).map(mapEmailRowToMessage));
+
+  const accountId = await getAccountId(supabase);
+  if (accountId && updated.length > 0) {
+    await logMessageAction(supabase, accountId, "Archived", ids, updated);
+  }
+
   return NextResponse.json({ updated });
 }

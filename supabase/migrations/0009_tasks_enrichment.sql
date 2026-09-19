@@ -46,8 +46,12 @@ comment on column tasks.confidence is
   'Nullable; null for every origin = ''manual'' row (there is no extraction confidence to record). No writer populates this for origin = ''extracted'' rows in this phase -- reserved for a future phase that surfaces Action Extraction''s own confidence in its output.';
 
 alter table tasks drop constraint tasks_status_check;
+-- NOT VALID: existing rows still carry 0003's 'open' status (see comment
+-- below -- they're intentionally left as-is, not rewritten). A plain ADD
+-- CONSTRAINT validates every existing row and would reject them outright;
+-- NOT VALID enforces the new vocabulary on future writes only.
 alter table tasks add constraint tasks_status_check
-  check (status in ('todo', 'in-progress', 'done', 'dismissed'));
+  check (status in ('todo', 'in-progress', 'done', 'dismissed')) not valid;
 
 comment on column tasks.status is
   'Widened from open|done|dismissed (0003) to the dashboard''s Kanban vocabulary todo|in-progress|done|dismissed. Existing ''open'' rows are left as-is -- the API layer (GET /api/action-items) maps ''open'' to ''todo'' on read rather than rewriting historical data. No writer produces ''open'' after this migration.';

@@ -397,3 +397,65 @@ design.md's FR2 description (fix action-extraction.json's Write task node) named
 When a migration narrows/replaces a check constraint, explicitly audit every existing INSERT/UPDATE literal against the new allowed values as part of design.md's Key Decisions or the task's own Notes -- don't rely on catching it during build.
 
 ---
+
+## [L27] design_gap — Gemini free-tier quota is a hard 20 requests/day per model, not just "429s eventually"
+
+**When:** 2026-09-19 06:19 UTC
+**Category:** design_gap
+**Priority:** high
+**Status:** pending
+
+### Detail
+architect/03a-component-automation-engine.md's original fallback-router sketch treated rate-limiting as a someday hypothetical ("when 429s actually appear"). Live deployment of 011-followups-contacts-api's Email Normaliser changes hit it almost immediately: a handful of test emails, each firing three parallel Gemini calls (Triage, Action Extraction, Commitment Extraction), exhausted the account's entire daily quota. n8n's default HTTP Request error handling (`neverError: false`, `onError: continueRegularOutput`) discards the actual response body on failure, surfacing only a generic axios message ("Try spacing your requests out using the batching settings under 'Options'") that looks like a per-minute burst problem but isn't -- it cost real diagnostic time chasing a burst/stagger fix (staggering the 3 parallel calls 5s/10s apart, which was still worth doing and is now live) before the real cause was confirmed. Root cause was only visible after temporarily flipping the Gemini HTTP node's `neverError` to `true` for one test call, which surfaced Gemini's actual error body: `quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier`, `quotaValue: 20`, model `gemini-3.6-flash`.
+
+### Action
+20 requests/day is roughly 6-7 real emails/day before the pipeline goes dark until next-day reset -- this is the real operating ceiling, not a testing artifact. The fallback router (OpenRouter, triggered specifically on `RESOURCE_EXHAUSTED`/429) is being built now rather than left as future work -- see architect/03a-component-automation-engine.md's updated "Where the fallback router goes" section. Also: when a `Call Gemini generateContent`-shaped node fails with an unhelpfully generic message, temporarily set `options.response.response.neverError` to `true` for one diagnostic call to see Gemini's real `quotaId`/`quotaValue` instead of guessing -- revert immediately after, since it also disables that node's `retryOnFail` for as long as it's set.
+
+---
+
+## [L28] design_gap — One unfetchable Gmail message permanently blocked all future ingestion
+
+**When:** 2026-09-19 07:45 UTC
+**Category:** design_gap
+**Priority:** high
+**Status:** pending
+
+### Detail
+`gmail-ingestion.json`'s `Loop message IDs` (SplitInBatches) processes every message id from a `history.list` batch sequentially through `messages.get fetch` -> `Call Email Normaliser`, and only reaches `Advance cursor` after the entire loop finishes. `messages.get fetch` had no `onError` handling, so a single bad id anywhere in the batch (confirmed live: a Gmail draft-autosave revision that had already been superseded before n8n got to fetch it, `404 Requested entity was not found`) aborted the whole execution before the cursor ever moved. Every subsequent push notification then re-fetched `history.list` from the same stale cursor, hit the same dead id first, and every genuinely new email queued behind it -- confirmed live: two real test emails sent minutes apart were both silently stuck for over 10 minutes while Google Cloud Pub/Sub kept redelivering the same failing notification on its own backoff schedule.
+
+### Action
+`messages.get fetch` now has `onError: continueRegularOutput`, feeding a new `Fetch succeeded?` IF node: the failure branch logs the skipped id (`Log skipped message`, console-only -- there's no `emails` row yet to attach a per-row error column to, unlike triage/action-extraction failures) and rejoins the loop, so the cursor still advances and one bad id can never again block the rest of a batch. Any per-item loop over an external API in this codebase should get the same per-item error isolation before it ships, not after it silently eats real mail in production.
+
+---
+
+## [L29] design_gap — Asymmetric terminal branches in a synchronously-called sub-workflow caused a race that silently dropped real results
+
+**When:** 2026-09-19 08:12 UTC
+**Category:** design_gap
+**Priority:** high
+**Status:** pending
+
+### Detail
+Adding the OpenRouter fallback to `llm-gateway.json` (L27) gave the workflow two differently-shaped terminal branches: `Quota exceeded?`'s false output (the normal, no-fallback-needed path) ended immediately with zero further nodes, while its true output continued through two more nodes (`Call OpenRouter chat completion` -> `Parse OpenRouter response`) before ending. Every caller of this gateway (`Triage Pipeline`, `Commitment Extraction`, confirmed live on both) uses a *blocking* Execute Workflow call (`waitForSubWorkflow: true`) since it needs the model's result synchronously. n8n's sub-workflow completion detection raced on that branch-depth asymmetry: most calls worked, but intermittently (roughly half the live test runs) the parent execution would silently stop dead at the `Call LLM Gateway` node -- `lastNodeExecuted` showing that node, execution status "success", no error anywhere -- despite the node's own output already holding the fully correct `{ success: true, data: {...} }` result. Real triage categorizations and real commitment extractions were computed correctly and then silently never written, non-deterministically, for over half an hour of live testing before this was traced to the branch shape rather than the data.
+Symptom fingerprint worth remembering: a blocking Execute Workflow call whose target has more than one possible terminal leaf, where `lastNodeExecuted` is the calling `executeWorkflow` node itself and the run is marked "success" with no error -- that combination means the parent probably never got the continue signal, not that the graph legitimately ends there.
+
+### Action
+Any sub-workflow called with `waitForSubWorkflow: true` must have exactly one terminal/leaf node reachable from every branch -- converge branches into a shared no-op (`n8n-nodes-base.noOp`) "Return result" node rather than letting them end at different depths. Fixed in `llm-gateway.json` by routing both `Quota exceeded?` outputs into one `Return result` node. Before adding a new conditional branch to any workflow other synchronous callers depend on, check every existing caller uses `waitForSubWorkflow: true` and verify the new graph still converges to one leaf.
+
+---
+
+## [L30] agent_issue — A newly-wired Execute Workflow node was silently `disabled: true`, and every parameter-only edit preserved that flag invisibly
+
+**When:** 2026-09-19 08:29 UTC
+**Category:** agent_issue
+**Priority:** medium
+**Status:** pending
+
+### Detail
+`Triage Pipeline`'s `Call Rule Engine` node reached this state left unconfigured (blank `workflowId`, no `workflowInputs`) from an earlier deployment pass, and at some point picked up a top-level `disabled: true` -- not present in the repo's `triage-pipeline.json`, so it happened live, most plausibly n8n itself defaulting an unresolved-target Execute Workflow node to disabled. A disabled node still reports `executionStatus: success` and produces a harmless-looking stub output (bare `{"success": true}`, none of the mapped input fields echoed back, unlike every enabled non-blocking Execute Workflow call in this codebase which echoes its full input) -- so nothing in the execution list or the node's own output flagged it as inert. Every fix applied across several iterations (setting `workflowId`, adding `workflowInputs` with a full `schema`, fixing the *target* workflow's own `settings.executionOrder`, even deactivating/reactivating the target) legitimately improved the configuration but did nothing, because none of them touched the one top-level `disabled` flag on the *calling* node -- each fetch-modify-PUT cycle round-tripped the full live JSON and silently preserved it. Only a full byte-for-byte diff against a known-working sibling node (`Call Action Extraction`) surfaced it.
+Symptom fingerprint worth remembering: an Execute Workflow node whose own output is a bare `{"success": true}` with none of its mapped input fields echoed back (contrast a healthy non-blocking call, which always echoes its full input alongside `success: true`) means the node itself is disabled, not that the target is misconfigured -- check `disabled` on the node before touching `parameters` again.
+
+### Action
+When a node behaves as a no-op despite parameters looking correct, diff its full JSON (not just `parameters`) against a known-working sibling of the same type before trying another parameter fix -- `disabled` and similar top-level flags are easy to miss when every fetch-modify-PUT cycle only inspects and edits `parameters`.
+
+---

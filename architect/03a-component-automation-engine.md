@@ -101,13 +101,15 @@ Triage and extraction fan out from the Normaliser in parallel — neither depend
 
 ## Where the fallback router goes
 
-Not built in v1, and deliberately not drawn. When 429s actually appear, it becomes routing logic *inside* the LLM Gateway:
+Sketched as future work in v1 ("when 429s actually appear"), not built. It has appeared — live testing during 011-followups-contacts-api hit Gemini's real daily cap after a handful of test emails, each firing three parallel Gemini calls (Triage, Action Extraction, Commitment Extraction). The raw quota error (captured by briefly enabling `neverError` on the Gemini HTTP node — see `.specclaw/learnings.md` L27) confirmed the exact ceiling: `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, value `20`, model `gemini-3.6-flash`. Twenty requests a day is roughly 6–7 real emails before the whole pipeline goes dark for the rest of the day — not a testing artifact, the real operating ceiling.
 
-- **Primary** — Gemini Flash free tier, all pipelines
-- **Fallback** — local Ollama 7B–14B for triage and extraction when rate-limited
-- **Escalation** — small paid balance for draft generation only, if quality demands it
+Router design, attaching inside the LLM Gateway as originally planned — no pipeline changes, same choke point:
 
-No pipeline changes when that day comes. That is the point of the choke point, and the reason it is worth enforcing on day one rather than retrofitting.
+- **Primary** — Gemini Flash free tier, all pipelines.
+- **Fallback** — OpenRouter (one API key, many models) when Gemini's response is specifically `RESOURCE_EXHAUSTED`/429, not on other failure types (a genuine model outage or malformed request should still surface as a real failure, not silently reroute). Chosen over the originally-sketched local Ollama fallback because the daily cap is exhausted by ordinary volume, not just bursts, and a local model means standing up a second always-on host — infrastructure this single-EC2-instance project doesn't already carry. OpenRouter needs only a second HTTP-header credential on a node that's already making outbound calls.
+- **Model** — a cheap, structured-output-capable model (e.g. `openai/gpt-4o-mini`) for Triage/Action/Commitment volume; quality matters more than throughput for Draft Generation, so it may warrant a stronger model even at higher per-call cost.
+
+Real cost from here: once the free tier caps out for the day, OpenRouter calls are paid per-token — no longer a free architecture past that point, by design (the alternative is the pipeline going dark until the next day's reset).
 
 ## Failure modes this diagram makes visible
 

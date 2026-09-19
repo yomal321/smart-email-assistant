@@ -174,12 +174,29 @@ export interface SyncState {
   error: { code: string; message: string } | null;
 }
 
+export interface RuleCondition {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+export interface RuleAction {
+  type: string;
+  params?: Record<string, unknown>;
+}
+
 export interface Rule {
   id: string;
   enabled: boolean;
   conditionSummary: string;
   actionSummary: string;
   runCount30d: number;
+  // Present only for rules created through the real builder (Phase 4) — the
+  // 5 fixture rules seeded as UI placeholder data never populated these.
+  conditions?: RuleCondition[];
+  actions?: RuleAction[];
+  dailyCap?: number | null;
+  confidenceFloor?: number | null;
 }
 
 export interface ActivityLogEntry {
@@ -189,4 +206,40 @@ export interface ActivityLogEntry {
   target: string;
   cause: string; // rule or model that caused it
   undoable: boolean;
+}
+
+export interface Settings {
+  signature: string | null;
+  styleSamples: string | null;
+  summaryLength: "one-line" | "short";
+  digestEnabled: boolean;
+  digestTime: string | null;
+  exclusionRules: string[];
+  retentionDays: number | null; // null = "Not set" — a real, permanent option
+  timezone: string;
+  workHoursStart: string;
+  workHoursEnd: string;
+  priorityWeights: { vip: number; deadline: number; directQuestion: number; age: number };
+}
+
+export interface SavedView {
+  id: string;
+  slug: string;
+  label: string;
+  filters: Record<string, unknown>;
+}
+
+export interface Category {
+  id: string | null; // null when this key has no override row yet — its default label applies
+  key: string;
+  label: string;
+  number: number;
+  mergedInto: string | null;
+}
+
+export interface SearchResult {
+  type: "message" | "contact";
+  id: string;
+  title: string;
+  subtitle: string;
 }

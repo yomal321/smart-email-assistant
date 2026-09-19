@@ -1,24 +1,17 @@
 "use client";
 
+// Phase 5: data now comes from GET /api/analytics/categories
+// (app/analytics/page.tsx) instead of a hardcoded 6-week fixture DATA map.
 import * as React from "react";
 import { PLATFORMS } from "@/lib/data";
+import type { CategoryBreakdownResult } from "@/lib/data/use-analytics";
 
-// Fixture: 6 weeks × 7 platforms, roughly proportioned to the messages fixture.
-const WEEKS = ["W1", "W2", "W3", "W4", "W5", "W6"];
-const DATA: Record<string, number[]> = {
-  "needs-reply": [4, 5, 3, 6, 4, 5],
-  meeting: [3, 2, 4, 3, 2, 3],
-  invoice: [2, 3, 2, 2, 3, 2],
-  fyi: [6, 5, 7, 6, 8, 6],
-  newsletter: [10, 12, 9, 11, 10, 13],
-  automated: [8, 9, 10, 8, 9, 11],
-  "spam-ish": [2, 1, 2, 1, 2, 1],
-};
-
-export function CategoryBreakdown() {
+export function CategoryBreakdown({ data }: { data: CategoryBreakdownResult }) {
+  const { weeks, series } = data;
   const [showTable, setShowTable] = React.useState(false);
-  const totals = WEEKS.map((_, wi) => PLATFORMS.reduce((sum, p) => sum + DATA[p.platform][wi], 0));
-  const max = Math.max(...totals);
+  const totals = weeks.map((_, wi) => PLATFORMS.reduce((sum, p) => sum + (series[p.platform]?.[wi] ?? 0), 0));
+  const max = Math.max(1, ...totals);
+  const hasAnyData = totals.some((t) => t > 0);
 
   return (
     <div>
@@ -40,7 +33,9 @@ export function CategoryBreakdown() {
         ))}
       </div>
 
-      {showTable ? (
+      {!hasAnyData ? (
+        <p className="py-8 text-center text-xs text-ink-tertiary">Not enough mail history yet for this window.</p>
+      ) : showTable ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-105 text-xs">
             <thead>
@@ -52,11 +47,11 @@ export function CategoryBreakdown() {
               </tr>
             </thead>
             <tbody>
-              {WEEKS.map((w, wi) => (
+              {weeks.map((w, wi) => (
                 <tr key={w} className="rule-b">
                   <td className="text-ink">{w}</td>
                   {PLATFORMS.map((p) => (
-                    <td key={p.platform} className="tabular text-ink">{DATA[p.platform][wi]}</td>
+                    <td key={p.platform} className="tabular text-ink">{series[p.platform]?.[wi] ?? 0}</td>
                   ))}
                 </tr>
               ))}
@@ -66,10 +61,10 @@ export function CategoryBreakdown() {
       ) : (
         <>
           <div className="flex h-28 items-end gap-3" role="img" aria-label="Stacked category breakdown by week">
-            {WEEKS.map((w, wi) => (
+            {weeks.map((w, wi) => (
               <div key={w} className="flex h-full flex-1 flex-col-reverse gap-px overflow-hidden rounded-t-sm">
                 {PLATFORMS.map((p) => {
-                  const v = DATA[p.platform][wi];
+                  const v = series[p.platform]?.[wi] ?? 0;
                   return (
                     <div
                       key={p.platform}
@@ -82,7 +77,7 @@ export function CategoryBreakdown() {
           </div>
           <div className="border-t border-rule-strong" />
           <div className="mt-1.5 flex gap-3">
-            {WEEKS.map((w) => (
+            {weeks.map((w) => (
               <span key={w} className="flex-1 text-center text-[10px] tabular text-ink-tertiary">
                 {w}
               </span>
