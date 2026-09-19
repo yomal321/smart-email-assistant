@@ -7,23 +7,14 @@ import { Inbox } from "lucide-react";
 import type { Platform } from "@/lib/data";
 import { platformMeta } from "@/lib/data";
 import { useBoard } from "@/components/board/board-provider";
+import { useSavedViews } from "@/lib/data/use-saved-views";
 import { BoardList } from "@/components/board/board-list";
 import { FilterBar, type FilterState } from "@/components/board/filter-bar";
 import { EmptyState } from "@/components/board/empty-state";
 
-const SAVED_VIEWS: Record<string, { label: string; predicate: (senderDomain: string, platform: Platform | undefined) => boolean }> = {
-  "client-needs-reply": {
-    label: "Client · needs reply",
-    predicate: (domain, platform) => domain === "northgate.co" && platform === "needs-reply",
-  },
-  "weekly-invoices": {
-    label: "This week's invoices",
-    predicate: (_domain, platform) => platform === "invoice",
-  },
-};
-
 function InboxContent() {
   const board = useBoard();
+  const { data: savedViews } = useSavedViews();
   const params = useSearchParams();
   const platformParam = params.get("platform") as Platform | null;
   const viewParam = params.get("view");
@@ -40,11 +31,14 @@ function InboxContent() {
   const inReviewQueue = (m: (typeof base)[number]) => m.ai === null || (m.ai && m.ai.confidence < 50);
   const onBoard = base.filter((m) => !inReviewQueue(m));
 
+  const activeView = viewParam ? (savedViews.find((v) => v.slug === viewParam) ?? null) : null;
+
   let filtered = onBoard;
   if (platformParam) filtered = filtered.filter((m) => m.ai?.platform === platformParam);
-  if (viewParam && SAVED_VIEWS[viewParam]) {
-    const view = SAVED_VIEWS[viewParam];
-    filtered = filtered.filter((m) => view.predicate(m.sender.domain, m.ai?.platform));
+  if (activeView) {
+    const { platform, senderDomain } = activeView.filters;
+    if (typeof platform === "string") filtered = filtered.filter((m) => m.ai?.platform === platform);
+    if (typeof senderDomain === "string") filtered = filtered.filter((m) => m.sender.domain === senderDomain);
   }
   if (filters.priority !== "all") filtered = filtered.filter((m) => m.ai?.priority === filters.priority);
   if (filters.hasActionItems) filtered = filtered.filter((m) => (m.ai?.actionItemIds.length ?? 0) > 0);
@@ -71,9 +65,7 @@ function InboxContent() {
 
   const heading = platformParam
     ? `Platform ${platformMeta(platformParam).number} · ${platformMeta(platformParam).label}`
-    : viewParam && SAVED_VIEWS[viewParam]
-      ? SAVED_VIEWS[viewParam].label
-      : "Inbox";
+    : (activeView?.label ?? "Inbox");
 
   return (
     <div className="flex h-full flex-col">
@@ -98,7 +90,7 @@ function InboxContent() {
               icon={Inbox}
               heading="No departures match."
               body={`${
-                [filters.priority !== "all", filters.hasActionItems, filters.unanswered, !!platformParam].filter(Boolean).length
+                [filters.priority !== "all", filters.hasActionItems, filters.unanswered, !!platformParam, !!activeView].filter(Boolean).length
               } filters are active. Clearing them would show ${onBoard.length} messages.`}
               actionLabel="Clear filters"
               actionHref={platformParam || viewParam ? "/inbox" : undefined}

@@ -142,12 +142,15 @@ export interface Draft {
   messageId: string;
   body: string; // current, possibly user-edited
   generatedBody: string; // original, for the commit-view diff
-  tone: "formal" | "friendly" | "brief" | "firm";
+  tone: "formal" | "friendly" | "brief" | "firm" | "custom";
   length: "brief" | "standard" | "detailed";
   status: "pending" | "approved" | "sent" | "discarded";
   generatedAt: string;
   approvedAt: string | null;
   editDistance: number | null; // feeds the approval-history table
+  // The mailbox owner's free-text direction for this generation. Non-null
+  // only when tone === "custom" (0012_drafts_custom_instruction).
+  customInstruction: string | null;
 }
 
 export interface Commitment {

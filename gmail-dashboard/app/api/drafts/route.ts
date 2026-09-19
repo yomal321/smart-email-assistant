@@ -14,7 +14,7 @@ import { mapDraftRowToDraft, type DraftRow } from "@/lib/data/draft-mapping";
 // Mirrors DraftRow's field list exactly (lib/data/draft-mapping.ts) — never
 // `select("*")`.
 const DRAFT_COLUMNS =
-  "id, email_id, draft_body, generated_body, tone, length, status, created_at, approved_at, edit_distance";
+  "id, email_id, draft_body, generated_body, tone, length, status, created_at, approved_at, edit_distance, custom_instruction";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -42,6 +42,9 @@ export async function POST(request: Request) {
   const messageId: unknown = body?.messageId;
   const tone: unknown = body?.tone;
   const length: unknown = body?.length;
+  // Only meaningful when tone === "custom" — n8n's "Verify secret" node
+  // validates, trims and bounds this itself, so it's forwarded as-is.
+  const customInstruction: unknown = body?.customInstruction;
 
   let n8nRes: Response;
   try {
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
         "x-draft-webhook-secret": process.env.DRAFT_WEBHOOK_SECRET!,
       },
-      body: JSON.stringify({ email_id: messageId, tone, length }),
+      body: JSON.stringify({ email_id: messageId, tone, length, custom_instruction: customInstruction }),
     });
   } catch {
     return NextResponse.json({ error: "failed to reach draft generation service" }, { status: 502 });

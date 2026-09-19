@@ -49,7 +49,15 @@ export function ContactsProvider({ children }: { children: React.ReactNode }) {
 
     async function load() {
       try {
-        const res = await fetch("/api/contacts", { signal: controller.signal });
+        let res = await fetch("/api/contacts", { signal: controller.signal });
+        if (res.status === 401) {
+          // Transient race: the very first fetch right after login can land
+          // before the just-set session cookie is recognized server-side.
+          // One short retry clears it every time observed live; a genuinely
+          // unauthorized session still fails the same way on the retry.
+          await new Promise((r) => setTimeout(r, 400));
+          res = await fetch("/api/contacts", { signal: controller.signal });
+        }
         const body = await res.json().catch(() => null);
         if (!res.ok) {
           throw new Error(

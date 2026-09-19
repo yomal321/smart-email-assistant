@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AlertTriangle, Inbox as InboxIcon, LayoutDashboard, CheckSquare, FileEdit, Clock, Users, BarChart3, SlidersHorizontal, Settings } from "lucide-react";
+import { AlertTriangle, Inbox as InboxIcon, LayoutDashboard, CheckSquare, FileEdit, Clock, Users, BarChart3, SlidersHorizontal, Settings, Compass } from "lucide-react";
 import { PLATFORMS, type Platform } from "@/lib/data";
+import { useSavedViews } from "@/lib/data/use-saved-views";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -15,11 +16,6 @@ const ROUTES = [
   { href: "/follow-ups", label: "Follow-ups", icon: Clock, countKey: "followUps" as const },
   { href: "/contacts", label: "Contacts", icon: Users, countKey: null },
   { href: "/analytics", label: "Analytics", icon: BarChart3, countKey: null },
-];
-
-const SAVED_VIEWS = [
-  { id: "client-needs-reply", label: "Client · needs reply", count: 7, href: "/inbox?view=client-needs-reply" },
-  { id: "weekly-invoices", label: "This week's invoices", count: 3, href: "/inbox?view=weekly-invoices" },
 ];
 
 export interface RailCounts {
@@ -36,6 +32,7 @@ export function PlatformRail({ counts, compact = false }: { counts: RailCounts; 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activePlatform = searchParams.get("platform");
+  const { data: savedViews } = useSavedViews();
 
   return (
     <nav
@@ -75,18 +72,17 @@ export function PlatformRail({ counts, compact = false }: { counts: RailCounts; 
         })}
       </RailSection>
 
-      {!compact && (
+      {!compact && savedViews.length > 0 && (
         <>
           <RailDivider compact={compact} />
           <RailSection title="Saved views" compact={compact}>
-            {SAVED_VIEWS.map((v) => (
+            {savedViews.map((v) => (
               <Link
                 key={v.id}
-                href={v.href}
+                href={`/inbox?view=${v.slug}`}
                 className="flex items-center justify-between rounded-xl px-2.5 py-2 text-[13px] text-ink-secondary transition-colors hover:bg-surface-raised hover:text-ink"
               >
                 <span className="truncate">{v.label}</span>
-                <span className="tabular text-xs text-ink-tertiary">{v.count}</span>
               </Link>
             ))}
           </RailSection>
@@ -120,6 +116,7 @@ export function PlatformRail({ counts, compact = false }: { counts: RailCounts; 
       <RailSection compact={compact}>
         <RailLink href="/rules" label="Rules" icon={SlidersHorizontal} active={pathname === "/rules"} compact={compact} />
         <RailLink href="/settings" label="Settings" icon={Settings} active={pathname === "/settings"} compact={compact} />
+        <RailLink href="/guide" label="Guide" icon={Compass} active={pathname === "/guide"} compact={compact} />
       </RailSection>
     </nav>
   );

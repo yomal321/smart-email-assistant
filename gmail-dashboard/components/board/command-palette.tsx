@@ -12,16 +12,17 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { getMessages, getContacts, PLATFORMS } from "@/lib/data";
+import { PLATFORMS } from "@/lib/data";
 import { useBoard } from "./board-provider";
+import { useContacts } from "./contacts-provider";
 import { daysFromNow } from "@/lib/data/now";
 import type { SearchResult } from "@/lib/data/types";
 
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const router = useRouter();
   const board = useBoard();
-  const messages = getMessages();
-  const contacts = getContacts();
+  const { contacts } = useContacts();
+  const messages = board.messages;
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<SearchResult[] | null>(null);
 

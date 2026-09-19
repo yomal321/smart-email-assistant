@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAwaitingReply } from "@/lib/data";
 import { useBoard } from "@/components/board/board-provider";
 import { useActionItems } from "@/components/board/action-items-provider";
+import { useCommitments } from "@/components/board/commitments-provider";
 import { BalanceBand } from "@/components/station/balance-band";
 import { BoardRow } from "@/components/station/board-row";
 import { VolumeTrend } from "@/components/charts/volume-trend";
@@ -17,6 +17,7 @@ type VolumeDay = { day: string; received: number; handled: number };
 export default function OverviewPage() {
   const board = useBoard();
   const actionItems = useActionItems();
+  const commitments = useCommitments();
   const router = useRouter();
 
   const [volumeTrend, setVolumeTrend] = useState<VolumeDay[] | null>(null);
@@ -58,7 +59,7 @@ export default function OverviewPage() {
   const waitingOnYou = onBoard.filter((m) => m.ai?.platform === "needs-reply");
   const overdueOnYou = waitingOnYou.filter((m) => m.sla.state === "overdue");
   const withinSlaOnYou = waitingOnYou.filter((m) => m.sla.state !== "overdue");
-  const awaiting = getAwaitingReply();
+  const awaiting = commitments.awaitingReply;
   const overAWeek = awaiting.filter((w) => w.daysElapsed > 7);
   const recent = awaiting.filter((w) => w.daysElapsed <= 7);
 

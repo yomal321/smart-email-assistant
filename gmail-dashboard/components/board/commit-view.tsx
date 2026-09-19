@@ -4,6 +4,7 @@ import * as React from "react";
 import { ArrowLeft } from "lucide-react";
 import type { Message, Draft } from "@/lib/data";
 import { Button } from "@/components/ui/button";
+import { SourceQuote } from "@/components/board/source-quote";
 
 /**
  * The commit station — a draft is staged against the original before it
@@ -57,9 +58,10 @@ export function CommitView({
             <h4 className="mb-2 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">
               Original
             </h4>
-            <div className="measure whitespace-pre-wrap rounded-lg border p-3 text-sm text-ink-secondary" style={{ borderColor: "var(--rule)" }}>
-              {message.thread[message.thread.length - 1]?.gist}
-            </div>
+            <SourceQuote
+              message={message}
+              className="measure rounded-lg border p-3 text-sm text-ink-secondary"
+            />
           </div>
           <div>
             <h4 className="mb-2 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">

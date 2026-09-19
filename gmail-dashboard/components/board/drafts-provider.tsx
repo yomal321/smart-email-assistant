@@ -39,6 +39,11 @@ function postDraftStatus(id: string, status: Draft["status"]): void {
 
 interface DraftsContextValue {
   drafts: Draft[];
+  // A regenerated draft is a new `drafts` row, not an edit of the old one —
+  // POST /api/drafts returns it fully mapped, so it goes straight into state.
+  // The Drafts page renders only the newest draft per message, so the
+  // superseded one stops showing without being deleted.
+  addDraft: (draft: Draft) => void;
   updateBody: (id: string, body: string) => void;
   setTone: (id: string, tone: Draft["tone"]) => void;
   setLength: (id: string, length: Draft["length"]) => void;
@@ -58,7 +63,15 @@ export function DraftsProvider({ children }: { children: React.ReactNode }) {
 
     async function load() {
       try {
-        const res = await fetch("/api/drafts", { signal: controller.signal });
+        let res = await fetch("/api/drafts", { signal: controller.signal });
+        if (res.status === 401) {
+          // Transient race: the very first fetch right after login can land
+          // before the just-set session cookie is recognized server-side.
+          // One short retry clears it every time observed live; a genuinely
+          // unauthorized session still fails the same way on the retry.
+          await new Promise((r) => setTimeout(r, 400));
+          res = await fetch("/api/drafts", { signal: controller.signal });
+        }
         const body = await res.json().catch(() => null);
         if (!res.ok) {
           throw new Error(
@@ -81,8 +94,13 @@ export function DraftsProvider({ children }: { children: React.ReactNode }) {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...fields } : d)));
   }, []);
 
+  const addDraft = React.useCallback((draft: Draft) => {
+    setDrafts((prev) => [draft, ...prev]);
+  }, []);
+
   const value: DraftsContextValue = {
     drafts,
+    addDraft,
     updateBody: (id, body) => {
       patch(id, { body });
       patchDraft(id, { body });

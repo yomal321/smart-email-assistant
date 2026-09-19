@@ -2,15 +2,31 @@
 
 import * as React from "react";
 import { FileEdit, RefreshCcw } from "lucide-react";
-import type { Draft, Message } from "@/lib/data";
+import type { Draft } from "@/lib/data";
+import { useMessage } from "@/lib/data/use-message";
+import {
+  REGEN_CAP_PER_HOUR,
+  regenerationsUsedThisHour,
+  newestPerMessage,
+  requestDraftRegeneration,
+  type RegenerateOverrides,
+} from "@/lib/data/draft-regeneration";
 import { useDrafts } from "@/components/board/drafts-provider";
 import { EmptyState } from "@/components/board/empty-state";
 import { CommitView } from "@/components/board/commit-view";
+import { SourceQuote } from "@/components/board/source-quote";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatFullDateTime } from "@/lib/format/relative-time";
 
-const TONES: Draft["tone"][] = ["formal", "friendly", "brief", "firm"];
+const TONES: Draft["tone"][] = ["formal", "friendly", "brief", "firm", "custom"];
 const LENGTHS: Draft["length"][] = ["brief", "standard", "detailed"];
 
 const SNIPPETS = [
@@ -20,69 +36,19 @@ const SNIPPETS = [
   "Attached is the latest version for your review.",
 ];
 
-// Fetches a single message by id from GET /api/messages/:id, replacing the
-// getMessageById() fixture lookup — the fixture never matches a real
-// Supabase-backed draft's messageId (design.md Key Decision 4). Mirrors
-// lib/data/use-sync-state.ts's read-hook shape: AbortController on unmount,
-// parse body.error on failure. `messageId` may be null (no id to fetch yet)
-// so this can be called unconditionally, satisfying the Rules of Hooks.
-function useMessage(messageId: string | null): { message: Message | null; loading: boolean } {
-  const [message, setMessage] = React.useState<Message | null>(null);
-  const [loading, setLoading] = React.useState(messageId !== null);
-
-  React.useEffect(() => {
-    if (!messageId) {
-      setMessage(null);
-      setLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/messages/${messageId}`, { signal: controller.signal });
-        const body = await res.json().catch(() => null);
-        if (!res.ok) {
-          // 404 is the fixture-miss equivalent — just leave message null.
-          if (res.status !== 404) {
-            throw new Error(
-              (body && typeof body.error === "string" && body.error) || `request failed with status ${res.status}`
-            );
-          }
-          setMessage(null);
-          return;
-        }
-        setMessage(body as Message);
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error(`[drafts/page] failed to load message ${messageId}`, err);
-        setMessage(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
-
-    return () => controller.abort();
-  }, [messageId]);
-
-  return { message, loading };
-}
-
 /** A labelled segmented control — the label is what tells Tone apart from Length. */
 function Segmented<T extends string>({
   label,
   options,
   value,
   onChange,
+  disabled = false,
 }: {
   label: string;
   options: readonly T[];
   value: T;
   onChange: (v: T) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -96,9 +62,10 @@ function Segmented<T extends string>({
           <button
             key={o}
             onClick={() => onChange(o)}
+            disabled={disabled}
             aria-pressed={value === o}
             className={
-              "rounded-full px-2.5 py-1 text-[11px] font-medium capitalize transition-colors " +
+              "rounded-full px-2.5 py-1 text-[11px] font-medium capitalize transition-colors disabled:opacity-50 " +
               (value === o
                 ? "bg-departure font-semibold text-departure-ink shadow-sm"
                 : "text-ink-tertiary hover:bg-surface-raised hover:text-ink")
@@ -116,16 +83,46 @@ function PendingDraftRow({
   draft,
   store,
   regenerating,
+  usedThisHour,
+  error,
   onRegenerate,
   onCommit,
 }: {
   draft: Draft;
   store: ReturnType<typeof useDrafts>;
   regenerating: boolean;
-  onRegenerate: () => void;
+  usedThisHour: number;
+  error: string | null;
+  onRegenerate: (overrides?: RegenerateOverrides) => void;
   onCommit: () => void;
 }) {
   const { message, loading } = useMessage(draft.messageId);
+  // A regeneration supersedes this draft, so unsaved edits to its body would
+  // stop being visible. Hold the request until the user confirms that.
+  const [pendingRegen, setPendingRegen] = React.useState<RegenerateOverrides | undefined>(undefined);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  // Selecting "Custom" only reveals the instruction box — it does not
+  // persist or regenerate until Generate is clicked, so `selectedTone` can
+  // differ from the draft's actually-persisted `draft.tone` while the box
+  // is open. Resets naturally on regeneration: a new draft has a new id, so
+  // this component remounts rather than re-rendering in place.
+  const [selectedTone, setSelectedTone] = React.useState<Draft["tone"]>(draft.tone);
+  const [customText, setCustomText] = React.useState(draft.customInstruction ?? "");
+
+  const capReached = usedThisHour >= REGEN_CAP_PER_HOUR;
+  const controlsDisabled = regenerating || capReached;
+  const hasEdits = (draft.editDistance ?? 0) > 0;
+
+  function requestRegenerate(overrides?: RegenerateOverrides) {
+    if (hasEdits) {
+      setPendingRegen(overrides);
+      setConfirmOpen(true);
+      return;
+    }
+    onRegenerate(overrides);
+  }
+
   // Loading and not-found collapse to the same "render nothing" result — a
   // draft whose message never resolves just doesn't show up, matching the
   // old `if (!message) return null` fixture-miss behavior.
@@ -147,9 +144,10 @@ function PendingDraftRow({
           <h4 className="mb-1.5 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-secondary">
             Their message
           </h4>
-          <blockquote className="whitespace-pre-wrap rounded-xl border-l-3 border-rule-strong bg-surface-sunk px-3.5 py-2.5 text-sm leading-relaxed text-ink-secondary">
-            {message.thread[message.thread.length - 1]?.gist}
-          </blockquote>
+          <SourceQuote
+            message={message}
+            className="rounded-xl border-l-3 border-rule-strong bg-surface-sunk px-3.5 py-2.5 text-sm leading-relaxed text-ink-secondary"
+          />
         </section>
 
         {/* Your reply */}
@@ -159,24 +157,83 @@ function PendingDraftRow({
               Your reply
             </h4>
             <div className="flex flex-wrap items-end gap-3">
-              <Segmented label="Tone" options={TONES} value={draft.tone} onChange={(t) => store.setTone(draft.id, t)} />
+              <Segmented
+                label="Tone"
+                options={TONES}
+                value={selectedTone}
+                disabled={controlsDisabled}
+                onChange={(t) => {
+                  setSelectedTone(t);
+                  if (t === "custom") return; // reveal the box; wait for Generate
+                  store.setTone(draft.id, t);
+                  requestRegenerate({ tone: t });
+                }}
+              />
               <span className="mb-1.5 h-5 w-px shrink-0 bg-rule" aria-hidden="true" />
               <Segmented
                 label="Length"
                 options={LENGTHS}
                 value={draft.length}
-                onChange={(l) => store.setLength(draft.id, l)}
+                disabled={controlsDisabled}
+                onChange={(l) => {
+                  store.setLength(draft.id, l);
+                  requestRegenerate({ length: l });
+                }}
               />
               <span className="mb-1.5 h-5 w-px shrink-0 bg-rule" aria-hidden="true" />
               <button
                 className="mb-0.5 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-ink-tertiary transition-colors hover:bg-surface-sunk hover:text-ink disabled:opacity-50"
-                disabled={regenerating}
-                onClick={onRegenerate}
+                disabled={controlsDisabled || selectedTone === "custom"}
+                onClick={() => requestRegenerate()}
               >
                 <RefreshCcw size={12} className={regenerating ? "animate-spin" : undefined} />
                 {regenerating ? "Regenerating…" : "Regenerate"}
               </button>
             </div>
+          </div>
+
+          {selectedTone === "custom" && (
+            <div className="mb-2.5 rounded-xl border border-rule-strong bg-surface-sunk p-2.5">
+              <Textarea
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                placeholder='Describe the reply you want — e.g. "ask them to push the deadline to Monday, be apologetic"'
+                className="min-h-20 w-full rounded-lg text-sm"
+                disabled={controlsDisabled}
+                aria-label="Custom reply instruction"
+              />
+              <div className="mt-1.5 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="rounded-lg"
+                  disabled={controlsDisabled || customText.trim().length === 0}
+                  onClick={() =>
+                    requestRegenerate({ tone: "custom", customInstruction: customText.trim() })
+                  }
+                >
+                  Generate
+                </Button>
+                {customText.trim().length === 0 && (
+                  <span className="text-[11px] text-ink-tertiary">Describe the reply, then Generate.</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-[11px] tabular text-ink-tertiary">
+              {usedThisHour} of {REGEN_CAP_PER_HOUR} regenerations used this hour
+            </span>
+            {capReached && (
+              <span className="text-[11px] text-ink-tertiary">
+                Limit reached — it frees up an hour after the earliest one.
+              </span>
+            )}
+            {error && (
+              <span className="text-[11px] font-medium" style={{ color: "var(--signal)" }}>
+                {error}
+              </span>
+            )}
           </div>
           <Textarea
             value={draft.body}
@@ -214,6 +271,33 @@ function PendingDraftRow({
           </div>
         </section>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Replace your edited draft?</DialogTitle>
+            <DialogDescription>
+              You&rsquo;ve edited this reply. Regenerating writes a new draft and this version stops showing —
+              it stays in the database, but you won&rsquo;t see it here.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" className="rounded-lg" onClick={() => setConfirmOpen(false)}>
+              Keep my edit
+            </Button>
+            <Button
+              size="sm"
+              className="rounded-lg"
+              onClick={() => {
+                setConfirmOpen(false);
+                onRegenerate(pendingRegen);
+              }}
+            >
+              Regenerate anyway
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -237,8 +321,12 @@ export default function DraftsPage() {
   const store = useDrafts();
   const [committingId, setCommittingId] = React.useState<string | null>(null);
   const [regeneratingId, setRegeneratingId] = React.useState<string | null>(null);
+  const [errorByMessageId, setErrorByMessageId] = React.useState<Record<string, string>>({});
 
-  const pending = store.drafts.filter((d) => d.status === "pending");
+  // Regeneration inserts a new row rather than updating the old one, so a
+  // message accumulates drafts. Only the newest per message is shown — the
+  // superseded ones stay in the database, just not on screen.
+  const pending = newestPerMessage(store.drafts.filter((d) => d.status === "pending"));
   const history = store.drafts.filter((d) => d.status === "sent" || d.status === "approved");
 
   const committing = store.drafts.find((d) => d.id === committingId);
@@ -259,15 +347,29 @@ export default function DraftsPage() {
     );
   }
 
-  function regenerate(draft: Draft) {
+  // `overrides` carries the tone/length/instruction the user just picked:
+  // the store update that persists tone/length is async, so reading
+  // draft.tone here would send the previous value.
+  async function regenerate(draft: Draft, overrides?: RegenerateOverrides) {
     setRegeneratingId(draft.id);
-    fetch("/api/drafts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageId: draft.messageId, tone: draft.tone, length: draft.length }),
-    })
-      .catch((err) => console.error("[drafts/page] failed to regenerate draft", err))
-      .finally(() => setRegeneratingId(null));
+    setErrorByMessageId((prev) => {
+      if (!(draft.messageId in prev)) return prev;
+      const next = { ...prev };
+      delete next[draft.messageId];
+      return next;
+    });
+
+    const result = await requestDraftRegeneration(draft, overrides);
+    if (result.draft) {
+      store.addDraft(result.draft);
+    } else {
+      console.error("[drafts/page] failed to regenerate draft", result.error);
+      setErrorByMessageId((prev) => ({
+        ...prev,
+        [draft.messageId]: result.error ?? "failed to regenerate draft",
+      }));
+    }
+    setRegeneratingId(null);
   }
 
   return (
@@ -293,7 +395,9 @@ export default function DraftsPage() {
               draft={draft}
               store={store}
               regenerating={regeneratingId === draft.id}
-              onRegenerate={() => regenerate(draft)}
+              usedThisHour={regenerationsUsedThisHour(store.drafts, draft.messageId)}
+              error={errorByMessageId[draft.messageId] ?? null}
+              onRegenerate={(overrides) => regenerate(draft, overrides)}
               onCommit={() => setCommittingId(draft.id)}
             />
           ))}

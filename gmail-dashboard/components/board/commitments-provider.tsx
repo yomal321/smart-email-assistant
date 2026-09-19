@@ -87,7 +87,15 @@ export function CommitmentsProvider({ children }: { children: React.ReactNode })
     const controller = new AbortController();
 
     async function fetchJson<T>(path: string): Promise<T> {
-      const res = await fetch(path, { signal: controller.signal });
+      let res = await fetch(path, { signal: controller.signal });
+      if (res.status === 401) {
+        // Transient race: the very first fetch right after login can land
+        // before the just-set session cookie is recognized server-side. One
+        // short retry clears it every time observed live; a genuinely
+        // unauthorized session still fails the same way on the retry.
+        await new Promise((r) => setTimeout(r, 400));
+        res = await fetch(path, { signal: controller.signal });
+      }
       const body = await res.json().catch(() => null);
       if (!res.ok) {
         throw new Error(

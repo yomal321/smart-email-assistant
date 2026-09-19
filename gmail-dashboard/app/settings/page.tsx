@@ -67,7 +67,7 @@ export default function SettingsPage() {
         <SettingsSection title="Connected accounts">
           <div className="flex items-center justify-between rounded-lg border p-3" style={{ borderColor: "var(--rule)" }}>
             <div>
-              <p className="text-sm font-medium text-ink">yomal@bistecglobal.com</p>
+              <p className="text-sm font-medium text-ink">Connected Gmail account</p>
               <p className="tabular text-xs text-ink-tertiary">
                 {sync
                   ? sync.status === "synced"

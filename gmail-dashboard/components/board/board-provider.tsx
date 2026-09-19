@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import type { Message, Platform } from "@/lib/data";
-import { NOW } from "@/lib/data/now";
 
 // Fire-and-forget mutation helper: fires a T5 mutation route in the
 // background after the reducer has already applied the optimistic update
@@ -74,7 +73,7 @@ function reducer(state: BoardState, action: BoardAction): BoardState {
         ...state,
         messages: state.messages.map((m) =>
           action.ids.includes(m.id)
-            ? { ...m, status: "archived", handledAt: NOW.toISOString(), handledAction: "archived" }
+            ? { ...m, status: "archived", handledAt: new Date().toISOString(), handledAction: "archived" }
             : m
         ),
       };
@@ -83,7 +82,7 @@ function reducer(state: BoardState, action: BoardAction): BoardState {
         ...state,
         messages: state.messages.map((m) =>
           action.ids.includes(m.id)
-            ? { ...m, status: "done", handledAt: NOW.toISOString(), handledAction: "done" }
+            ? { ...m, status: "done", handledAt: new Date().toISOString(), handledAction: "done" }
             : m
         ),
       };
@@ -96,7 +95,7 @@ function reducer(state: BoardState, action: BoardAction): BoardState {
                 ...m,
                 status: "snoozed",
                 snoozedUntil: action.until,
-                handledAt: NOW.toISOString(),
+                handledAt: new Date().toISOString(),
                 handledAction: "snoozed",
               }
             : m
@@ -189,7 +188,15 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
 
     async function load() {
       try {
-        const res = await fetch("/api/messages", { signal: controller.signal });
+        let res = await fetch("/api/messages", { signal: controller.signal });
+        if (res.status === 401) {
+          // Transient race: the very first fetch right after login can land
+          // before the just-set session cookie is recognized server-side.
+          // One short retry clears it every time observed live; a genuinely
+          // unauthorized session still fails the same way on the retry.
+          await new Promise((r) => setTimeout(r, 400));
+          res = await fetch("/api/messages", { signal: controller.signal });
+        }
         const body = await res.json().catch(() => null);
         if (!res.ok) {
           throw new Error(

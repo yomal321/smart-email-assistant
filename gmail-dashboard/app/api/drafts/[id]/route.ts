@@ -13,7 +13,7 @@ import { mapDraftRowToDraft, computeEditDistance, type DraftRow } from "@/lib/da
 // Mirrors DraftRow's field list exactly (lib/data/draft-mapping.ts) — never
 // `select("*")`.
 const DRAFT_COLUMNS =
-  "id, email_id, draft_body, generated_body, tone, length, status, created_at, approved_at, edit_distance";
+  "id, email_id, draft_body, generated_body, tone, length, status, created_at, approved_at, edit_distance, custom_instruction";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;

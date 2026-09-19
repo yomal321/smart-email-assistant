@@ -5,6 +5,14 @@ import { X, ExternalLink, RefreshCcw, ChevronDown, ChevronUp } from "lucide-reac
 import type { Message } from "@/lib/data";
 import { platformMeta, PLATFORMS, type Platform } from "@/lib/data";
 import { formatFullDateTime } from "@/lib/format/relative-time";
+import type { Draft } from "@/lib/data";
+import {
+  REGEN_CAP_PER_HOUR,
+  regenerationsUsedThisHour,
+  newestForMessage,
+  requestDraftRegeneration,
+  type RegenerateOverrides,
+} from "@/lib/data/draft-regeneration";
 import { useDrafts } from "@/components/board/drafts-provider";
 import { useActionItems } from "@/components/board/action-items-provider";
 import { PriorityAspect } from "./priority-aspect";
@@ -36,11 +44,17 @@ export function BoardSheet({
 }) {
   const [showFullThread, setShowFullThread] = React.useState(false);
   const [committing, setCommitting] = React.useState(false);
-  const [regenerating, setRegenerating] = React.useState(false);
   const draftsStore = useDrafts();
   const actionItemsStore = useActionItems();
 
-  const draft = draftsStore.drafts.find((d) => d.messageId === message.id);
+  // A message can carry several superseded drafts (each regeneration is a
+  // new row, never an edit of the old one) — only the newest pending one is
+  // "the" suggested reply, matching app/drafts/page.tsx's dedupe.
+  const draft = newestForMessage(
+    draftsStore.drafts.filter((d) => d.status === "pending"),
+    message.id
+  );
+
   const actionItems = actionItemsStore.items.filter((a) => message.ai?.actionItemIds.includes(a.id));
   const thread = message.thread;
   const visibleThread = showFullThread ? thread : thread.slice(-3);
@@ -243,53 +257,21 @@ export function BoardSheet({
             </section>
           )}
 
-          {/* Suggested reply */}
+          {/* Suggested reply — keyed by draft.id so its local tone/custom-text/
+              error state resets by remounting on a new draft rather than via
+              an effect (matches PendingDraftRow's pattern on the Drafts page). */}
           {draft && (
-            <section>
-              <div className="mb-2 flex items-center justify-between">
-                <SectionHead>Suggested reply</SectionHead>
-                <div className="flex items-center gap-1">
-                  <ToneSegmented value={draft.tone} onChange={(t) => draftsStore.setTone(draft.id, t)} />
-                  <button
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-tertiary hover:bg-surface-sunk hover:text-ink disabled:opacity-50"
-                    aria-label="Regenerate"
-                    title="Regenerate"
-                    disabled={regenerating}
-                    onClick={() => {
-                      setRegenerating(true);
-                      setTimeout(() => setRegenerating(false), 900);
-                    }}
-                  >
-                    <RefreshCcw size={14} className={regenerating ? "animate-spin" : undefined} />
-                  </button>
-                </div>
-              </div>
-              <Textarea
-                value={draft.body}
-                onChange={(e) => draftsStore.updateBody(draft.id, e.target.value)}
-                className="measure min-h-32 rounded-lg text-sm"
-                aria-label="Suggested reply, editable"
-              />
-              <div className="mt-2 flex gap-2">
-                <Button size="sm" className="rounded-lg" onClick={() => setCommitting(true)}>
-                  Review and send
-                </Button>
-                <Button size="sm" variant="secondary" className="rounded-lg" onClick={onClose}>
-                  Save as draft
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="rounded-lg text-ink-tertiary"
-                  onClick={() => {
-                    draftsStore.setStatus(draft.id, "discarded");
-                    onClose();
-                  }}
-                >
-                  Discard
-                </Button>
-              </div>
-            </section>
+            <SuggestedReply
+              key={draft.id}
+              draft={draft}
+              draftsStore={draftsStore}
+              onReviewAndSend={() => setCommitting(true)}
+              onSaveAsDraft={onClose}
+              onDiscard={() => {
+                draftsStore.setStatus(draft.id, "discarded");
+                onClose();
+              }}
+            />
           )}
 
           {/* Sender context */}
@@ -329,22 +311,139 @@ function SectionHead({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SuggestedReply({
+  draft,
+  draftsStore,
+  onReviewAndSend,
+  onSaveAsDraft,
+  onDiscard,
+}: {
+  draft: Draft;
+  draftsStore: ReturnType<typeof useDrafts>;
+  onReviewAndSend: () => void;
+  onSaveAsDraft: () => void;
+  onDiscard: () => void;
+}) {
+  const [regenerating, setRegenerating] = React.useState(false);
+  const [regenerateError, setRegenerateError] = React.useState<string | null>(null);
+  const [selectedTone, setSelectedTone] = React.useState<Draft["tone"]>(draft.tone);
+  const [customText, setCustomText] = React.useState(draft.customInstruction ?? "");
+
+  const usedThisHour = regenerationsUsedThisHour(draftsStore.drafts, draft.messageId);
+  const capReached = usedThisHour >= REGEN_CAP_PER_HOUR;
+  const controlsDisabled = regenerating || capReached;
+
+  async function regenerate(overrides?: RegenerateOverrides) {
+    setRegenerating(true);
+    setRegenerateError(null);
+    const result = await requestDraftRegeneration(draft, overrides);
+    if (result.draft) {
+      draftsStore.addDraft(result.draft);
+    } else {
+      setRegenerateError(result.error ?? "failed to regenerate draft");
+    }
+    setRegenerating(false);
+  }
+
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between">
+        <SectionHead>Suggested reply</SectionHead>
+        <div className="flex items-center gap-1">
+          <ToneSegmented
+            value={selectedTone}
+            disabled={controlsDisabled}
+            onChange={(t) => {
+              setSelectedTone(t);
+              if (t === "custom") return; // reveal the box; wait for Generate
+              draftsStore.setTone(draft.id, t);
+              void regenerate({ tone: t });
+            }}
+          />
+          <button
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-tertiary hover:bg-surface-sunk hover:text-ink disabled:opacity-50"
+            aria-label="Regenerate"
+            title="Regenerate"
+            disabled={controlsDisabled || selectedTone === "custom"}
+            onClick={() => void regenerate()}
+          >
+            <RefreshCcw size={14} className={regenerating ? "animate-spin" : undefined} />
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-[11px] tabular text-ink-tertiary">
+          {usedThisHour} of {REGEN_CAP_PER_HOUR} regenerations used this hour
+        </span>
+        {regenerateError && (
+          <span className="text-[11px] font-medium" style={{ color: "var(--signal)" }}>
+            {regenerateError}
+          </span>
+        )}
+      </div>
+
+      {selectedTone === "custom" && (
+        <div className="mb-2.5 rounded-lg border border-rule-strong bg-surface-sunk p-2.5">
+          <Textarea
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            placeholder='Describe the reply you want — e.g. "ask them to push the deadline to Monday, be apologetic"'
+            className="min-h-16 w-full rounded-lg text-sm"
+            disabled={regenerating}
+            aria-label="Custom reply instruction"
+          />
+          <Button
+            size="sm"
+            className="mt-1.5 rounded-lg"
+            disabled={controlsDisabled || customText.trim().length === 0}
+            onClick={() => void regenerate({ tone: "custom", customInstruction: customText.trim() })}
+          >
+            Generate
+          </Button>
+        </div>
+      )}
+
+      <Textarea
+        value={draft.body}
+        onChange={(e) => draftsStore.updateBody(draft.id, e.target.value)}
+        className="measure min-h-32 rounded-lg text-sm"
+        aria-label="Suggested reply, editable"
+      />
+      <div className="mt-2 flex gap-2">
+        <Button size="sm" className="rounded-lg" onClick={onReviewAndSend}>
+          Review and send
+        </Button>
+        <Button size="sm" variant="secondary" className="rounded-lg" onClick={onSaveAsDraft}>
+          Save as draft
+        </Button>
+        <Button size="sm" variant="ghost" className="rounded-lg text-ink-tertiary" onClick={onDiscard}>
+          Discard
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function ToneSegmented({
   value,
   onChange,
+  disabled = false,
 }: {
-  value: "formal" | "friendly" | "brief" | "firm";
-  onChange: (v: "formal" | "friendly" | "brief" | "firm") => void;
+  value: Draft["tone"];
+  onChange: (v: Draft["tone"]) => void;
+  disabled?: boolean;
 }) {
-  const options: typeof value[] = ["formal", "friendly", "brief", "firm"];
+  const options: Draft["tone"][] = ["formal", "friendly", "brief", "firm", "custom"];
   return (
     <div className="flex overflow-hidden rounded-full border border-rule">
       {options.map((o) => (
         <button
           key={o}
           onClick={() => onChange(o)}
+          disabled={disabled}
           className={
-            "px-2.5 py-1 text-[11px] capitalize transition-colors " +
+            "px-2.5 py-1 text-[11px] capitalize transition-colors disabled:opacity-50 " +
             (value === o ? "bg-departure font-semibold text-departure-ink" : "text-ink-tertiary hover:bg-surface-sunk")
           }
         >

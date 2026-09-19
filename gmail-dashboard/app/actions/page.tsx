@@ -5,8 +5,7 @@ import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckSquare2 } from "lucide-react";
 import type { ActionItem } from "@/lib/data";
-import { getMessageById } from "@/lib/data";
-import { NOW } from "@/lib/data/now";
+import { useMessage } from "@/lib/data/use-message";
 import { useActionItems } from "@/components/board/action-items-provider";
 import { PriorityAspect } from "@/components/station/priority-aspect";
 import { EmptyState } from "@/components/board/empty-state";
@@ -22,7 +21,7 @@ import { Button } from "@/components/ui/button";
 
 function daysUntil(iso: string | null): number | null {
   if (!iso) return null;
-  return Math.round((new Date(iso).getTime() - NOW.getTime()) / 86_400_000);
+  return Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
 
 function group(items: ActionItem[]) {
@@ -168,7 +167,7 @@ function ActionRow({
   onSetStatus: (id: string, status: ActionItem["status"]) => void;
   overdue: boolean;
 }) {
-  const source = item.sourceMessageId ? getMessageById(item.sourceMessageId) : undefined;
+  const { message: source } = useMessage(item.sourceMessageId);
   return (
     <div className="flex items-center gap-3 rule-b px-4 py-2.5">
       <input

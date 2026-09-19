@@ -5,7 +5,7 @@ import { PLATFORMS } from "@/lib/data";
 import { useBoard } from "./board-provider";
 import { useActionItems } from "./action-items-provider";
 import { useDrafts } from "./drafts-provider";
-import { getAwaitingReply, getCommitments } from "@/lib/data";
+import { useCommitments } from "./commitments-provider";
 import { ConcourseBar } from "./concourse-bar";
 import { PlatformRail, type RailCounts } from "@/components/station/platform-rail";
 import { UndoBar } from "./undo-bar";
@@ -16,6 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const board = useBoard();
   const actionItems = useActionItems();
   const drafts = useDrafts();
+  const commitments = useCommitments();
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [shortcutsOpen, setShortcutsOpen] = React.useState(false);
 
@@ -53,7 +54,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const openActionItems = actionItems.items.filter((i) => i.status !== "done").length;
   const pendingDrafts = drafts.drafts.filter((d) => d.status === "pending").length;
-  const followUps = getAwaitingReply().length + getCommitments().filter((c) => c.status === "open").length;
+  const followUps =
+    commitments.awaitingReply.length + commitments.commitments.filter((c) => c.status === "open").length;
 
   const counts: RailCounts = {
     overview: 0,

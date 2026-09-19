@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Menu, Search, Moon, Sun, Monitor, Rows3, Rows2, HelpCircle } from "lucide-react";
+import { Menu, Search, Moon, Sun, Monitor, Rows3, Rows2, HelpCircle, User } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   DropdownMenu,
@@ -111,10 +111,10 @@ export function ConcourseBar({
         </DropdownMenu>
 
         <div
-          className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-departure text-xs font-bold text-departure-ink shadow-card"
-          title="yomal@bistecglobal.com"
+          className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-departure text-departure-ink shadow-card"
+          title={sync ? `Connected Gmail account — ${sync.status}` : "Connected Gmail account"}
         >
-          YR
+          <User size={16} />
         </div>
       </div>
     </div>

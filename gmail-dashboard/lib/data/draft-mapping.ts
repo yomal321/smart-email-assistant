@@ -16,6 +16,7 @@ export interface DraftRow {
   created_at: string;
   approved_at: string | null;
   edit_distance: number | null;
+  custom_instruction: string | null;
 }
 
 export function mapDraftRowToDraft(row: DraftRow): Draft {
@@ -34,6 +35,7 @@ export function mapDraftRowToDraft(row: DraftRow): Draft {
     generatedAt: row.created_at,
     approvedAt: row.approved_at,
     editDistance: row.edit_distance,
+    customInstruction: row.custom_instruction,
   };
 }
 
