@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getAccountId } from "@/lib/supabase/account";
 import { logMessageAction } from "@/lib/data/activity-log";
-import { mapEmailRowToMessage, type EmailRow } from "@/lib/data/message-mapping";
+import { mapEmailRowsToMessages, type EmailRow } from "@/lib/data/message-mapping";
 
 // Mirrors EmailRow's field list exactly (lib/data/message-mapping.ts) —
 // never `select("*")`/`raw_payload` (NFR1's field-minimization convention).
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   // account) simply affect zero rows — a silent no-op, not a 404, matching
   // the reducer's own tolerant behavior on an unknown id (spec FR8, Edge
   // Cases).
-  const updated = await Promise.all(((data ?? []) as unknown as EmailRow[]).map(mapEmailRowToMessage));
+  const updated = await mapEmailRowsToMessages((data ?? []) as unknown as EmailRow[]);
 
   const accountId = await getAccountId(supabase);
   if (accountId && updated.length > 0) {

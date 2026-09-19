@@ -9,7 +9,7 @@
 // (spec NFR4).
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { mapEmailRowToMessage, type EmailRow } from "@/lib/data/message-mapping";
+import { mapEmailRowsToMessages, type EmailRow } from "@/lib/data/message-mapping";
 
 // 500-row bound (spec NFR2) — a documented default, not a silent limit.
 // A mailbox with more than this many rows loses older mail from the board
@@ -89,9 +89,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "failed to read messages" }, { status: 500 });
   }
 
-  const messages = await Promise.all(
-    (data ?? []).map((row) => mapEmailRowToMessage(row as unknown as EmailRow)),
-  );
+  const messages = await mapEmailRowsToMessages((data ?? []) as unknown as EmailRow[]);
 
   return NextResponse.json(messages);
 }

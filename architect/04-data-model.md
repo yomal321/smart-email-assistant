@@ -34,7 +34,7 @@ erDiagram
     EMAILS {
         uuid id PK
         uuid account_id FK
-        text thread_id
+        text thread_id "indexed (0013)"
         text sender
         text subject
         text body
@@ -91,7 +91,7 @@ erDiagram
     }
     THREAD_ENTRIES {
         uuid id PK
-        uuid email_id FK
+        uuid email_id FK "indexed (0013)"
         boolean author_is_you
         text author_name
         timestamptz at
