@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "sig": "2069908296 8385",
+  "tier": "standard",
+  "tier_source": "classifier",
+  "rationale": "Multiple new subsystems (plans, notes, six APIs, four pages) across 16–22 files, all structurally additive with nullable task FK, no existing systems impacted, and reversible by git revert.",
+  "domains": [],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"}
+  ],
+  "dropped": []
+}

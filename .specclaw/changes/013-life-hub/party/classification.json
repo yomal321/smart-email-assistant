@@ -1,0 +1,10 @@
+{
+  "tier": "standard",
+  "domains": [],
+  "rationale": "Multiple new subsystems (plans, notes, six APIs, four pages) across 16–22 files, all structurally additive with nullable task FK, no existing systems impacted, and reversible by git revert.",
+  "signals": {
+    "blast_radius": "Two new tables, ~6 new API routes, ~4 new pages, and nav restructure into domain sections—all additive to the existing app frame",
+    "unresolved": "Whether Overview page becomes hub-wide or remains email-focused, which would determine extent of its rewriting but not the core scope",
+    "irreversibility": "Pure git revert with no data migration, as nullable plan FK leaves existing tables and writers (Action Extraction, POST /api/action-items) entirely unaffected"
+  }
+}
