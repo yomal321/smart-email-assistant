@@ -16,7 +16,9 @@ Gmail ingestion through draft generation is live, with every acceptance criterio
 | 2 | **Triage** — category + one-line summary per email | 🟢 Live — verified |
 | 3 | **Action items** — task extraction with optional deadline | 🟢 Live — verified |
 | 4 | **Draft generation** — authenticated on-demand reply endpoint | 🟢 Live — 8/8 ACs verified |
-| 5 | **Web dashboard** — unified inbox, task sidebar, draft review | ⚪ Not started |
+| 5 | **Web dashboard** — unified inbox, task sidebar, draft review | 🟢 Built |
+| 6 | **Inbox noise control** — junk gate, selective cleanup, retention sweep | 🟢 Built |
+| A | **Assistant bot** — conversational mobile client (Telegram) + proactive pushes | 🟡 Spec'd, build pending — `.specclaw/changes/012-assistant-bot` |
 | — | **Outlook ingestion** | 🟡 Deferred — proposed and reviewed, not approved |
 
 Verification evidence for each phase lives in `.specclaw/changes/<change>/verify-report.md`.

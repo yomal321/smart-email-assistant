@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "sig": "90134026 8682",
+  "tier": "standard",
+  "tier_source": "classifier",
+  "rationale": "Multiple subsystems involved (n8n, Supabase, migrations) but all changes are additive; open questions are tuning decisions that don't alter the file list; security domain flagged for new untrusted input (Telegram) and LLM-mediated output.",
+  "domains": ["security"],
+  "seats": [
+    {"role": "party-po", "model": "sonnet"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "sonnet"},
+    {"role": "party-security", "model": "opus"}
+  ],
+  "dropped": []
+}

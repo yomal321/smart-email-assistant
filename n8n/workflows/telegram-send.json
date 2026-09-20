@@ -1,0 +1,159 @@
+{
+  "name": "Telegram Send",
+  "nodes": [
+    {
+      "id": "a7b8c9d0-0001-4a1a-9c1a-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chat_id",
+              "type": "string"
+            },
+            {
+              "name": "text",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "notes": "T2/design.md: two callers pass { chat_id, text } here -- telegram-adapter.json (replies) and assistant-scheduler.json (proactive pushes). Same 'shared seam, multiple callers' justification llm-gateway.json already established."
+    },
+    {
+      "id": "a7b8c9d0-0002-4a1a-9c1a-000000000002",
+      "name": "Call sendMessage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.telegram.org/bot' + $env.TELEGRAM_BOT_TOKEN + '/sendMessage' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"chat_id\": $json.chat_id, \"text\": $json.text, \"parse_mode\": \"HTML\" } }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false
+            }
+          }
+        }
+      },
+      "notes": "Bot token read from the n8n environment variable TELEGRAM_BOT_TOKEN (never hardcoded, never an n8n credential -- same custody convention as DRAFT_WEBHOOK_SECRET/RESYNC_WEBHOOK_SECRET; a Code node isn't needed here since the HTTP Request node's expression editor reads $env directly). parse_mode='HTML' lets callers use <b>/<i> for the digest pushes' light formatting; plain text is valid HTML-mode input too, so slash-command replies need no escaping changes. options.response.fullResponse + neverError=false mirrors llm-gateway.json's 'Call Gemini generateContent' -- a non-2xx status makes the node genuinely fail and enters n8n's native retry (maxTries=2), rather than being swallowed as normal response data.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a7b8c9d0-0003-4a1a-9c1a-000000000003",
+      "name": "Parse send result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Never throws unhandled -- same generic-contract convention as LLM\n// Gateway's 'Parse Gemini response': always { success, ... }, never a raw\n// throw a calling workflow would have to catch.\ntry {\n  const response = $json || {};\n\n  if (response.error) {\n    const message =\n      (typeof response.error === 'string' && response.error) ||\n      (response.error && response.error.message) ||\n      'Request to Telegram sendMessage failed';\n    return { json: { success: false, error: String(message) } };\n  }\n\n  const statusCode = response.statusCode;\n  const body = response.body || {};\n\n  if (!statusCode || statusCode < 200 || statusCode >= 300) {\n    const apiMessage = body.description || `Telegram sendMessage returned HTTP ${statusCode}`;\n    return { json: { success: false, error: String(apiMessage) } };\n  }\n\n  return { json: { success: true, message_id: body.result && body.result.message_id } };\n} catch (err) {\n  return { json: { success: false, error: (err && err.message) || 'Unknown Telegram Send error' } };\n}\n"
+      }
+    },
+    {
+      "id": "a7b8c9d0-0004-4a1a-9c1a-000000000004",
+      "name": "Return result",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        300
+      ],
+      "notes": "T2's Notes: converges to a single terminal leaf, per design.md's Grounding sources (L29's terminal-branch-convergence lesson) -- this sub-workflow is called with waitForSubWorkflow: true by both future callers, and llm-gateway.json's own 'Return result' node exists for exactly the same reason (n8n's sub-workflow completion signal raced on asymmetric terminal branches in a prior live incident). There is only one branch here today, but the node is added preemptively so a later failure branch (e.g. a distinct 'chat not found' path) has something to converge onto rather than requiring a refactor under pressure.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a7b8c9d0-s001-4a1a-9c1a-stickynote001",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        60
+      ],
+      "parameters": {
+        "content": "## Telegram Send\n\nReusable sendMessage sub-workflow. Two callers: telegram-adapter.json (replies to inbound questions) and assistant-scheduler.json (the four proactive pushes). Contract: { chat_id, text } in, { success, message_id? , error? } out -- never throws.\n\nSee .specclaw/changes/012-assistant-bot/design.md, Architecture + File Changes Map, and tasks.md T2.",
+        "height": 220,
+        "width": 480,
+        "color": 4
+      }
+    },
+    {
+      "id": "a7b8c9d0-s002-4a1a-9c1a-stickynote002",
+      "name": "Sticky Note - placeholders",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        460
+      ],
+      "parameters": {
+        "content": "### Placeholders to fill in on import\n\n- **TELEGRAM_BOT_TOKEN** n8n environment variable -- the token @BotFather issues for this bot (see docs/setup/assistant-bot-setup.md). Never store it as an n8n credential; the HTTP Request node reads it directly via $env in its URL expression.\n- Callers (telegram-adapter.json, assistant-scheduler.json) invoke this workflow by name (cachedResultName: 'Telegram Send') with workflowId.value left blank -- re-point each caller's Execute Workflow node at the real imported workflow via the resource picker once this file is imported, same convention every prior phase's sub-workflow references use.",
+        "height": 220,
+        "width": 480,
+        "color": 7
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Call sendMessage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call sendMessage": {
+      "main": [
+        [
+          {
+            "node": "Parse send result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse send result": {
+      "main": [
+        [
+          {
+            "node": "Return result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

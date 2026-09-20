@@ -1,0 +1,1259 @@
+{
+  "name": "Assistant Scheduler",
+  "nodes": [
+    {
+      "id": "d3e4f5a6-mb-0001-4a1a-9c1a-000000000001",
+      "name": "Morning Brief Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2400,
+        -600
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "notes": "FR11. Fixed hour (7am), same style as retention-sweep.json's 'Every day at 3am' -- n8n's Schedule Trigger has no per-workflow timezone expression field (it evaluates against the n8n instance's own configured timezone), so this ASSUMES the n8n host's configured timezone matches settings.timezone (default Asia/Colombo). The 'today'/'overnight' DATE MATH inside this branch is still computed correctly against settings.timezone regardless (via AT TIME ZONE) -- only the trigger's wall-clock firing hour depends on this assumption. See the placeholders sticky note.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-mb-0002-4a1a-9c1a-000000000002",
+      "name": "MB: Read settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2160,
+        -600
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT timezone FROM settings LIMIT 1;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR16. Same pattern as assistant-brain.json's 'Read settings' -- alwaysOutputData=true so an unconfigured account still yields a pass-through item, and 'MB: Prepare timezone' falls back to the column default.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-mb-0003-4a1a-9c1a-000000000003",
+      "name": "MB: Prepare timezone",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1920,
+        -600
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const timezone = ($json && $json.timezone) || 'Asia/Colombo';\nreturn { json: { timezone } };\n"
+      }
+    },
+    {
+      "id": "d3e4f5a6-mb-0004-4a1a-9c1a-000000000004",
+      "name": "MB: Read tasks due today",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1680,
+        -600
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, task_text FROM tasks WHERE status IN ('todo','in-progress') AND deadline = (now() AT TIME ZONE $1)::date ORDER BY deadline ASC;",
+        "options": {
+          "queryReplacement": "={{ [$json.timezone] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR11 part 1. Same timezone-aware 'today' calculation as assistant-brain.json's /today command.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-mb-0005-4a1a-9c1a-000000000005",
+      "name": "MB: Read open commitments",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1440,
+        -600
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, text, direction FROM commitments WHERE status = 'open' ORDER BY created_at DESC LIMIT 10;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR11 part 2. executeOnce=true -- same reason as every other parameterless read chained after a variable-row-count node in this project (draft-generation.json's 'Read style sample').",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-mb-0006-4a1a-9c1a-000000000006",
+      "name": "MB: Read overnight count",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1200,
+        -600
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT count(*) FROM emails WHERE received_at >= (date_trunc('day', now() AT TIME ZONE $1))::timestamp AT TIME ZONE $1;",
+        "options": {
+          "queryReplacement": "={{ [$('MB: Prepare timezone').first().json.timezone] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR11 part 3 ('overnight' = since local midnight). date_trunc('day', now() AT TIME ZONE $1) gives local midnight as a naive timestamp; casting back AT TIME ZONE $1 converts it to the correct UTC instant for comparison against received_at (timestamptz). Reads timezone via node-name reference since it sits three nodes downstream of 'MB: Prepare timezone'.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-mb-0007-4a1a-9c1a-000000000007",
+      "name": "MB: Read unhandled urgent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -960,
+        -600
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, subject FROM emails WHERE priority = 'urgent' AND status = 'open' ORDER BY received_at DESC LIMIT 10;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR11 part 4. Same query as assistant-brain.json's /urgent command.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-mb-0008-4a1a-9c1a-000000000008",
+      "name": "MB: Format brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        -600
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const tasks = $('MB: Read tasks due today').all().map((i) => i.json).filter((r) => r && r.id);\nconst commitments = $('MB: Read open commitments').all().map((i) => i.json).filter((r) => r && r.id);\nconst overnightRow = $('MB: Read overnight count').first().json || {};\nconst overnightCount = parseInt(overnightRow.count, 10) || 0;\nconst urgent = $('MB: Read unhandled urgent').all().map((i) => i.json).filter((r) => r && r.id);\n\nconst taskLines = tasks.length ? tasks.map((t) => `- ${t.task_text}`).join('\\n') : '(none)';\nconst commitmentLines = commitments.length\n  ? commitments.map((c) => `- ${c.text} (${c.direction})`).join('\\n')\n  : '(none)';\nconst urgentLines = urgent.length ? urgent.map((u) => `- ${u.subject}`).join('\\n') : '(none)';\n\nconst text = `<b>Morning Brief</b>\\n\\nTasks due today:\\n${taskLines}\\n\\nOpen commitments:\\n${commitmentLines}\\n\\nOvernight emails: ${overnightCount}\\n\\nUnhandled urgent:\\n${urgentLines}`;\nreturn [{ json: { text } }];\n"
+      },
+      "notes": "FR11."
+    },
+    {
+      "id": "d3e4f5a6-mb-0009-4a1a-9c1a-000000000009",
+      "name": "MB: Expand to chat IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        -600
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// FR15/spec.md 'multiple allowlisted chat IDs': every allowlisted chat gets\n// the same digest. No dedup write for digests -- the Schedule Trigger\n// already fires exactly once per day by construction.\nconst text = $json.text;\nconst allowedChatIds = ($env.TELEGRAM_ALLOWED_CHAT_IDS || '')\n  .split(',')\n  .map((id) => id.trim())\n  .filter((id) => id.length > 0);\n\nreturn allowedChatIds.map((chatId) => ({ json: { chat_id: chatId, text } }));\n"
+      }
+    },
+    {
+      "id": "d3e4f5a6-mb-000a-4a1a-9c1a-00000000000a",
+      "name": "MB: Loop chat IDs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -240,
+        -600
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "notes": "BEST-EFFORT, not live-verified: assumes n8n's Split In Batches output order is [0]=done, [1]=loop -- same assumption gmail-renewal-recovery.json's 'Loop Over Message IDs' documents and flags for on-import verification.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-mb-000b-4a1a-9c1a-00000000000b",
+      "name": "MB: Call Telegram Send",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -680
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Telegram Send"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "text": "={{ $json.text }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "onError=continueRegularOutput (learnings.md L28: one bad row/send must never block the rest of the batch) -- a failed send to one chat ID does not stop the loop from reaching the others.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-up-0001-4a1a-9c1a-000000000001",
+      "name": "Urgent/VIP Poll Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2400,
+        -240
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "notes": "FR12. 5-minute interval is a starting guess (design.md Notes), not measured."
+    },
+    {
+      "id": "d3e4f5a6-up-0002-4a1a-9c1a-000000000002",
+      "name": "UP: Read urgent/VIP candidates",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2160,
+        -240
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT DISTINCT e.id, e.subject, e.received_at FROM emails e LEFT JOIN contacts c ON e.participants @> jsonb_build_array(jsonb_build_object('address', c.email)) WHERE (e.priority = 'urgent' OR c.is_vip = true) AND e.status = 'open' ORDER BY e.received_at DESC;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR12: unhandled (status='open') emails that are either priority='urgent' or from a contacts.is_vip=true sender. Deliberately unfiltered by bot_notifications here -- dedup is computed per (chat_id, email_id) pair in 'UP: Expand unsent alerts' below, since bot_notifications_urgent_alert_uidx is scoped per chat_id, not globally per email.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-up-0003-4a1a-9c1a-000000000003",
+      "name": "UP: Read existing alerts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1920,
+        -240
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT chat_id, email_id FROM bot_notifications WHERE notification_type = 'urgent_alert';",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Snapshot of every (chat_id, email_id) pair already notified, used to filter the candidate x chat_id expansion below.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-up-0004-4a1a-9c1a-000000000004",
+      "name": "UP: Expand unsent alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1680,
+        -240
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// AC6/AC10: cross candidates x allowlisted chat IDs, then drop any pair\n// already present in bot_notifications -- this IS the dedup enforcement\n// point (the INSERT below is a guard against a race, not the primary check).\nconst candidates = $('UP: Read urgent/VIP candidates').all().map((i) => i.json).filter((r) => r && r.id);\nconst sent = $('UP: Read existing alerts').all().map((i) => i.json).filter((r) => r && r.chat_id);\nconst sentKeys = new Set(sent.map((r) => `${r.chat_id}::${r.email_id}`));\n\nconst allowedChatIds = ($env.TELEGRAM_ALLOWED_CHAT_IDS || '')\n  .split(',')\n  .map((id) => id.trim())\n  .filter((id) => id.length > 0);\n\nconst items = [];\nfor (const candidate of candidates) {\n  for (const chatId of allowedChatIds) {\n    if (!sentKeys.has(`${chatId}::${candidate.id}`)) {\n      items.push({ json: { chat_id: chatId, email_id: candidate.id, subject: candidate.subject } });\n    }\n  }\n}\nreturn items;\n"
+      }
+    },
+    {
+      "id": "d3e4f5a6-up-0005-4a1a-9c1a-000000000005",
+      "name": "UP: Loop unsent alerts",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1440,
+        -240
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "notes": "BEST-EFFORT, not live-verified: same [0]=done/[1]=loop output-order assumption as gmail-renewal-recovery.json's 'Loop Over Message IDs'.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-up-0006-4a1a-9c1a-000000000006",
+      "name": "UP: Call Telegram Send",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        -320
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Telegram Send"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "text": "={{ '🚨 Urgent: ' + $json.subject }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "onError=continueRegularOutput (learnings.md L28) -- one failed send must not stop the rest of the batch, and per this row's own contract must still fall through to 'UP: Insert notification' so a delivered-but-erroring response doesn't skip the dedup write and cause a resend next poll. A genuinely undelivered message re-sends next cycle instead (acceptable per spec.md's missed-push edge case), which is preferable to silently blocking every later candidate in the same run.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-up-0007-4a1a-9c1a-000000000007",
+      "name": "UP: Insert notification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -960,
+        -320
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_notifications (chat_id, notification_type, email_id) VALUES ($1, 'urgent_alert', $2) ON CONFLICT DO NOTHING;",
+        "options": {
+          "queryReplacement": "={{ [$('UP: Loop unsent alerts').item.json.chat_id, $('UP: Loop unsent alerts').item.json.email_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "AC6/AC10: ON CONFLICT DO NOTHING against bot_notifications_urgent_alert_uidx -- belt-and-braces alongside the read-time filter in 'UP: Expand unsent alerts', guarding the (small) race window between that read and this write within a single poll run. onError=continueRegularOutput so a write failure doesn't stop the rest of the batch (L28). CORRECTED 2026-09-20 (live error: 'null value in column \"chat_id\" ... violates not-null constraint'): queryReplacement originally read $json.chat_id/$json.email_id directly, but by this point $json is 'UP: Call Telegram Send's OWN return value ({success, message_id}) -- an executeWorkflow node replaces the item entirely with its sub-workflow's output, it doesn't merge. Confirmed live: this silently no-op'd the dedup write on every poll (masked by onError=continueRegularOutput), so the same 3 urgent emails re-sent every 5-minute cycle instead of once. Fixed by reading $('UP: Loop unsent alerts').item.json instead -- the node immediately before the Telegram Send call, still carrying the original {chat_id, email_id, subject}.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-dn-0001-4a1a-9c1a-000000000001",
+      "name": "Deadline Nudge Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2400,
+        120
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "notes": "FR13. Fixed hour (8am), same instance-timezone assumption as 'Morning Brief Trigger'."
+    },
+    {
+      "id": "d3e4f5a6-dn-0002-4a1a-9c1a-000000000002",
+      "name": "DN: Read settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2160,
+        120
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT timezone FROM settings LIMIT 1;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR16.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-dn-0003-4a1a-9c1a-000000000003",
+      "name": "DN: Read due/overdue tasks",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1920,
+        120
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, task_text, deadline FROM tasks WHERE status IN ('todo','in-progress') AND deadline IS NOT NULL AND deadline <= (now() AT TIME ZONE $1)::date ORDER BY deadline ASC;",
+        "options": {
+          "queryReplacement": "={{ [$json.timezone || 'Asia/Colombo'] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR13: 'today or earlier', not just today -- a task overdue for a week still needs exactly one nudge (the dedup row, once written, prevents any repeat regardless of how many more days it stays open).",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-dn-0004-4a1a-9c1a-000000000004",
+      "name": "DN: Read existing nudges",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1680,
+        120
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT chat_id, task_id FROM bot_notifications WHERE notification_type = 'deadline_nudge';",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Snapshot for the candidate x chat_id filter, same shape as 'UP: Read existing alerts'.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-dn-0005-4a1a-9c1a-000000000005",
+      "name": "DN: Expand unsent nudges",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1440,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// AC7/AC10: same candidate x chat_id x dedup-snapshot pattern as\n// 'UP: Expand unsent alerts'.\nconst candidates = $('DN: Read due/overdue tasks').all().map((i) => i.json).filter((r) => r && r.id);\nconst sent = $('DN: Read existing nudges').all().map((i) => i.json).filter((r) => r && r.chat_id);\nconst sentKeys = new Set(sent.map((r) => `${r.chat_id}::${r.task_id}`));\n\nconst allowedChatIds = ($env.TELEGRAM_ALLOWED_CHAT_IDS || '')\n  .split(',')\n  .map((id) => id.trim())\n  .filter((id) => id.length > 0);\n\nconst items = [];\nfor (const candidate of candidates) {\n  for (const chatId of allowedChatIds) {\n    if (!sentKeys.has(`${chatId}::${candidate.id}`)) {\n      items.push({\n        json: {\n          chat_id: chatId,\n          task_id: candidate.id,\n          task_text: candidate.task_text,\n          deadline: candidate.deadline,\n        },\n      });\n    }\n  }\n}\nreturn items;\n"
+      }
+    },
+    {
+      "id": "d3e4f5a6-dn-0006-4a1a-9c1a-000000000006",
+      "name": "DN: Loop unsent nudges",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1200,
+        120
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "notes": "BEST-EFFORT, not live-verified: same [0]=done/[1]=loop output-order assumption as gmail-renewal-recovery.json's 'Loop Over Message IDs'.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-dn-0007-4a1a-9c1a-000000000007",
+      "name": "DN: Call Telegram Send",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -960,
+        40
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Telegram Send"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "text": "={{ '⏰ Deadline nudge: ' + $json.task_text + ' (deadline ' + String($json.deadline).slice(0, 10) + ')' }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "onError=continueRegularOutput (L28), same reasoning as 'UP: Call Telegram Send'.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-dn-0008-4a1a-9c1a-000000000008",
+      "name": "DN: Insert notification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -720,
+        40
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_notifications (chat_id, notification_type, task_id) VALUES ($1, 'deadline_nudge', $2) ON CONFLICT DO NOTHING;",
+        "options": {
+          "queryReplacement": "={{ [$('DN: Loop unsent nudges').item.json.chat_id, $('DN: Loop unsent nudges').item.json.task_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "AC7/AC10: ON CONFLICT DO NOTHING against bot_notifications_deadline_nudge_uidx. CORRECTED 2026-09-20: same $json-after-executeWorkflow bug found live in 'UP: Insert notification' (see its notes) -- fixed here pre-emptively the same way, reading $('DN: Loop unsent nudges').item.json instead of $json, which by this point would be 'DN: Call Telegram Send's own {success, message_id} return value.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-er-0001-4a1a-9c1a-000000000001",
+      "name": "Evening Review Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2400,
+        480
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 19
+            }
+          ]
+        }
+      },
+      "notes": "FR14. Fixed hour (7pm), same instance-timezone assumption as 'Morning Brief Trigger'."
+    },
+    {
+      "id": "d3e4f5a6-er-0002-4a1a-9c1a-000000000002",
+      "name": "ER: Read settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2160,
+        480
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT timezone FROM settings LIMIT 1;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR16.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-er-0003-4a1a-9c1a-000000000003",
+      "name": "ER: Prepare timezone",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1920,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const timezone = ($json && $json.timezone) || 'Asia/Colombo';\nreturn { json: { timezone } };\n"
+      }
+    },
+    {
+      "id": "d3e4f5a6-er-0004-4a1a-9c1a-000000000004",
+      "name": "ER: Read done today",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1680,
+        480
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, task_text FROM tasks WHERE status = 'done' AND deadline = (now() AT TIME ZONE $1)::date;",
+        "options": {
+          "queryReplacement": "={{ [$json.timezone] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR14 part 1, APPROXIMATE by necessity: tasks has no completed-at timestamp (0009_tasks_enrichment.sql adds owner/priority/origin/confidence, not a completion time), so 'done today' cannot be computed exactly. This uses status='done' AND deadline=today as the closest available proxy -- a task completed today but due on a different date will not appear here. Flagged honestly rather than silently wrong; revisit if a tasks.completed_at column is ever added.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-er-0005-4a1a-9c1a-000000000005",
+      "name": "ER: Read still open today",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1440,
+        480
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, task_text FROM tasks WHERE status IN ('todo','in-progress') AND deadline = (now() AT TIME ZONE $1)::date;",
+        "options": {
+          "queryReplacement": "={{ [$('ER: Prepare timezone').first().json.timezone] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR14 part 2 (what slipped). executeOnce=true, timezone read by node-name reference (see 'MB: Read overnight count' for the same convention).",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-er-0006-4a1a-9c1a-000000000006",
+      "name": "ER: Read due tomorrow",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1200,
+        480
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, task_text FROM tasks WHERE status IN ('todo','in-progress') AND deadline = (now() AT TIME ZONE $1)::date + 1;",
+        "options": {
+          "queryReplacement": "={{ [$('ER: Prepare timezone').first().json.timezone] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "FR14 part 3.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-er-0007-4a1a-9c1a-000000000007",
+      "name": "ER: Format review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const done = $('ER: Read done today').all().map((i) => i.json).filter((r) => r && r.id);\nconst slipped = $('ER: Read still open today').all().map((i) => i.json).filter((r) => r && r.id);\nconst tomorrow = $('ER: Read due tomorrow').all().map((i) => i.json).filter((r) => r && r.id);\n\nconst doneLines = done.length ? done.map((t) => `- ${t.task_text}`).join('\\n') : '(none)';\nconst slippedLines = slipped.length ? slipped.map((t) => `- ${t.task_text}`).join('\\n') : '(none)';\nconst tomorrowLines = tomorrow.length ? tomorrow.map((t) => `- ${t.task_text}`).join('\\n') : '(none)';\n\nconst text = `<b>Evening Review</b>\\n\\nDone today:\\n${doneLines}\\n\\nDue today, still open:\\n${slippedLines}\\n\\nDue tomorrow:\\n${tomorrowLines}`;\nreturn [{ json: { text } }];\n"
+      },
+      "notes": "FR14."
+    },
+    {
+      "id": "d3e4f5a6-er-0008-4a1a-9c1a-000000000008",
+      "name": "ER: Expand to chat IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const text = $json.text;\nconst allowedChatIds = ($env.TELEGRAM_ALLOWED_CHAT_IDS || '')\n  .split(',')\n  .map((id) => id.trim())\n  .filter((id) => id.length > 0);\n\nreturn allowedChatIds.map((chatId) => ({ json: { chat_id: chatId, text } }));\n"
+      },
+      "notes": "FR15 -- no dedup write, same reasoning as 'MB: Expand to chat IDs'."
+    },
+    {
+      "id": "d3e4f5a6-er-0009-4a1a-9c1a-000000000009",
+      "name": "ER: Loop chat IDs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -480,
+        480
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "notes": "BEST-EFFORT, not live-verified: same [0]=done/[1]=loop output-order assumption as gmail-renewal-recovery.json's 'Loop Over Message IDs'.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-er-000a-4a1a-9c1a-00000000000a",
+      "name": "ER: Call Telegram Send",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        400
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Telegram Send"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "text": "={{ $json.text }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "onError=continueRegularOutput (L28), same reasoning as 'MB: Call Telegram Send'.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-s001-4a1a-9c1a-stickynote001",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2400,
+        -900
+      ],
+      "parameters": {
+        "content": "## Assistant Scheduler\n\nOne workflow, four independent Schedule Trigger chains (design.md's Architecture): Morning Brief (daily digest, no dedup), Urgent/VIP Poll (every 5 min, per-entity dedup via bot_notifications), Deadline Nudge (daily, per-entity dedup), Evening Review (daily digest, no dedup). Every send goes through telegram-send.json; the two per-entity pushes additionally write bot_notifications (0014_bot_notifications.sql) guarded by its partial unique indexes.\n\nSee .specclaw/changes/012-assistant-bot/spec.md (FR11-FR16) and design.md (Architecture, Data Model Changes).",
+        "height": 300,
+        "width": 640,
+        "color": 4
+      }
+    },
+    {
+      "id": "d3e4f5a6-s002-4a1a-9c1a-stickynote002",
+      "name": "Sticky Note - placeholders",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2400,
+        820
+      ],
+      "parameters": {
+        "content": "### Placeholders to fill in on import\n\n- **Supabase Postgres** credential on every Postgres node -- reuse the existing credential, do not create a new one.\n- Every 'Call Telegram Send' node references the 'Telegram Send' sub-workflow by name (workflowId.value blank) -- re-point each at the real imported workflow via the resource picker once telegram-send.json is imported.\n- **TELEGRAM_ALLOWED_CHAT_IDS** must already be set (same env var telegram-adapter.json reads).\n- Migration 0014_bot_notifications.sql must be applied before activating this workflow -- 'UP:'/'DN:' branches read and write it immediately.\n- The three fixed trigger hours (7am Morning Brief, 8am Deadline Nudge, 7pm Evening Review) assume the n8n instance's own configured timezone matches settings.timezone (default Asia/Colombo) -- adjust the Schedule Trigger nodes' hours directly if the instance runs in a different timezone, since n8n's Schedule Trigger has no per-workflow timezone field to parametrize instead.\n- 'ER: Read done today' is a documented approximation (deadline=today AND status='done', no completed-at column exists) -- see that node's own notes.",
+        "height": 300,
+        "width": 640,
+        "color": 7
+      }
+    }
+  ],
+  "connections": {
+    "Morning Brief Trigger": {
+      "main": [
+        [
+          {
+            "node": "MB: Read settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Read settings": {
+      "main": [
+        [
+          {
+            "node": "MB: Prepare timezone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Prepare timezone": {
+      "main": [
+        [
+          {
+            "node": "MB: Read tasks due today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Read tasks due today": {
+      "main": [
+        [
+          {
+            "node": "MB: Read open commitments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Read open commitments": {
+      "main": [
+        [
+          {
+            "node": "MB: Read overnight count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Read overnight count": {
+      "main": [
+        [
+          {
+            "node": "MB: Read unhandled urgent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Read unhandled urgent": {
+      "main": [
+        [
+          {
+            "node": "MB: Format brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Format brief": {
+      "main": [
+        [
+          {
+            "node": "MB: Expand to chat IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Expand to chat IDs": {
+      "main": [
+        [
+          {
+            "node": "MB: Loop chat IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Loop chat IDs": {
+      "main": [
+        [],
+        [
+          {
+            "node": "MB: Call Telegram Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Call Telegram Send": {
+      "main": [
+        [
+          {
+            "node": "MB: Loop chat IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgent/VIP Poll Trigger": {
+      "main": [
+        [
+          {
+            "node": "UP: Read urgent/VIP candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UP: Read urgent/VIP candidates": {
+      "main": [
+        [
+          {
+            "node": "UP: Read existing alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UP: Read existing alerts": {
+      "main": [
+        [
+          {
+            "node": "UP: Expand unsent alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UP: Expand unsent alerts": {
+      "main": [
+        [
+          {
+            "node": "UP: Loop unsent alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UP: Loop unsent alerts": {
+      "main": [
+        [],
+        [
+          {
+            "node": "UP: Call Telegram Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UP: Call Telegram Send": {
+      "main": [
+        [
+          {
+            "node": "UP: Insert notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UP: Insert notification": {
+      "main": [
+        [
+          {
+            "node": "UP: Loop unsent alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deadline Nudge Trigger": {
+      "main": [
+        [
+          {
+            "node": "DN: Read settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DN: Read settings": {
+      "main": [
+        [
+          {
+            "node": "DN: Read due/overdue tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DN: Read due/overdue tasks": {
+      "main": [
+        [
+          {
+            "node": "DN: Read existing nudges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DN: Read existing nudges": {
+      "main": [
+        [
+          {
+            "node": "DN: Expand unsent nudges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DN: Expand unsent nudges": {
+      "main": [
+        [
+          {
+            "node": "DN: Loop unsent nudges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DN: Loop unsent nudges": {
+      "main": [
+        [],
+        [
+          {
+            "node": "DN: Call Telegram Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DN: Call Telegram Send": {
+      "main": [
+        [
+          {
+            "node": "DN: Insert notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DN: Insert notification": {
+      "main": [
+        [
+          {
+            "node": "DN: Loop unsent nudges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evening Review Trigger": {
+      "main": [
+        [
+          {
+            "node": "ER: Read settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Read settings": {
+      "main": [
+        [
+          {
+            "node": "ER: Prepare timezone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Prepare timezone": {
+      "main": [
+        [
+          {
+            "node": "ER: Read done today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Read done today": {
+      "main": [
+        [
+          {
+            "node": "ER: Read still open today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Read still open today": {
+      "main": [
+        [
+          {
+            "node": "ER: Read due tomorrow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Read due tomorrow": {
+      "main": [
+        [
+          {
+            "node": "ER: Format review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Format review": {
+      "main": [
+        [
+          {
+            "node": "ER: Expand to chat IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Expand to chat IDs": {
+      "main": [
+        [
+          {
+            "node": "ER: Loop chat IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Loop chat IDs": {
+      "main": [
+        [],
+        [
+          {
+            "node": "ER: Call Telegram Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Call Telegram Send": {
+      "main": [
+        [
+          {
+            "node": "ER: Loop chat IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

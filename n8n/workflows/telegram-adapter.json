@@ -1,0 +1,520 @@
+{
+  "name": "Telegram Adapter",
+  "nodes": [
+    {
+      "id": "c2d3e4f5-0001-4a1a-9c1a-000000000001",
+      "name": "Telegram Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-updates",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "notes": "CORRECTED 2026-09-20 (live execution #847/#848/#857/#858): originally n8n-nodes-base.telegramTrigger. That node type does NOT expose raw request headers on $json -- only the already-parsed Telegram Update object (update_id, message, ...) -- so FR3's 'Verify Telegram secret' node always read an empty header and rejected every request, including legitimate ones (confirmed live: authFailed:true on a real /today message from the allowlisted chat). Switched to a generic Webhook node instead, the same convention gmail-ingestion.json / draft-generation.json / gmail-renewal-recovery.json's resync webhook already use for header-based secret verification. httpMethod=POST, responseMode='responseNode' pairs correctly with the three 'Respond 200 - ...' nodes below (a genuine webhook node is required for respondToWebhook to work at all -- also confirmed live, see those nodes' notes). No n8n credential of any kind is needed for this node; TELEGRAM_BOT_TOKEN (used only by telegram-send.json) remains the only Telegram-related secret this change needs. The webhook must be registered manually via Telegram's setWebhook API (docs/setup/assistant-bot-setup.md step 5) pointed at this node's path -- there is no auto-registration the way telegramTrigger provided.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c2d3e4f5-0002-4a1a-9c1a-000000000002",
+      "name": "Verify Telegram secret",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1360,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// FR3: constant-time comparison against TELEGRAM_WEBHOOK_SECRET, echoed back\n// by Telegram in the X-Telegram-Bot-Api-Secret-Token header on every webhook\n// call once setWebhook was called with secret_token (docs/setup/assistant-\n// bot-setup.md). Same crypto.createHash('sha256') + crypto.timingSafeEqual\n// pattern as gmail-renewal-recovery.json's 'Verify resync secret' -- secret\n// read via $env, never an n8n credential, for the same reason draft-\n// generation.json's 'Verify secret' documents (a Code node can't read an\n// n8n credential's stored value directly).\ntry {\n  const crypto = require('crypto');\n  const item = $json || {};\n  const headers = item.headers || {};\n  const providedSecret = headers['x-telegram-bot-api-secret-token'] || '';\n  const expectedSecret = $env.TELEGRAM_WEBHOOK_SECRET || '';\n\n  const providedHash = crypto.createHash('sha256').update(String(providedSecret)).digest();\n  const expectedHash = crypto.createHash('sha256').update(String(expectedSecret)).digest();\n\n  const isValid = Boolean(expectedSecret) && Boolean(providedSecret) &&\n    crypto.timingSafeEqual(providedHash, expectedHash);\n\n  return { json: { authFailed: !isValid, update: item.body || item } };\n} catch (err) {\n  return { json: { authFailed: true, update: null, error: (err && err.message) || 'Unknown auth error' } };\n}\n"
+      },
+      "notes": "Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto and N8N_BLOCK_ENV_ACCESS_IN_NODE=false on the n8n instance -- same two env vars draft-generation-setup.md documents as non-optional for its own 'Verify secret' node; without both, every request is rejected regardless of whether the secret is correct."
+    },
+    {
+      "id": "c2d3e4f5-0003-4a1a-9c1a-000000000003",
+      "name": "Secret ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1120,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c2d3e4f5-cond-secret",
+              "leftValue": "={{ $json.authFailed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "True (index 0, authFailed) -> Respond 200 - ack only, no reply sent (FR3, a forged call gets no signal it failed). False (index 1) -> chat-ID allowlist check."
+    },
+    {
+      "id": "c2d3e4f5-0004-4a1a-9c1a-000000000004",
+      "name": "Check chat allowlist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        180
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// FR4: TELEGRAM_ALLOWED_CHAT_IDS is a comma-separated env var, compared as\n// strings (Telegram chat ids are numeric but arrive as JSON numbers/strings\n// depending on client -- String() on both sides avoids a type mismatch).\nconst update = $json.update || {};\nconst message = update.message || {};\nconst chatId = message.chat && message.chat.id !== undefined ? String(message.chat.id) : '';\n\nconst allowed = ($env.TELEGRAM_ALLOWED_CHAT_IDS || '')\n  .split(',')\n  .map((id) => id.trim())\n  .filter((id) => id.length > 0);\n\nconst isAllowed = Boolean(chatId) && allowed.includes(chatId);\n\nreturn { json: { chat_id: chatId, allowed: isAllowed, message } };\n"
+      },
+      "notes": "FR4: fail-closed and silent -- an empty/misconfigured TELEGRAM_ALLOWED_CHAT_IDS allows nobody, never everybody."
+    },
+    {
+      "id": "c2d3e4f5-0005-4a1a-9c1a-000000000005",
+      "name": "Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -640,
+        180
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c2d3e4f5-cond-allowed",
+              "leftValue": "={{ $json.allowed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "True (index 0) -> normalize the message and reach the Brain. False (index 1, unlisted chat) -> Respond 200 - ack only (FR4/AC2): no reply sent, no further action, and the sender gets no acknowledgement the bot even exists."
+    },
+    {
+      "id": "c2d3e4f5-0006-4a1a-9c1a-000000000006",
+      "name": "Normalize message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        60
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Normalizes to the neutral { chat_id, text, channel } shape design.md's\n// Architecture section specifies -- a future whatsapp-adapter.json would\n// produce the exact same shape from a completely different source payload.\nconst message = $json.message || {};\nconst chatId = $json.chat_id;\nconst isText = typeof message.text === 'string' && message.text.length > 0;\n\nreturn {\n  json: {\n    chat_id: chatId,\n    text: isText ? message.text : null,\n    channel: 'telegram',\n    isText,\n  },\n};\n"
+      },
+      "notes": "Edge case (spec.md): non-text content (sticker/photo/voice) has isText=false -- 'Is text?' below short-circuits that to a fixed reply without ever calling the Brain."
+    },
+    {
+      "id": "c2d3e4f5-0007-4a1a-9c1a-000000000007",
+      "name": "Is text?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        60
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c2d3e4f5-cond-istext",
+              "leftValue": "={{ $json.isText }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "True (index 0) -> Call Assistant Brain. False (index 1, sticker/photo/voice/etc.) -> Call Telegram Send with a fixed 'text only' reply, Brain never invoked."
+    },
+    {
+      "id": "c2d3e4f5-0008-4a1a-9c1a-000000000008",
+      "name": "Call Assistant Brain",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        -60
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Assistant Brain"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "text": "={{ $json.text }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Blocking call (waitForSubWorkflow: true) per design.md's Architecture -- step 4 must complete before step 5 (Telegram Send) can run. References the 'Assistant Brain' sub-workflow by name (cachedResultName), workflowId.value left blank; re-point at the real workflow via the resource picker once assistant-brain.json is imported.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c2d3e4f5-0009-4a1a-9c1a-000000000009",
+      "name": "Call Telegram Send",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        360,
+        -60
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Telegram Send"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $('Normalize message').first().json.chat_id }}",
+            "text": "={{ $json.reply_text }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Blocking call, step 5. Reads chat_id from 'Normalize message' by node-name reference (Assistant Brain's own output only carries reply_text) and text from the Brain's { reply_text }. References 'Telegram Send' by name, same re-pointing step as 'Call Assistant Brain'.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c2d3e4f5-000a-4a1a-9c1a-00000000000a",
+      "name": "Non-text reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        100,
+        180
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "return { json: { chat_id: $json.chat_id, reply_text: 'I can only read text right now.' } };\n"
+      },
+      "notes": "Edge case: fixed reply for non-text messages, without invoking the Brain."
+    },
+    {
+      "id": "c2d3e4f5-000b-4a1a-9c1a-00000000000b",
+      "name": "Call Telegram Send (non-text)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        360,
+        180
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Telegram Send"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "text": "={{ $json.reply_text }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Same 'Telegram Send' sub-workflow as the text path's 'Call Telegram Send' -- two separate nodes because they sit on different IF branches, not two different destinations.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c2d3e4f5-000c-4a1a-9c1a-00000000000c",
+      "name": "Respond 200 - ack",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        620,
+        60
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "Terminal, all paths converge here. Telegram requires 200 to avoid retrying/disabling the webhook, regardless of whether a reply was actually sent (FR4's unlisted-chat path also reaches this node, just without ever calling the Brain or Telegram Send). RE-CORRECTED 2026-09-20: this is a respondToWebhook node again -- it was briefly changed to a NoOp under the mistaken assumption that Telegram Trigger's own auto-ack made an explicit response unnecessary, but the real fix was switching the trigger node type itself (see 'Telegram Webhook's notes) -- with a genuine Webhook node, this respondToWebhook is required and correct.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c2d3e4f5-000d-4a1a-9c1a-00000000000d",
+      "name": "Respond 200 - unauthorized (silent)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        460
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "Terminal. FR3's signature-verification failure -- Telegram still gets 200 (a forged caller learns nothing from the response), but no chat-ID check, no Brain call, no reply. RE-CORRECTED 2026-09-20, see 'Respond 200 - ack' notes.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c2d3e4f5-000e-4a1a-9c1a-00000000000e",
+      "name": "Respond 200 - unlisted chat (silent)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        340
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "Terminal. FR4/AC2 -- a message from a chat ID not in TELEGRAM_ALLOWED_CHAT_IDS: Telegram sees a successful delivery, the sender sees nothing. RE-CORRECTED 2026-09-20, see 'Respond 200 - ack' notes.",
+      "notesInFlow": true
+    },
+    {
+      "id": "c2d3e4f5-s001-4a1a-9c1a-stickynote001",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1600,
+        -220
+      ],
+      "parameters": {
+        "content": "## Telegram Adapter\n\nInbound: Telegram Trigger (webhook) -> verify X-Telegram-Bot-Api-Secret-Token (FR3, constant-time) -> chat-ID allowlist (FR4) -> normalize to { chat_id, text, channel } -> non-text short-circuit -> blocking call to Assistant Brain -> blocking call to Telegram Send -> respond 200. Every failure path (bad secret, unlisted chat) still responds 200 to Telegram but sends no reply and reaches neither the Brain nor Telegram Send.\n\nSee .specclaw/changes/012-assistant-bot/spec.md (FR1-FR4, FR10 edge case) and design.md (Architecture).",
+        "height": 300,
+        "width": 620,
+        "color": 4
+      }
+    },
+    {
+      "id": "c2d3e4f5-s002-4a1a-9c1a-stickynote002",
+      "name": "Sticky Note - placeholders",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1600,
+        700
+      ],
+      "parameters": {
+        "content": "### Placeholders to fill in on import\n\n- **TELEGRAM_WEBHOOK_SECRET** n8n environment variable -- generated per docs/setup/assistant-bot-setup.md, passed as secret_token when calling Telegram's setWebhook.\n- **TELEGRAM_ALLOWED_CHAT_IDS** n8n environment variable -- comma-separated chat IDs, no spaces required (trimmed).\n- 'Call Assistant Brain' and both 'Call Telegram Send' nodes reference their sub-workflows by name only (workflowId.value blank) -- re-point each at the real imported workflow via the resource picker once assistant-brain.json / telegram-send.json are imported.\n- The Telegram Trigger's webhookId is a placeholder -- n8n assigns the real one on save; docs/setup/assistant-bot-setup.md then points Telegram's setWebhook at that URL.\n- Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto and N8N_BLOCK_ENV_ACCESS_IN_NODE=false (already set for draft-generation.json/gmail-renewal-recovery.json if those are deployed -- confirm both are present, no new setting needed if so).",
+        "height": 280,
+        "width": 620,
+        "color": 7
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify Telegram secret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Telegram secret": {
+      "main": [
+        [
+          {
+            "node": "Secret ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Secret ok?": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 - unauthorized (silent)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check chat allowlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check chat allowlist": {
+      "main": [
+        [
+          {
+            "node": "Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Normalize message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 200 - unlisted chat (silent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize message": {
+      "main": [
+        [
+          {
+            "node": "Is text?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is text?": {
+      "main": [
+        [
+          {
+            "node": "Call Assistant Brain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Non-text reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Assistant Brain": {
+      "main": [
+        [
+          {
+            "node": "Call Telegram Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Telegram Send": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 - ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Non-text reply": {
+      "main": [
+        [
+          {
+            "node": "Call Telegram Send (non-text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Telegram Send (non-text)": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 - ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

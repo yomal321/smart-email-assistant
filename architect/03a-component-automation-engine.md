@@ -20,12 +20,18 @@ flowchart TB
         draft["<b>Draft Generation</b><br/><i>[Workflow · on demand]</i><br/>Reply grounded in thread<br/>and past sent mail"]
 
         llm["<b>LLM Gateway</b><br/><i>[Sub-workflow]</i><br/>Every model call routes here.<br/>Swapping models is one node."]
+
+        tadapt["<b>Telegram Adapter</b><br/><i>[Workflow · webhook]</i><br/>Verify + allowlist,<br/>route to the Brain"]
+        tbrain["<b>Assistant Brain</b><br/><i>[Workflow · channel-agnostic]</i><br/>Slash commands + one<br/>capped free-text LLM path"]
+        tsend["<b>Telegram Send</b><br/><i>[Sub-workflow]</i><br/>The one place<br/>sendMessage is called"]
+        tsched["<b>Assistant Scheduler</b><br/><i>[Workflow · 4 triggers]</i><br/>Morning/evening digests,<br/>urgent poll, deadline nudge"]
     end
 
     pubsub["Google Cloud Pub/Sub"]
     outlook["Microsoft Outlook"]
     gmail["Gmail"]
     gemini["Gemini Flash API"]
+    telegram["Telegram"]
     db[("Database<br/>Supabase")]
     web["Web Dashboard"]
 
@@ -52,14 +58,24 @@ flowchart TB
     draft --> llm
     llm -->|"Single outbound<br/>model call"| gemini
 
+    telegram -->|"Webhook update"| tadapt
+    tadapt -->|"{ chat_id, text }"| tbrain
+    tbrain -->|"{ reply_text }"| tadapt
+    tadapt --> tsend
+    tsched --> tsend
+    tsend -->|"sendMessage"| telegram
+    tbrain -->|"Read-only: emails,<br/>tasks, commitments, contacts"| db
+    tsched -->|"Read-only + bot_notifications<br/>dedup writes"| db
+    tbrain --> llm
+
     classDef component fill:#85BBF0,stroke:#5D82A8,color:#000000
     classDef gateway fill:#3C7FB1,stroke:#22536F,color:#ffffff
     classDef ext fill:#999999,stroke:#6B6B6B,color:#ffffff
     classDef container fill:#438DD5,stroke:#2E6295,color:#ffffff
     classDef boundary fill:#ffffff,stroke:#438DD5,stroke-dasharray:5 5,color:#438DD5
-    class gin,oin,norm,triage,action,draft,hook component
-    class llm gateway
-    class pubsub,outlook,gmail,gemini ext
+    class gin,oin,norm,triage,action,draft,hook,tadapt,tbrain,tsched component
+    class llm,tsend gateway
+    class pubsub,outlook,gmail,gemini,telegram ext
     class db,web container
     class n8nbox boundary
 ```
@@ -76,6 +92,10 @@ flowchart TB
 | Draft Generation | Workflow | On demand only | draft, for review |
 | Draft Webhook | HTTP endpoint | Dashboard request | — (invokes Draft Generation) |
 | **LLM Gateway** | Sub-workflow | Every AI call | — |
+| Telegram Adapter | Workflow | Telegram webhook | — (invokes Assistant Brain, Telegram Send) |
+| Assistant Brain | Workflow | Called by Telegram Adapter | — (read-only; calls LLM Gateway for free-text only) |
+| **Telegram Send** | Sub-workflow | Called by Adapter or Scheduler | — (calls Telegram's `sendMessage`) |
+| Assistant Scheduler | Workflow | 4 schedule/poll triggers | `bot_notifications` (urgent/deadline dedup only) |
 
 ## The two normalisation points
 
@@ -110,6 +130,10 @@ Router design, attaching inside the LLM Gateway as originally planned — no pip
 - **Model** — a cheap, structured-output-capable model (e.g. `openai/gpt-4o-mini`) for Triage/Action/Commitment volume; quality matters more than throughput for Draft Generation, so it may warrant a stronger model even at higher per-call cost.
 
 Real cost from here: once the free tier caps out for the day, OpenRouter calls are paid per-token — no longer a free architecture past that point, by design (the alternative is the pipeline going dark until the next day's reset).
+
+## The bot is a fourth caller of the same choke point, sized around its ceiling
+
+`012-assistant-bot`'s Assistant Brain answers most questions (`/today`, `/urgent`, `/deadlines`, `/vip`, `/help`) with zero LLM Gateway calls — each is one fixed, parameterized query. Only free-text questions reach the gateway, and that path carries its own independent daily cap (10/day, tracked in the Brain's own workflow static data) sized with headroom below the 20/day ceiling this document already describes above — the bot is structurally unable to starve Triage/Action/Commitment Extraction of quota. Telegram Adapter and Assistant Scheduler never call the LLM Gateway directly; only Assistant Brain does, and only for free text.
 
 ## Failure modes this diagram makes visible
 
