@@ -35,6 +35,81 @@
       }
     },
     {
+      "id": "f6a7b8c9-00a1-4a1a-9c1a-0000000000a1",
+      "name": "Read triage category",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        320,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT category FROM emails WHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ [$json.email_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Wave 6 (PHASE-6-IMPLEMENTATION-PLAN.md): reads Triage's verdict so junk never reaches an LLM call here. Reads $json.email_id directly since this is the first node after the trigger -- no intermediate node has replaced $json yet.",
+      "notesInFlow": true
+    },
+    {
+      "id": "f6a7b8c9-00a2-4a1a-9c1a-0000000000a2",
+      "name": "Worth extracting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        410,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "f6a7b8c9-cond-a2",
+              "leftValue": "={{ !['promotional','low_priority'].includes($json.category) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "True when Triage has not classified this email as promotional/low_priority -- includes the case where category is still null, because the Wait stagger upstream (email-normaliser.json) is only long enough to dodge Gemini's rate limit, not guaranteed to outlast Triage's own LLM round trip. Failing open (extract) on an unknown category costs one possibly-unnecessary LLM call; failing closed (skip) risks silently dropping a real task/commitment. False routes to 'Skipped (low value)' and spends no LLM call.",
+      "notesInFlow": true
+    },
+    {
+      "id": "f6a7b8c9-00a3-4a1a-9c1a-0000000000a3",
+      "name": "Skipped (low value)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        410,
+        520
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Triage already classified this email promotional/low_priority. No LLM\n// call spent, no DB write -- same minimal shape as this workflow's other\n// no-op outcomes, plus 'skipped' so it reads distinctly in n8n's run log.\nconst emailId = $('Execute Workflow Trigger').item.json.email_id;\nreturn { json: { email_id: emailId, extracted: false, skipped: true } };\n"
+      }
+    },
+    {
       "id": "f6a7b8c9-0002-4a1a-9c1a-000000000002",
       "name": "Build extraction prompt",
       "type": "n8n-nodes-base.code",
@@ -46,7 +121,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "// Field minimization (same convention as Triage Pipeline's 'Build triage\n// prompt'): only subject + a truncated plain-text body + received_at ever\n// leave this workflow toward LLM Gateway / Gemini -- never raw_payload or\n// headers, which are not even part of this workflow's input in the first\n// place (Execute Workflow Trigger only declares email_id/subject/body/received_at).\nconst input = $json || {};\nconst emailId = input.email_id;\n\n// Malformed input (null/missing subject, body, or received_at) must never\n// throw here (mirrors AC2's no-content-email case, and any malformed row).\nconst subject = input.subject === null || input.subject === undefined ? '' : String(input.subject);\nconst bodyRaw = input.body === null || input.body === undefined ? '' : String(input.body);\nconst receivedAt = input.received_at === null || input.received_at === undefined ? '' : String(input.received_at);\nconst truncatedBody = bodyRaw.slice(0, 2000);\n\nconst systemPrompt = 'You are an email action-item extraction assistant. Read the email and decide whether it contains an actionable request or commitment -- something the recipient needs to do. If it does, set has_task to true and extract a short task_text describing what needs to be done. If it does not, set has_task to false and omit task_text and deadline entirely. Today\\'s date / the email\\'s reference date is ' + receivedAt + '. Only include a deadline if a date for the task is clearly and confidently stated in the email, or unambiguously implied relative to the reference date above (for example \"by Friday\") -- resolve any such relative date against the reference date, do not invent one. If you cannot produce a confident deadline in YYYY-MM-DD format, omit the deadline field entirely rather than guess. Respond only with JSON matching the given schema.';\n\nconst userContent = `Email received: ${receivedAt}\\n\\nSubject: ${subject}\\n\\nBody:\\n${truncatedBody}`;\n\n// task_text is constrained to a plain string; deadline is pinned to\n// YYYY-MM-DD via pattern as defense-in-depth (the actual enforcement point\n// is 'Validate extraction result' below, not this schema).\nconst responseSchema = {\n  type: 'object',\n  properties: {\n    has_task: {\n      type: 'boolean',\n    },\n    task_text: {\n      type: 'string',\n    },\n    deadline: {\n      type: 'string',\n      pattern: '^\\\\d{4}-\\\\d{2}-\\\\d{2}$',\n    },\n  },\n  required: ['has_task'],\n};\n\nreturn {\n  json: {\n    email_id: emailId,\n    system_prompt: systemPrompt,\n    user_content: userContent,\n    response_schema: responseSchema,\n  },\n};\n"
+        "jsCode": "// Field minimization (same convention as Triage Pipeline's 'Build triage\n// prompt'): only subject + a truncated plain-text body + received_at ever\n// leave this workflow toward LLM Gateway / Gemini -- never raw_payload or\n// headers, which are not even part of this workflow's input in the first\n// place (Execute Workflow Trigger only declares email_id/subject/body/received_at).\nconst input = $('Execute Workflow Trigger').item.json || {}; // Wave 2: gate nodes sit between the trigger and here now\nconst emailId = input.email_id;\n\n// Malformed input (null/missing subject, body, or received_at) must never\n// throw here (mirrors AC2's no-content-email case, and any malformed row).\nconst subject = input.subject === null || input.subject === undefined ? '' : String(input.subject);\nconst bodyRaw = input.body === null || input.body === undefined ? '' : String(input.body);\nconst receivedAt = input.received_at === null || input.received_at === undefined ? '' : String(input.received_at);\nconst truncatedBody = bodyRaw.slice(0, 2000);\n\nconst systemPrompt = 'You are an email action-item extraction assistant. Read the email and decide whether it contains an actionable request or commitment -- something the recipient needs to do. If it does, set has_task to true and extract a short task_text describing what needs to be done. If it does not, set has_task to false and omit task_text and deadline entirely. Today\\'s date / the email\\'s reference date is ' + receivedAt + '. Only include a deadline if a date for the task is clearly and confidently stated in the email, or unambiguously implied relative to the reference date above (for example \"by Friday\") -- resolve any such relative date against the reference date, do not invent one. If you cannot produce a confident deadline in YYYY-MM-DD format, omit the deadline field entirely rather than guess. Respond only with JSON matching the given schema.';\n\nconst userContent = `Email received: ${receivedAt}\\n\\nSubject: ${subject}\\n\\nBody:\\n${truncatedBody}`;\n\n// task_text is constrained to a plain string; deadline is pinned to\n// YYYY-MM-DD via pattern as defense-in-depth (the actual enforcement point\n// is 'Validate extraction result' below, not this schema).\nconst responseSchema = {\n  type: 'object',\n  properties: {\n    has_task: {\n      type: 'boolean',\n    },\n    task_text: {\n      type: 'string',\n    },\n    deadline: {\n      type: 'string',\n      pattern: '^\\\\d{4}-\\\\d{2}-\\\\d{2}$',\n    },\n  },\n  required: ['has_task'],\n};\n\nreturn {\n  json: {\n    email_id: emailId,\n    system_prompt: systemPrompt,\n    user_content: userContent,\n    response_schema: responseSchema,\n  },\n};\n"
       }
     },
     {
@@ -302,7 +377,7 @@
       "main": [
         [
           {
-            "node": "Build extraction prompt",
+            "node": "Read triage category",
             "type": "main",
             "index": 0
           }
@@ -383,6 +458,35 @@
         [
           {
             "node": "Format error output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read triage category": {
+      "main": [
+        [
+          {
+            "node": "Worth extracting?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Worth extracting?": {
+      "main": [
+        [
+          {
+            "node": "Build extraction prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skipped (low value)",
             "type": "main",
             "index": 0
           }

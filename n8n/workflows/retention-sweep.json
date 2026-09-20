@@ -1,0 +1,262 @@
+{
+  "name": "Retention Sweep",
+  "nodes": [
+    {
+      "id": "b3c4d5e6-0001-4a1a-9c1a-000000000001",
+      "name": "Every day at 3am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b3c4d5e6-0002-4a1a-9c1a-000000000002",
+      "name": "Read retention_days",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -960,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT retention_days FROM settings LIMIT 1;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Single-account system (same limit(1) pattern as lib/supabase/account.ts). Zero rows means no settings row exists yet (Settings page never opened) -- 'Retention set?' then receives zero items and neither of its branches executes, which is the correct outcome (never configured = do nothing).",
+      "notesInFlow": true
+    },
+    {
+      "id": "b3c4d5e6-0003-4a1a-9c1a-000000000003",
+      "name": "Retention set?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -720,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b3c4d5e6-cond-1",
+              "leftValue": "={{ $json.retention_days !== null && $json.retention_days !== undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "architect/04-data-model.md: 'Not set' is a real, permanent option for retention_days, not an unconfigured default -- a null value means keep forever and this branch must exit, not fall back to some built-in number of days.",
+      "notesInFlow": true
+    },
+    {
+      "id": "b3c4d5e6-0004-4a1a-9c1a-000000000004",
+      "name": "Not set - keep forever",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        420
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "b3c4d5e6-0005-4a1a-9c1a-000000000005",
+      "name": "Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -480,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DASHBOARD_BASE_URL }}/api/auth/login",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { password: $env.DASHBOARD_LOGIN_SECRET } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "notes": "Reuses DASHBOARD_LOGIN_SECRET -- already required by the dashboard itself, no new secret. Requires a new DASHBOARD_BASE_URL n8n environment variable (the deployed dashboard's reachable base URL), same convention rule-engine.json's 'Call draft webhook' already established for SELF_BASE_URL. Full Response is on so 'Extract session cookie' can read the Set-Cookie header -- middleware.ts is deny-by-default, so /api/settings/cleanup needs a real session, and this is the same login path a human operator uses, not a separate machine-auth mechanism.",
+      "notesInFlow": true
+    },
+    {
+      "id": "b3c4d5e6-0006-4a1a-9c1a-000000000006",
+      "name": "Extract session cookie",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        180
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Full Response wraps the login call as { statusCode, headers, body }.\n// set-cookie can be a single string or an array depending on the HTTP\n// client layer -- handle both rather than assume one.\nconst headers = $json.headers || {};\nconst raw = headers['set-cookie'];\nconst setCookie = Array.isArray(raw) ? raw[0] : raw;\nif (!setCookie) {\n  throw new Error('login did not return a session cookie -- check DASHBOARD_LOGIN_SECRET and DASHBOARD_BASE_URL');\n}\nconst cookie = setCookie.split(';')[0]; // \"session=<token>\"\nconst retentionDays = $('Read retention_days').first().json.retention_days;\nreturn { json: { cookie, retentionDays } };\n"
+      }
+    },
+    {
+      "id": "b3c4d5e6-0007-4a1a-9c1a-000000000007",
+      "name": "Call cleanup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DASHBOARD_BASE_URL }}/api/settings/cleanup",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { confirm: 'CLEANUP', olderThanDays: $json.retentionDays } }}",
+        "options": {}
+      },
+      "notes": "Delegates to gmail-dashboard/app/api/settings/cleanup/route.ts rather than reimplementing the candidate rule in SQL, so the promotional/social-only scope and the starred/sent/has-work guards live in exactly one place (PHASE-6-IMPLEMENTATION-PLAN.md Wave 3). This means retention only ever removes low-value mail, never a blanket 'delete everything older than N days' -- the Settings page copy next to this control says so.",
+      "notesInFlow": true
+    },
+    {
+      "id": "b3c4d5e6-s001-4a1a-9c1a-stickynote001",
+      "name": "Sticky Note - Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        60
+      ],
+      "parameters": {
+        "content": "## Retention Sweep\n\nDaily, 3am. Makes settings.retention_days real -- previously written by PATCH /api/settings and rendered on the Settings page, read by nothing (PHASE-6-IMPLEMENTATION-PLAN.md Wave 5).\n\nNull retention_days ('Not set') exits without deleting anything -- that is a real, permanent choice, not a missing default. Otherwise logs into the dashboard with the operator's own DASHBOARD_LOGIN_SECRET and calls POST /api/settings/cleanup with olderThanDays=retention_days, so this workflow never duplicates that route's deletion rule or its starred/sent/has-work guards.\n\nSee PHASE-6-IMPLEMENTATION-PLAN.md Wave 5.",
+        "height": 300,
+        "width": 480,
+        "color": 4
+      }
+    },
+    {
+      "id": "b3c4d5e6-s002-4a1a-9c1a-stickynote002",
+      "name": "Sticky Note - placeholders",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        400
+      ],
+      "parameters": {
+        "content": "### Placeholders to fill in on import\n\n- **Supabase Postgres** credential must be created and attached to 'Read retention_days'.\n- **DASHBOARD_BASE_URL** n8n environment variable -- the deployed dashboard's reachable base URL (same convention as rule-engine.json's SELF_BASE_URL).\n- **DASHBOARD_LOGIN_SECRET** must already be set as an n8n environment variable, matching the dashboard's own gmail-dashboard/.env.local value.",
+        "height": 220,
+        "width": 420,
+        "color": 7
+      }
+    }
+  ],
+  "connections": {
+    "Every day at 3am": {
+      "main": [
+        [
+          {
+            "node": "Read retention_days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read retention_days": {
+      "main": [
+        [
+          {
+            "node": "Retention set?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retention set?": {
+      "main": [
+        [
+          {
+            "node": "Login",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not set - keep forever",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login": {
+      "main": [
+        [
+          {
+            "node": "Extract session cookie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract session cookie": {
+      "main": [
+        [
+          {
+            "node": "Call cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

@@ -140,6 +140,31 @@
       }
     },
     {
+      "id": "f1a10017-7777-4a1a-9a1a-000000000017",
+      "name": "Read exclusions",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -360,
+        60
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT exclusion_rules FROM settings WHERE account_id = $1;",
+        "options": {
+          "queryReplacement": "={{ [$json.id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Wave 4 (PHASE-6-IMPLEMENTATION-PLAN.md): read once per Pub/Sub delivery, not once per message -- 'Junk gate' reads this by name ($('Read exclusions')) regardless of which branch it sits on. No settings row yet (never opened Settings) returns zero rows; 'Junk gate' treats that as an empty list, not an error.",
+      "notesInFlow": true
+    },
+    {
       "parameters": {
         "method": "GET",
         "url": "https://gmail.googleapis.com/gmail/v1/users/me/history",
@@ -294,6 +319,41 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "f1a10016-cond-1",
+              "leftValue": "={{ (() => { const m = $json; const labels = m.labelIds || []; const BLOCK = ['CATEGORY_PROMOTIONS','CATEGORY_SOCIAL','CATEGORY_FORUMS','SPAM','TRASH']; if (labels.some(l => BLOCK.includes(l))) return true; const hs = (m.payload && m.payload.headers) || []; const h = (n) => ((hs.find(x => (x.name||'').toLowerCase() === n) || {}).value || ''); if (h('list-unsubscribe')) return true; if (/^(bulk|list|junk)$/i.test(h('precedence').trim())) return true; if (/auto-generated|auto-replied/i.test(h('auto-submitted'))) return true; if (/no-?reply|donotreply|do-not-reply|mailer-daemon|bounce|newsletter/i.test(h('from'))) return true;  const excl = ($('Read exclusions').first()?.json?.exclusion_rules) || []; const fromAddr = h('from').toLowerCase(); if (excl.some(rule => fromAddr.includes(String(rule).toLowerCase()))) return true; return false; })() }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f1a10016-6666-4a1a-9a1a-000000000016",
+      "name": "Junk gate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1060,
+        -100
+      ],
+      "notes": "Drops bulk mail BEFORE it reaches the Normaliser, so it never lands in `emails` and never costs the three downstream LLM calls (triage + action extraction + commitment extraction). True = junk, and the true branch loops straight back to 'Loop message IDs' so the batch loop still advances. CATEGORY_UPDATES is deliberately NOT blocked - that bucket carries bank notices, receipts and account-security alerts. List-Unsubscribe is the single most reliable bulk-mail signal. Wave 4: also drops any sender matching an entry in settings.exclusion_rules (read once per delivery by 'Read exclusions'), so that column is now the user-editable input to this gate instead of dead state.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
         "source": "database",
         "workflowId": {
           "__rl": true,
@@ -317,7 +377,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1180,
+        1280,
         -100
       ],
       "notes": "References the 'Email Normaliser' sub-workflow BY NAME (cachedResultName) since no live n8n instance/workflow ID exists yet - workflowId.value is left blank as a placeholder, matching the pattern gmail-renewal-recovery.json already uses. Once email-normaliser.json (T3) is imported, re-point this node at the real workflow via n8n's resource picker (it resolves by ID internally, not by name). Passes { account_id, raw_message } matching the Email Normaliser contract.",
@@ -440,6 +500,11 @@
             "node": "history.list fetch",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Read exclusions",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -517,7 +582,7 @@
       "main": [
         [
           {
-            "node": "Call Email Normaliser",
+            "node": "Junk gate",
             "type": "main",
             "index": 0
           }
@@ -529,6 +594,24 @@
         [
           {
             "node": "Loop message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Junk gate": {
+      "main": [
+        [
+          {
+            "node": "Loop message IDs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Email Normaliser",
             "type": "main",
             "index": 0
           }

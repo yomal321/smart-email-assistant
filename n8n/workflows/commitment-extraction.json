@@ -47,6 +47,81 @@
       }
     },
     {
+      "id": "a2b3c4d5-00a1-4a1a-9c1a-0000000000a1",
+      "name": "Read triage category",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        320,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT category FROM emails WHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ [$json.email_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Wave 6 (PHASE-6-IMPLEMENTATION-PLAN.md): reads Triage's verdict so junk never reaches an LLM call here. Reads $json.email_id directly since this is the first node after the trigger -- no intermediate node has replaced $json yet.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a2b3c4d5-00a2-4a1a-9c1a-0000000000a2",
+      "name": "Worth extracting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        410,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "a2b3c4d5-cond-a2",
+              "leftValue": "={{ !['promotional','low_priority'].includes($json.category) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "True when Triage has not classified this email as promotional/low_priority -- includes the case where category is still null, because the Wait stagger upstream (email-normaliser.json) is only long enough to dodge Gemini's rate limit, not guaranteed to outlast Triage's own LLM round trip. Failing open (extract) on an unknown category costs one possibly-unnecessary LLM call; failing closed (skip) risks silently dropping a real task/commitment. False routes to 'Skipped (low value)' and spends no LLM call.",
+      "notesInFlow": true
+    },
+    {
+      "id": "a2b3c4d5-00a3-4a1a-9c1a-0000000000a3",
+      "name": "Skipped (low value)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        410,
+        520
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Triage already classified this email promotional/low_priority. No LLM\n// call spent, no DB write -- same minimal shape as this workflow's other\n// no-op outcomes, plus 'skipped' so it reads distinctly in n8n's run log.\nconst emailId = $('Execute Workflow Trigger').item.json.email_id;\nreturn { json: { email_id: emailId, extracted: false, skipped: true } };\n"
+      }
+    },
+    {
       "id": "c1a2b3c4-0002-4a1a-9c1a-000000000002",
       "name": "Build extraction prompt",
       "type": "n8n-nodes-base.code",
@@ -58,7 +133,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "// Field minimization: only subject + a truncated plain-text body + received_at\n// ever leave this workflow toward LLM Gateway (same convention as Action\n// Extraction's 'Build extraction prompt'). email_id/account_id/participants/\n// is_from_user are carried forward in THIS node's own output json (rather\n// than via $('Execute Workflow Trigger') back-references) so later nodes can\n// read them without re-resolving the trigger -- picked as the simpler of the\n// two allowed conventions, and used consistently by every node below.\nconst input = $json || {};\nconst emailId = input.email_id;\nconst accountId = input.account_id;\nconst participants = input.participants;\nconst isFromUser = input.is_from_user === true;\n\n// Malformed input (null/missing subject, body, or received_at) must never\n// throw here (mirrors Action Extraction's own field-minimization node).\nconst subject = input.subject === null || input.subject === undefined ? '' : String(input.subject);\nconst bodyRaw = input.body === null || input.body === undefined ? '' : String(input.body);\nconst receivedAt = input.received_at === null || input.received_at === undefined ? '' : String(input.received_at);\nconst truncatedBody = bodyRaw.slice(0, 2000);\n\nconst directionContext = isFromUser\n  ? 'This email was SENT by the account owner.'\n  : 'This email was RECEIVED by the account owner.';\n\nconst systemPrompt = 'You are an email commitment-detection assistant. Read the email and decide whether it contains AT MOST ONE promise-like commitment -- someone explicitly committing to do something for the other party. There are two possible directions: \"you-promised\" (the account owner is the one making the promise) and \"promised-to-you\" (the other party is the one making the promise, i.e. a promise made TO the account owner). ' + directionContext + ' Use that fact together with who is actually making the promise in the email text to resolve direction -- do not assume direction from sender alone (a sent email can relay or quote the other party\\'s promise, and a received email can restate the account owner\\'s own prior promise). If a commitment is found, set has_commitment to true, direction to exactly \"you-promised\" or \"promised-to-you\", text to a short paraphrase of the commitment, trigger_sentence to the EXACT verbatim sentence copied from the email body that the detection is based on (it must be a literal substring of the body below, not paraphrased or reworded in any way), confidence to an integer from 0 to 100, and optionally due_date in YYYY-MM-DD format. Today\\'s date / the email\\'s reference date is ' + receivedAt + '. Only include due_date if a date for the commitment is clearly and confidently stated in the email, or unambiguously implied relative to the reference date above (for example \"by Friday\") -- resolve any such relative date against the reference date, do not invent one. If you cannot produce a confident due_date in YYYY-MM-DD format, omit the field entirely rather than guess. If no commitment is found, set has_commitment to false and omit every other field entirely. Respond only with JSON matching the given schema.';\n\nconst userContent = `Email received: ${receivedAt}\\n\\nSubject: ${subject}\\n\\nBody:\\n${truncatedBody}`;\n\n// direction/text/trigger_sentence are constrained to plain strings;\n// due_date is pinned to YYYY-MM-DD via pattern as defense-in-depth (the\n// actual enforcement point is 'Validate extraction result' below, not this\n// schema) -- same convention Action Extraction's prompt builder uses for\n// its own deadline field.\nconst responseSchema = {\n  type: 'object',\n  properties: {\n    has_commitment: {\n      type: 'boolean',\n    },\n    direction: {\n      type: 'string',\n      enum: ['you-promised', 'promised-to-you'],\n    },\n    text: {\n      type: 'string',\n    },\n    trigger_sentence: {\n      type: 'string',\n    },\n    confidence: {\n      type: 'integer',\n    },\n    due_date: {\n      type: 'string',\n      pattern: '^\\\\d{4}-\\\\d{2}-\\\\d{2}$',\n    },\n  },\n  required: ['has_commitment'],\n};\n\nreturn {\n  json: {\n    email_id: emailId,\n    account_id: accountId,\n    participants: participants,\n    is_from_user: isFromUser,\n    system_prompt: systemPrompt,\n    user_content: userContent,\n    response_schema: responseSchema,\n  },\n};\n"
+        "jsCode": "// Field minimization: only subject + a truncated plain-text body + received_at\n// ever leave this workflow toward LLM Gateway (same convention as Action\n// Extraction's 'Build extraction prompt'). email_id/account_id/participants/\n// is_from_user are carried forward in THIS node's own output json (rather\n// than via $('Execute Workflow Trigger') back-references) so later nodes can\n// read them without re-resolving the trigger -- picked as the simpler of the\n// two allowed conventions, and used consistently by every node below.\nconst input = $('Execute Workflow Trigger').item.json || {}; // Wave 2: gate nodes sit between the trigger and here now\nconst emailId = input.email_id;\nconst accountId = input.account_id;\nconst participants = input.participants;\nconst isFromUser = input.is_from_user === true;\n\n// Malformed input (null/missing subject, body, or received_at) must never\n// throw here (mirrors Action Extraction's own field-minimization node).\nconst subject = input.subject === null || input.subject === undefined ? '' : String(input.subject);\nconst bodyRaw = input.body === null || input.body === undefined ? '' : String(input.body);\nconst receivedAt = input.received_at === null || input.received_at === undefined ? '' : String(input.received_at);\nconst truncatedBody = bodyRaw.slice(0, 2000);\n\nconst directionContext = isFromUser\n  ? 'This email was SENT by the account owner.'\n  : 'This email was RECEIVED by the account owner.';\n\nconst systemPrompt = 'You are an email commitment-detection assistant. Read the email and decide whether it contains AT MOST ONE promise-like commitment -- someone explicitly committing to do something for the other party. There are two possible directions: \"you-promised\" (the account owner is the one making the promise) and \"promised-to-you\" (the other party is the one making the promise, i.e. a promise made TO the account owner). ' + directionContext + ' Use that fact together with who is actually making the promise in the email text to resolve direction -- do not assume direction from sender alone (a sent email can relay or quote the other party\\'s promise, and a received email can restate the account owner\\'s own prior promise). If a commitment is found, set has_commitment to true, direction to exactly \"you-promised\" or \"promised-to-you\", text to a short paraphrase of the commitment, trigger_sentence to the EXACT verbatim sentence copied from the email body that the detection is based on (it must be a literal substring of the body below, not paraphrased or reworded in any way), confidence to an integer from 0 to 100, and optionally due_date in YYYY-MM-DD format. Today\\'s date / the email\\'s reference date is ' + receivedAt + '. Only include due_date if a date for the commitment is clearly and confidently stated in the email, or unambiguously implied relative to the reference date above (for example \"by Friday\") -- resolve any such relative date against the reference date, do not invent one. If you cannot produce a confident due_date in YYYY-MM-DD format, omit the field entirely rather than guess. If no commitment is found, set has_commitment to false and omit every other field entirely. Respond only with JSON matching the given schema.';\n\nconst userContent = `Email received: ${receivedAt}\\n\\nSubject: ${subject}\\n\\nBody:\\n${truncatedBody}`;\n\n// direction/text/trigger_sentence are constrained to plain strings;\n// due_date is pinned to YYYY-MM-DD via pattern as defense-in-depth (the\n// actual enforcement point is 'Validate extraction result' below, not this\n// schema) -- same convention Action Extraction's prompt builder uses for\n// its own deadline field.\nconst responseSchema = {\n  type: 'object',\n  properties: {\n    has_commitment: {\n      type: 'boolean',\n    },\n    direction: {\n      type: 'string',\n      enum: ['you-promised', 'promised-to-you'],\n    },\n    text: {\n      type: 'string',\n    },\n    trigger_sentence: {\n      type: 'string',\n    },\n    confidence: {\n      type: 'integer',\n    },\n    due_date: {\n      type: 'string',\n      pattern: '^\\\\d{4}-\\\\d{2}-\\\\d{2}$',\n    },\n  },\n  required: ['has_commitment'],\n};\n\nreturn {\n  json: {\n    email_id: emailId,\n    account_id: accountId,\n    participants: participants,\n    is_from_user: isFromUser,\n    system_prompt: systemPrompt,\n    user_content: userContent,\n    response_schema: responseSchema,\n  },\n};\n"
       }
     },
     {
@@ -303,7 +378,7 @@
       "main": [
         [
           {
-            "node": "Build extraction prompt",
+            "node": "Read triage category",
             "type": "main",
             "index": 0
           }
@@ -384,6 +459,35 @@
         [
           {
             "node": "Format commitment output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read triage category": {
+      "main": [
+        [
+          {
+            "node": "Worth extracting?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Worth extracting?": {
+      "main": [
+        [
+          {
+            "node": "Build extraction prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skipped (low value)",
             "type": "main",
             "index": 0
           }

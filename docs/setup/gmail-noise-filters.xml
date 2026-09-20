@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom' xmlns:apps='http://schemas.google.com/apps/2006'>
+  <title>Smart Gmail Assistant — noise filters</title>
+
+  <!--
+    Derived from the 55 low-value messages found in `emails` on 2026-09-20.
+    Import via Gmail → Settings → Filters and Blocked Addresses → Import filters.
+
+    Tier 1 trashes pure marketing at delivery, so it never reaches the INBOX
+    label and the Pub/Sub watch never fires for it. Tier 2 only archives and
+    labels — those senders are noisy but occasionally wanted, so they stay
+    readable under the "Noise" label instead of being destroyed.
+
+    invitations@linkedin.com is deliberately absent from both: a connection
+    invitation is a real message, and it was only swept up by Gmail's
+    CATEGORY_SOCIAL tag.
+  -->
+
+  <!-- Tier 1 — pure marketing. Trash on arrival. -->
+  <entry>
+    <category term='filter'></category>
+    <title>Mail Filter</title>
+    <content></content>
+    <apps:property name='from' value='temu@commerce.temuemail.com OR recommendations@discover.pinterest.com OR pinterest-recommendations@ideas.pinterest.com OR learn@itr.mail.codecademy.com OR newsletter@email.roadmap.sh OR team@mail.kodekloud.com OR no-reply@n.dribbble.com OR team@news.fly.io OR googleone-noreply@google.com OR googleaistudio-noreply@google.com OR email@email.microsoft.com'/>
+    <apps:property name='shouldTrash' value='true'/>
+    <apps:property name='shouldMarkAsRead' value='true'/>
+    <apps:property name='sizeOperator' value='s_sl'/>
+    <apps:property name='sizeUnit' value='s_smb'/>
+  </entry>
+
+  <!-- Tier 2 — social notifications. Skip inbox, label, keep readable. -->
+  <entry>
+    <category term='filter'></category>
+    <title>Mail Filter</title>
+    <content></content>
+    <apps:property name='from' value='messages-noreply@linkedin.com OR notifications-noreply@linkedin.com OR updates-noreply@linkedin.com OR notification@facebookmail.com'/>
+    <apps:property name='shouldArchive' value='true'/>
+    <apps:property name='shouldMarkAsRead' value='true'/>
+    <apps:property name='label' value='Noise'/>
+    <apps:property name='sizeOperator' value='s_sl'/>
+    <apps:property name='sizeUnit' value='s_smb'/>
+  </entry>
+
+  <!-- Tier 3 — catch-all for future bulk senders. Archive + label only;
+       never trash, because this one matches by category rather than by a
+       sender you have actually seen and judged. -->
+  <entry>
+    <category term='filter'></category>
+    <title>Mail Filter</title>
+    <content></content>
+    <apps:property name='hasTheWord' value='category:promotions'/>
+    <apps:property name='shouldArchive' value='true'/>
+    <apps:property name='label' value='Noise'/>
+    <apps:property name='sizeOperator' value='s_sl'/>
+    <apps:property name='sizeUnit' value='s_smb'/>
+  </entry>
+
+</feed>
