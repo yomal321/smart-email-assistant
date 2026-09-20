@@ -89,21 +89,23 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Go to">
-          <CommandItem onSelect={() => go("/")}>Overview</CommandItem>
-          <CommandItem onSelect={() => go("/inbox")}>Inbox</CommandItem>
-          <CommandItem onSelect={() => go("/actions")}>Action items</CommandItem>
-          <CommandItem onSelect={() => go("/drafts")}>Drafts</CommandItem>
-          <CommandItem onSelect={() => go("/follow-ups")}>Follow-ups</CommandItem>
-          <CommandItem onSelect={() => go("/contacts")}>Contacts</CommandItem>
-          <CommandItem onSelect={() => go("/analytics")}>Analytics</CommandItem>
-          <CommandItem onSelect={() => go("/rules")}>Rules</CommandItem>
-          <CommandItem onSelect={() => go("/settings")}>Settings</CommandItem>
-          <CommandItem onSelect={() => go("/review")}>Review queue</CommandItem>
+          <CommandItem onSelect={() => go("/mail")}>Overview</CommandItem>
+          <CommandItem onSelect={() => go("/mail/inbox")}>Inbox</CommandItem>
+          <CommandItem onSelect={() => go("/mail/actions")}>Action items</CommandItem>
+          <CommandItem onSelect={() => go("/mail/drafts")}>Drafts</CommandItem>
+          <CommandItem onSelect={() => go("/mail/follow-ups")}>Follow-ups</CommandItem>
+          <CommandItem onSelect={() => go("/mail/contacts")}>Contacts</CommandItem>
+          <CommandItem onSelect={() => go("/mail/analytics")}>Analytics</CommandItem>
+          <CommandItem onSelect={() => go("/mail/rules")}>Rules</CommandItem>
+          <CommandItem onSelect={() => go("/mail/settings")}>Settings</CommandItem>
+          <CommandItem onSelect={() => go("/mail/review")}>Review queue</CommandItem>
           {PLATFORMS.map((p) => (
-            <CommandItem key={p.platform} onSelect={() => go(`/inbox?platform=${p.platform}`)}>
+            <CommandItem key={p.platform} onSelect={() => go(`/mail/inbox?platform=${p.platform}`)}>
               Platform {p.number} · {p.label}
             </CommandItem>
           ))}
+          <CommandSeparator />
+          <CommandItem onSelect={() => go("/")}>← Hub</CommandItem>
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Messages">
@@ -113,12 +115,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 // (which re-matches every item's rendered text against the
                 // typed query, independent of our server-side filtering)
                 // never hides an already-server-matched result.
-                <CommandItem key={r.id} value={`${query} ${r.title} ${r.subtitle}`} onSelect={() => go(`/inbox?open=${r.id}`)}>
+                <CommandItem key={r.id} value={`${query} ${r.title} ${r.subtitle}`} onSelect={() => go(`/mail/inbox?open=${r.id}`)}>
                   {r.subtitle} — {r.title}
                 </CommandItem>
               ))
             : messages.slice(0, 6).map((m) => (
-                <CommandItem key={m.id} onSelect={() => go(`/inbox?open=${m.id}`)}>
+                <CommandItem key={m.id} onSelect={() => go(`/mail/inbox?open=${m.id}`)}>
                   {m.sender.name} — {m.subject}
                 </CommandItem>
               ))}
@@ -127,12 +129,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         <CommandGroup heading="Contacts">
           {searchedContacts
             ? searchedContacts.map((r) => (
-                <CommandItem key={r.id} value={`${query} ${r.title} ${r.subtitle}`} onSelect={() => go("/contacts")}>
+                <CommandItem key={r.id} value={`${query} ${r.title} ${r.subtitle}`} onSelect={() => go("/mail/contacts")}>
                   {r.title} · {r.subtitle}
                 </CommandItem>
               ))
             : contacts.slice(0, 6).map((c) => (
-                <CommandItem key={c.id} onSelect={() => go("/contacts")}>
+                <CommandItem key={c.id} onSelect={() => go("/mail/contacts")}>
                   {c.name} · {c.email}
                 </CommandItem>
               ))}

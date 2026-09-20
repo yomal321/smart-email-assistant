@@ -72,7 +72,7 @@ export default function LoginPage() {
             <TrainFront className="size-5" aria-hidden />
           </div>
           <h1 className="text-lg font-semibold tracking-tight text-ink">The Departure Board</h1>
-          <p className="mt-1 text-sm text-ink-tertiary">Sign in to your Smart Gmail Assistant</p>
+          <p className="mt-1 text-sm text-ink-tertiary">Sign in to your Smart Email Assistant</p>
         </div>
 
         <div className="card-surface p-6">

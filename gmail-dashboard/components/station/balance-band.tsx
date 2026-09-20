@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ export function BalanceBand({
   return (
     <div className="grid grid-cols-1 gap-3 p-4 pb-0 sm:grid-cols-2" role="group" aria-label="Waiting balance">
       <Link
-        href="/inbox?platform=needs-reply"
+        href="/mail/inbox?platform=needs-reply"
         className="group flex flex-col justify-center gap-1 rounded-2xl px-5 py-4 text-left shadow-card transition-transform hover:-translate-y-0.5"
         style={{ background: "var(--departure)", color: "var(--departure-ink)" }}
       >
@@ -29,7 +29,7 @@ export function BalanceBand({
         </span>
       </Link>
       <Link
-        href="/follow-ups"
+        href="/mail/follow-ups"
         className="group flex flex-col justify-center gap-1 rounded-2xl border border-rule bg-surface-raised px-5 py-4 text-left shadow-card transition-transform hover:-translate-y-0.5"
       >
         <span className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">

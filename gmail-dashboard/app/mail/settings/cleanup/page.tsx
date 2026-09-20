@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 // Dedicated cleanup surface, split out of /settings (Privacy links here rather
 // than embedding these controls inline) so there's room for the route diagram,
@@ -206,7 +206,7 @@ export default function InboxCleanupPage() {
     <div className="flex-1 overflow-y-auto">
       <header className="rule-b flex items-center gap-3 px-6 py-4">
         <Link
-          href="/settings"
+          href="/mail/settings"
           className="flex size-8 items-center justify-center rounded-lg text-ink-secondary transition-colors hover:bg-muted hover:text-ink"
           aria-label="Back to Settings"
         >

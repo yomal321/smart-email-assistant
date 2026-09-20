@@ -1,0 +1,151 @@
+"use client";
+
+// Plans list — derived progress per plan, filterable by status, inline
+// creation (spec.md FR7). Life Hub (013-life-hub).
+
+import * as React from "react";
+import Link from "next/link";
+import { Target } from "lucide-react";
+import { usePlans } from "@/lib/data/use-plans";
+import { EmptyState } from "@/components/board/empty-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { Plan, PlanStatus } from "@/lib/data/types";
+
+const STATUS_LABEL: Record<PlanStatus, string> = {
+  active: "Active",
+  paused: "Paused",
+  done: "Done",
+  archived: "Archived",
+};
+
+const STATUS_FILTERS: Array<PlanStatus | "all"> = ["all", "active", "paused", "done", "archived"];
+
+export default function PlansPage() {
+  const { data: plans, loading, create } = usePlans();
+  const [filter, setFilter] = React.useState<PlanStatus | "all">("all");
+
+  const visible = filter === "all" ? plans : plans.filter((p) => p.status === filter);
+
+  return (
+    <div className="flex h-full flex-col overflow-y-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 rule-b px-4 py-3">
+        <div>
+          <h1 className="text-lg font-semibold text-ink">Plans</h1>
+          <p className="text-sm text-ink-secondary">Goals and projects that group the tasks you already have.</p>
+        </div>
+        <div className="flex gap-1">
+          {STATUS_FILTERS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={
+                "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors " +
+                (filter === s ? "bg-departure-field text-departure-field-ink" : "text-ink-tertiary hover:bg-surface-sunk")
+              }
+            >
+              {s === "all" ? "All" : STATUS_LABEL[s]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <CreatePlanForm onCreate={create} />
+
+      {loading && <p className="px-4 py-6 text-sm text-ink-secondary">Loading plans…</p>}
+
+      {!loading && visible.length === 0 && (
+        <EmptyState
+          icon={Target}
+          heading="No plans yet."
+          body="Create a plan to group the tasks that belong to the same effort — a task extracted from an email and one you typed by hand can both live under it."
+        />
+      )}
+
+      {!loading &&
+        visible.map((plan) => <PlanRow key={plan.id} plan={plan} />)}
+    </div>
+  );
+}
+
+function PlanRow({ plan }: { plan: Plan }) {
+  const hasTasks = plan.taskCount > 0;
+  const pct = hasTasks ? Math.round((plan.doneCount / plan.taskCount) * 100) : 0;
+
+  return (
+    <Link
+      href={`/plans/${plan.id}`}
+      className="flex items-center gap-3 rule-b px-4 py-3 transition-colors hover:bg-surface-sunk"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-medium text-ink">{plan.title}</p>
+          <StatusBadge status={plan.status} />
+        </div>
+        {plan.description && <p className="mt-0.5 truncate text-xs text-ink-tertiary">{plan.description}</p>}
+      </div>
+      {plan.targetDate && <span className="tabular shrink-0 text-xs text-ink-tertiary">{plan.targetDate}</span>}
+      <div className="w-32 shrink-0">
+        {hasTasks ? (
+          <>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-sunk">
+              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "var(--cleared)" }} />
+            </div>
+            <p className="mt-1 text-right text-xs tabular text-ink-tertiary">
+              {plan.doneCount}/{plan.taskCount} done
+            </p>
+          </>
+        ) : (
+          <p className="text-right text-xs text-ink-tertiary">no tasks yet</p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function StatusBadge({ status }: { status: PlanStatus }) {
+  const color = status === "done" ? "var(--cleared)" : status === "paused" ? "var(--signal)" : "var(--ink-tertiary)";
+  return (
+    <span
+      className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+      style={{ color, background: "var(--surface-sunk)" }}
+    >
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+function CreatePlanForm({ onCreate }: { onCreate: ReturnType<typeof usePlans>["create"] }) {
+  const [title, setTitle] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setSaving(true);
+    setError(null);
+    const result = await onCreate({ title });
+    setSaving(false);
+    if (result.ok) {
+      setTitle("");
+    } else {
+      setError(result.error ?? "failed to create plan");
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex items-center gap-2 rule-b px-4 py-3">
+      <Input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="New plan title…"
+        className="h-8 flex-1 rounded-lg"
+      />
+      <Button type="submit" size="sm" className="h-8 rounded-lg" disabled={!title.trim() || saving}>
+        {saving ? "Creating…" : "+ New plan"}
+      </Button>
+      {error && <p className="text-xs" style={{ color: "var(--signal)" }}>{error}</p>}
+    </form>
+  );
+}

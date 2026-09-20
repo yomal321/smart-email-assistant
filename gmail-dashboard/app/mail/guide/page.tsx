@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import {
@@ -76,49 +76,49 @@ const DESTINATIONS = [
     body: "The day at a glance — what came in, what is still waiting on you, what you cleared.",
   },
   {
-    href: "/inbox",
+    href: "/mail/inbox",
     label: "Inbox",
     icon: InboxIcon,
     body: "Every message with its category and one-line summary. Filter by category or sort to find what matters first.",
   },
   {
-    href: "/actions",
+    href: "/mail/actions",
     label: "Action items",
     icon: CheckSquare,
     body: "Commitments the assistant found, with their source email. Mark them done, dismiss them, or reopen them.",
   },
   {
-    href: "/drafts",
+    href: "/mail/drafts",
     label: "Drafts",
     icon: FileEdit,
     body: "Generated replies waiting for review. Read, edit, copy into your mail client — or discard.",
   },
   {
-    href: "/follow-ups",
+    href: "/mail/follow-ups",
     label: "Follow-ups",
     icon: Clock,
     body: "Threads where you are waiting on someone else, so nothing quietly goes cold.",
   },
   {
-    href: "/contacts",
+    href: "/mail/contacts",
     label: "Contacts",
     icon: Users,
     body: "Who you actually correspond with, how often, and what is currently open with each of them.",
   },
   {
-    href: "/analytics",
+    href: "/mail/analytics",
     label: "Analytics",
     icon: BarChart3,
     body: "Volume and category trends over time — the honest answer to “is the inbox getting lighter?”",
   },
   {
-    href: "/review",
+    href: "/mail/review",
     label: "Review queue",
     icon: AlertTriangle,
     body: "Anything the assistant was not confident about, held back for your judgement instead of guessed at.",
   },
   {
-    href: "/rules",
+    href: "/mail/rules",
     label: "Rules & automation",
     icon: SlidersHorizontal,
     body: "Your own if-this-then-that rules, layered on top of the AI triage for the cases you want handled your way.",
@@ -171,13 +171,13 @@ export default function GuidePage() {
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button asChild size="lg">
-              <Link href="/inbox">
+              <Link href="/mail/inbox">
                 Open the inbox
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="secondary">
-              <Link href="/">See today&rsquo;s overview</Link>
+              <Link href="/mail">See today&rsquo;s overview</Link>
             </Button>
           </div>
         </section>
@@ -265,7 +265,7 @@ export default function GuidePage() {
           </ul>
           <p className="measure mt-5 text-[13px] leading-relaxed text-ink-tertiary">
             Everything the assistant does automatically is written down in the activity log on the{" "}
-            <Link href="/settings" className="text-departure underline">
+            <Link href="/mail/settings" className="text-departure underline">
               Settings
             </Link>{" "}
             page — what it did, to what, and why.

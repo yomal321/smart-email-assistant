@@ -3,9 +3,9 @@
 // convention rather than a shared "resource mapper" abstraction (ActionItem
 // and Draft have no structural overlap worth generalizing over).
 import "server-only";
-import type { ActionItem, Priority } from "@/lib/data/types";
+import type { ActionItem, Priority, TaskType } from "@/lib/data/types";
 
-// The subset of a `tasks` row (post-migration-0009 shape) this mapper needs.
+// The subset of a `tasks` row (post-migration-0016 shape) this mapper needs.
 export interface TaskRow {
   id: string;
   email_id: string | null;
@@ -17,6 +17,15 @@ export interface TaskRow {
   priority: Priority;
   origin: "extracted" | "manual";
   confidence: number | null;
+  plan_id: string | null; // 013-life-hub
+  type: TaskType; // 0016_life_load.sql
+  source_id: string | null;
+  course_id: string | null;
+  due_at: string | null;
+  starts_at: string | null;
+  duration_minutes: number | null;
+  effort_minutes: number;
+  weight: number;
 }
 
 // 'open' only appears on rows written before migration 0009 (0003's original
@@ -45,5 +54,18 @@ export function mapTaskRowToActionItem(row: TaskRow): ActionItem {
     status: mapStatus(row.status),
     origin: row.origin,
     confidence: row.confidence,
+    planId: row.plan_id,
+    type: row.type,
+    sourceId: row.source_id,
+    courseId: row.course_id,
+    // The migration backfilled due_at from the pre-existing date-only
+    // `deadline` for every historical row, but a defensive coalesce here
+    // costs nothing and keeps this mapper correct even against a row the
+    // backfill somehow missed.
+    dueAt: row.due_at ?? (row.deadline ? `${row.deadline}T23:59:00` : null),
+    startsAt: row.starts_at,
+    durationMinutes: row.duration_minutes,
+    effortMinutes: row.effort_minutes,
+    weight: row.weight,
   };
 }

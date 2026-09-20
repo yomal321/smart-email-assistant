@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -59,7 +59,7 @@ export function SyncClock({ state, onResync }: { state: SyncState; onResync?: ()
               <dt>Failed items</dt>
               <dd className="tabular">
                 {state.failedCount > 0 ? (
-                  <Link href="/review" className="underline decoration-1 underline-offset-2 text-signal">
+                  <Link href="/mail/review" className="underline decoration-1 underline-offset-2 text-signal">
                     {state.failedCount} · review
                   </Link>
                 ) : (

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { Suspense } from "react";
@@ -83,7 +83,7 @@ function InboxContent() {
               heading="Board clear."
               body="Nothing is waiting on you. Check Follow-ups for what's waiting on other people."
               actionLabel="View waiting on them"
-              actionHref="/follow-ups"
+              actionHref="/mail/follow-ups"
             />
           ) : (
             <EmptyState
@@ -93,7 +93,7 @@ function InboxContent() {
                 [filters.priority !== "all", filters.hasActionItems, filters.unanswered, !!platformParam, !!activeView].filter(Boolean).length
               } filters are active. Clearing them would show ${onBoard.length} messages.`}
               actionLabel="Clear filters"
-              actionHref={platformParam || viewParam ? "/inbox" : undefined}
+              actionHref={platformParam || viewParam ? "/mail/inbox" : undefined}
               onAction={
                 platformParam || viewParam
                   ? undefined

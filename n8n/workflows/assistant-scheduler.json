@@ -850,6 +850,58 @@
         "width": 640,
         "color": 7
       }
+    },
+    {
+      "id": "d3e4f5a6-mb-000c-4a1a-9c1a-00000000000c",
+      "name": "MB: Insert notification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        -680
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_notifications (chat_id, notification_type) VALUES ($1, 'morning_brief');",
+        "options": {
+          "queryReplacement": "={{ [$('MB: Loop chat IDs').item.json.chat_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "0018_bot_observability.sql, option B1: logs the digest send for the /bot page's activity log and stats. No dedup key -- Morning Brief Trigger already fires at most once/day (012-assistant-bot FR15), so a second row here means a second genuine send, not a re-fire. onError=continueRegularOutput (L28 pattern): a failed log write must not stop the loop from reaching the remaining chat IDs. NOT LIVE-VERIFIED -- see docs/setup/bot-observability-setup.md.",
+      "notesInFlow": true
+    },
+    {
+      "id": "d3e4f5a6-er-000b-4a1a-9c1a-00000000000b",
+      "name": "ER: Insert notification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        400
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_notifications (chat_id, notification_type) VALUES ($1, 'evening_review');",
+        "options": {
+          "queryReplacement": "={{ [$('ER: Loop chat IDs').item.json.chat_id] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "0018_bot_observability.sql, option B1: logs the digest send for the /bot page's activity log and stats. No dedup key -- Evening Review Trigger already fires at most once/day (012-assistant-bot FR15), so a second row here means a second genuine send, not a re-fire. onError=continueRegularOutput (L28 pattern): a failed log write must not stop the loop from reaching the remaining chat IDs. NOT LIVE-VERIFIED -- see docs/setup/bot-observability-setup.md.",
+      "notesInFlow": true
     }
   ],
   "connections": {
@@ -968,7 +1020,7 @@
       "main": [
         [
           {
-            "node": "MB: Loop chat IDs",
+            "node": "MB: Insert notification",
             "type": "main",
             "index": 0
           }
@@ -1243,6 +1295,28 @@
       ]
     },
     "ER: Call Telegram Send": {
+      "main": [
+        [
+          {
+            "node": "ER: Insert notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MB: Insert notification": {
+      "main": [
+        [
+          {
+            "node": "MB: Loop chat IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER: Insert notification": {
       "main": [
         [
           {

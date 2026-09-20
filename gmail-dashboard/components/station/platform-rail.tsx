@@ -2,20 +2,38 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AlertTriangle, Inbox as InboxIcon, LayoutDashboard, CheckSquare, FileEdit, Clock, Users, BarChart3, SlidersHorizontal, Settings, Compass } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Inbox as InboxIcon,
+  LayoutDashboard,
+  CheckSquare,
+  FileEdit,
+  Clock,
+  Users,
+  BarChart3,
+  SlidersHorizontal,
+  Settings,
+  Compass,
+} from "lucide-react";
 import { PLATFORMS, type Platform } from "@/lib/data";
 import { useSavedViews } from "@/lib/data/use-saved-views";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-const ROUTES = [
-  { href: "/", label: "Overview", icon: LayoutDashboard, countKey: null },
-  { href: "/inbox", label: "Inbox", icon: InboxIcon, countKey: "inbox" as const },
-  { href: "/actions", label: "Action items", icon: CheckSquare, countKey: "actions" as const },
-  { href: "/drafts", label: "Drafts", icon: FileEdit, countKey: "drafts" as const },
-  { href: "/follow-ups", label: "Follow-ups", icon: Clock, countKey: "followUps" as const },
-  { href: "/contacts", label: "Contacts", icon: Users, countKey: null },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, countKey: null },
+// The mail module's own rail — Board (email surfaces) and Insight (email
+// analytics), unchanged since 007-web-dashboard. Plans/Notes/Life moved out
+// to the hub entirely (see hub-shell.tsx) rather than living as a section in
+// here — mixing a non-email domain into this rail is exactly what got
+// reverted; see feedback_module_separation in project memory.
+const BOARD_ROUTES = [
+  { href: "/mail", label: "Overview", icon: LayoutDashboard, countKey: null },
+  { href: "/mail/inbox", label: "Inbox", icon: InboxIcon, countKey: "inbox" as const },
+  { href: "/mail/actions", label: "Action items", icon: CheckSquare, countKey: "actions" as const },
+  { href: "/mail/drafts", label: "Drafts", icon: FileEdit, countKey: "drafts" as const },
+  { href: "/mail/follow-ups", label: "Follow-ups", icon: Clock, countKey: "followUps" as const },
+  { href: "/mail/contacts", label: "Contacts", icon: Users, countKey: null },
+  { href: "/mail/analytics", label: "Analytics", icon: BarChart3, countKey: null },
 ];
 
 export interface RailCounts {
@@ -42,8 +60,21 @@ export function PlatformRail({ counts, compact = false }: { counts: RailCounts; 
       )}
       aria-label="Primary"
     >
+      {/* The door back to the hub — mirrors hub-shell.tsx's "Mail Assistant"
+          door, so moving between the two rooms is symmetric. */}
+      <Link
+        href="/"
+        className={cn(
+          "mb-2 flex items-center gap-2.5 rounded-xl border border-rule bg-surface px-2.5 py-2 text-[13px] font-medium text-ink-secondary transition-colors hover:border-departure hover:bg-surface-raised hover:text-ink",
+          compact && "justify-center px-0"
+        )}
+      >
+        <ArrowLeft size={16} className="shrink-0" />
+        {!compact && <span className="flex-1 truncate">Hub</span>}
+      </Link>
+
       <RailSection title="Board" compact={compact}>
-        {ROUTES.map((r) => {
+        {BOARD_ROUTES.map((r) => {
           const active = pathname === r.href;
           const count = r.countKey ? counts[r.countKey] : undefined;
           return (
@@ -56,7 +87,7 @@ export function PlatformRail({ counts, compact = false }: { counts: RailCounts; 
 
       <RailSection title="Platforms" compact={compact}>
         {PLATFORMS.map((p) => {
-          const active = pathname === "/inbox" && activePlatform === p.platform;
+          const active = pathname === "/mail/inbox" && activePlatform === p.platform;
           return (
             <RailPlatformLink
               key={p.platform}
@@ -79,7 +110,7 @@ export function PlatformRail({ counts, compact = false }: { counts: RailCounts; 
             {savedViews.map((v) => (
               <Link
                 key={v.id}
-                href={`/inbox?view=${v.slug}`}
+                href={`/mail/inbox?view=${v.slug}`}
                 className="flex items-center justify-between rounded-xl px-2.5 py-2 text-[13px] text-ink-secondary transition-colors hover:bg-surface-raised hover:text-ink"
               >
                 <span className="truncate">{v.label}</span>
@@ -92,7 +123,7 @@ export function PlatformRail({ counts, compact = false }: { counts: RailCounts; 
       <RailDivider compact={compact} />
 
       <Link
-        href="/review"
+        href="/mail/review"
         className={cn(
           "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-semibold transition-colors",
           counts.reviewQueue > 0
@@ -113,10 +144,10 @@ export function PlatformRail({ counts, compact = false }: { counts: RailCounts; 
 
       <RailDivider compact={compact} />
 
-      <RailSection compact={compact}>
-        <RailLink href="/rules" label="Rules" icon={SlidersHorizontal} active={pathname === "/rules"} compact={compact} />
-        <RailLink href="/settings" label="Settings" icon={Settings} active={pathname === "/settings"} compact={compact} />
-        <RailLink href="/guide" label="Guide" icon={Compass} active={pathname === "/guide"} compact={compact} />
+      <RailSection title="System" compact={compact}>
+        <RailLink href="/mail/rules" label="Rules" icon={SlidersHorizontal} active={pathname === "/mail/rules"} compact={compact} />
+        <RailLink href="/mail/settings" label="Settings" icon={Settings} active={pathname === "/mail/settings"} compact={compact} />
+        <RailLink href="/mail/guide" label="Guide" icon={Compass} active={pathname === "/mail/guide"} compact={compact} />
       </RailSection>
     </nav>
   );
@@ -217,7 +248,7 @@ function RailPlatformLink({
 
   const content = (
     <Link
-      href={`/inbox?platform=${platform}`}
+      href={`/mail/inbox?platform=${platform}`}
       className={cn(
         "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors",
         active

@@ -24,6 +24,9 @@ erDiagram
     ACCOUNTS ||--o{ SAVED_VIEWS : has
     ACCOUNTS ||--o{ CATEGORIES : has
     CATEGORIES ||--o{ CATEGORIES : "merged into (nullable)"
+    ACCOUNTS ||--o{ PLANS : has
+    ACCOUNTS ||--o{ NOTES : has
+    PLANS    ||--o{ TASKS  : "groups (nullable, 013-life-hub)"
 
     ACCOUNTS {
         uuid id PK
@@ -76,6 +79,7 @@ erDiagram
         text priority "urgent/normal/low, default normal (010)"
         text origin "extracted/manual (010)"
         int confidence "nullable, unwritten this phase"
+        uuid plan_id FK "nullable, no ON DELETE CASCADE (013-life-hub)"
     }
     DRAFTS {
         uuid id PK
@@ -185,6 +189,25 @@ erDiagram
         int number
         uuid merged_into FK "nullable -- Merge stays unimplemented, semantics undecided (Phase 4)"
     }
+    PLANS {
+        uuid id PK
+        uuid account_id FK
+        text title
+        text description "nullable"
+        text status "active/paused/done/archived, default active, stored not derived (013-life-hub)"
+        date target_date "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    NOTES {
+        uuid id PK
+        uuid account_id FK
+        text title "nullable -- quick capture often has no title (013-life-hub)"
+        text body
+        timestamptz created_at
+        timestamptz updated_at
+        tsvector search_vector "generated always as, title+body, GIN-indexed (013-life-hub)"
+    }
 ```
 
 `contact_aggregates` (a SQL view, not a table, so it doesn't appear above) computes `message_count`/`last_contact_at` per contact from `emails.participants`; `yourAvgReplyHours`/`openThreadIds` are computed in `contact-mapping.ts` instead, not in SQL (`011-followups-contacts-api`).
@@ -204,6 +227,7 @@ erDiagram
 | Web Dashboard (action-item/draft routes, `010-dashboard-actions-drafts-api`) | `tasks`: email_id=null/task_text/deadline/status/priority/origin='manual' (`POST\|PATCH /api/action-items*`); `drafts`: draft_body/edit_distance/tone/length (`PATCH /api/drafts/:id`), status/approved_at (`POST /api/drafts/:id/status`) — otherwise reads only |
 | Web Dashboard (follow-ups/contacts routes, `011-followups-contacts-api`) | `commitments.status` (`PATCH /api/commitments/:id`); `nudges`: commitment_id (nullable)/email_id/body/sent_at=null (`POST /api/nudges`); `contacts.is_vip` (`PATCH /api/contacts/:id/vip`) — otherwise reads only |
 | Web Dashboard (rules/settings/activity/search routes, Phase 4 — `PHASE-4-IMPLEMENTATION-PLAN.md`) | `rules`: full row (`POST /api/rules`), `enabled` (`PATCH /api/rules/:id`); `settings`: full row on first read, then whichever fields a `PATCH /api/settings` call sends; `activity_log`: written by the message mutation routes (archive/done/snooze) and by `/api/sync/resync`/`/api/settings/purge` themselves, not by n8n; `saved_views`: full row (`POST /api/saved-views`); `categories`: `label` (`PATCH /api/categories/rename`), full row for a custom category (`POST /api/categories`) |
+| Web Dashboard (plans/notes routes, `013-life-hub`) | `plans`: full row (`POST /api/plans`), `title`/`description`/`status`/`target_date` (`PATCH /api/plans/:id`) — otherwise reads only, progress (`taskCount`/`doneCount`) is derived at read time, never stored; `notes`: full row (`POST /api/notes`), `title`/`body` (`PATCH /api/notes/:id`); `tasks.plan_id`: written only by `PATCH /api/action-items/:id` (assign/unassign, nullable, no other writer touches it) |
 | Web Dashboard (reassignment logging, Phase 5 — `PHASE-5-IMPLEMENTATION-PLAN.md`) | `activity_log`: one row per real platform reassignment (`PATCH /api/messages/:id/platform`, only when the value actually changes) — the signal `GET /api/analytics/ai-performance`'s classification-accuracy figure counts against |
 | Rule Engine (`rule-engine.json`, Phase 5 — `PHASE-5-IMPLEMENTATION-PLAN.md`) | `rule_runs`: one row per applied (matched, under daily_cap) rule; `activity_log`: one row per applied rule, `undoable=true` only for Auto-archive; `emails`: status/handled_at/handled_action (Auto-archive), priority/priority_score (Auto-prioritise) — Auto-label is detected but never applied (no target-category value exists to apply); Auto-draft calls `draft-generation.json`'s existing webhook rather than writing `drafts` itself |
 | Postgres (via n8n, on-demand) | `accounts` fields refreshed by `gmail-renewal-recovery.json`'s new webhook-triggered path (Phase 4) — same columns the 6-hourly schedule path already writes, just reachable on demand via `POST /api/sync/resync` too |

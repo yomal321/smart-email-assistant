@@ -18,10 +18,21 @@ Gmail ingestion through draft generation is live, with every acceptance criterio
 | 4 | **Draft generation** — authenticated on-demand reply endpoint | 🟢 Live — 8/8 ACs verified |
 | 5 | **Web dashboard** — unified inbox, task sidebar, draft review | 🟢 Built |
 | 6 | **Inbox noise control** — junk gate, selective cleanup, retention sweep | 🟢 Built |
-| A | **Assistant bot** — conversational mobile client (Telegram) + proactive pushes | 🟡 Spec'd, build pending — `.specclaw/changes/012-assistant-bot` |
+| A | **Assistant bot** — conversational mobile client (Telegram) + proactive pushes | 🟢 Built |
+| B1 | **Life Hub** — plans, notes, task view, and bot activity, as modules under a new main dashboard at `/` | 🟢 Built, ⚠️ migration `0015_plans_notes.sql` not yet applied live |
 | — | **Outlook ingestion** | 🟡 Deferred — proposed and reviewed, not approved |
 
 Verification evidence for each phase lives in `.specclaw/changes/<change>/verify-report.md`.
+
+**Shape as of 2026-09-20:** this is no longer one app. The former single dashboard split into a
+main hub (`/`, `/tasks`, `/plans`, `/notes`, `/bot`) and a Mail Assistant module
+(`/mail/*`, everything phases 1-6 built) reached through a sidebar door either
+way. Same Next.js app, same Supabase project, separate shells and separate data
+providers per room — a new life domain becomes a hub module, never a section
+inside the mail sidebar. `.specclaw/changes/013-life-hub`'s own spec/design
+describe the earlier, rejected shape (Plans/Notes as a section inside the mail
+app); this README is the current source of truth until that change is
+reconciled or superseded.
 
 ---
 

@@ -125,6 +125,12 @@ export interface Message {
   handledAction: "archived" | "done" | "snoozed" | null;
 }
 
+// The commitment types the hub ranks in one list (0016_life_load.sql) — an
+// email-extracted or manually-typed item is 'task'; the rest come from a
+// source/course the user assigns by hand (see project_personal_dashboard_spec
+// in project memory for why this is one discriminated table, not six).
+export type TaskType = "task" | "meeting" | "call" | "assignment" | "quiz" | "ca" | "exam" | "admin";
+
 export interface ActionItem {
   id: string;
   text: string;
@@ -135,6 +141,57 @@ export interface ActionItem {
   status: "todo" | "in-progress" | "done";
   origin: "extracted" | "manual";
   confidence: number | null; // null when manual
+  planId: string | null; // 013-life-hub — the plan this task belongs to, if any
+  // 0016_life_load.sql — the hub's ranking fields. Every row has them (all
+  // carry a DB default); the mail module ignores all but dueAt.
+  type: TaskType;
+  sourceId: string | null; // null only on a fresh DB with no accounts row yet
+  courseId: string | null; // set only for academic items
+  dueAt: string | null; // to-the-minute; coalesces from `dueDate` when unset
+  startsAt: string | null; // set only for scheduled things (meeting/call/exam)
+  durationMinutes: number | null;
+  effortMinutes: number;
+  weight: number; // 1–5
+}
+
+export interface Source {
+  id: string;
+  name: string;
+  kind: "work" | "academic";
+  color: string;
+  code: string; // two-letter plate label (0017_source_code.sql) — see SourcePlate
+}
+
+export interface Course {
+  id: string;
+  sourceId: string;
+  code: string;
+  name: string;
+  semester: string | null;
+  isActive: boolean;
+}
+
+export type PlanStatus = "active" | "paused" | "done" | "archived";
+
+export interface Plan {
+  id: string;
+  title: string;
+  description: string | null;
+  status: PlanStatus;
+  targetDate: string | null;
+  // Derived at read time from this plan's tasks, never stored (spec.md FR5).
+  taskCount: number;
+  doneCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Note {
+  id: string;
+  title: string | null; // nullable: quick capture often has no title
+  body: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Draft {

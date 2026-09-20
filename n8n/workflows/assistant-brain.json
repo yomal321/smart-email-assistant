@@ -443,7 +443,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "// FR8: independent daily cap on free-text LLM calls, tracked in this\n// workflow's own static data -- same technique draft-generation.json uses\n// for its auth-failure cooldown (no new schema, no new credential). The\n// date bucket is UTC-based (a coarse daily reset, not tied to\n// settings.timezone) since this is a soft usage budget, not a\n// user-facing 'today' calculation like FR16's slash commands.\nconst staticData = $getWorkflowStaticData('global');\nconst chatId = $json.chat_id;\nconst text = $json.text;\nconst todayKey = new Date().toISOString().slice(0, 10);\n\nif (staticData.freeTextDate !== todayKey) {\n  staticData.freeTextDate = todayKey;\n  staticData.freeTextCount = 0;\n}\n\nconst CAP = 10; // FR8 default -- roughly half the account's 20/day Gemini ceiling (NFR1)\nconst capped = (staticData.freeTextCount || 0) >= CAP;\n\nreturn { json: { chat_id: chatId, text, capped } };\n"
+        "jsCode": "// 0018_bot_observability.sql (option B2): reads the persisted count from\n// 'Read today's usage' instead of $getWorkflowStaticData, so the daily cap\n// survives an n8n cold start and the dashboard can read remaining budget.\nconst upstream = $('Compute free-text usage date').item.json;\nconst chatId = upstream.chat_id;\nconst text = upstream.text;\n\nconst CAP = 10; // FR8 default -- roughly half the account's 20/day Gemini ceiling (NFR1)\nconst capped = ($json.count || 0) >= CAP;\n\nreturn { json: { chat_id: chatId, text, capped } };\n"
       }
     },
     {
@@ -680,7 +680,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "// FR8: counter increments on SUCCESS only -- a failed call that produced no\n// usable answer still cost a Gemini/OpenRouter request, but not counting it\n// here would double-penalize the operator for a model-side failure. This\n// mirrors how the daily cap exists to protect quota, not to punish retries.\nconst staticData = $getWorkflowStaticData('global');\nstaticData.freeTextCount = (staticData.freeTextCount || 0) + 1;\nconst chatId = $json.chat_id;\nconst answer = $json.answer;\nreturn { json: { chat_id: chatId, reply_text: answer } };\n"
+        "jsCode": "// FR8: counted on SUCCESS only (unchanged reasoning) -- the count itself is\n// now written by 'Upsert free-text usage' (0018_bot_observability.sql,\n// option B2), which sits immediately before this node in the graph. This\n// node only builds the reply text, reading from 'Free-text success?'\n// directly rather than $json since the Postgres node in between returns\n// its own query result shape, not {chat_id, answer}.\nconst upstream = $('Free-text success?').item.json;\nconst chatId = upstream.chat_id;\nconst answer = upstream.answer;\nreturn { json: { chat_id: chatId, reply_text: answer } };\n"
       }
     },
     {
@@ -742,6 +742,72 @@
         "width": 620,
         "color": 7
       }
+    },
+    {
+      "id": "b1a2c3d4-0030-4a1a-9c1a-000000000030",
+      "name": "Compute free-text usage date",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1440,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// 0018_bot_observability.sql (option B2): UTC calendar day, matching\n// bot_free_text_usage's documented bucket -- a soft usage budget, not a\n// user-facing \"today\" tied to settings.timezone.\nreturn { json: { chat_id: $json.chat_id, text: $json.text, usage_date: new Date().toISOString().slice(0, 10) } };\n"
+      }
+    },
+    {
+      "id": "b1a2c3d4-0031-4a1a-9c1a-000000000031",
+      "name": "Read today's usage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1320,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE((SELECT count FROM bot_free_text_usage WHERE usage_date = $1), 0) AS count;",
+        "options": {
+          "queryReplacement": "={{ [$json.usage_date] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "0018_bot_observability.sql, option B2. COALESCE guarantees exactly one row back regardless of whether today has a bot_free_text_usage row yet, so 'Check free-text cap' downstream never has to handle a zero-item case. NOT LIVE-VERIFIED -- see docs/setup/bot-observability-setup.md.",
+      "notesInFlow": true
+    },
+    {
+      "id": "b1a2c3d4-0032-4a1a-9c1a-000000000032",
+      "name": "Upsert free-text usage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        810,
+        180
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_free_text_usage (usage_date, count) VALUES ($1, 1)\nON CONFLICT (usage_date) DO UPDATE SET count = bot_free_text_usage.count + 1;",
+        "options": {
+          "queryReplacement": "={{ [$('Compute free-text usage date').item.json.usage_date] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "0018_bot_observability.sql, option B2: counted on SUCCESS only (unchanged FR8 reasoning), now persisted instead of workflow static data so it survives an n8n cold start and GET /api/hub/bot-stats can read remaining budget. onError=continueRegularOutput (L28 pattern): a failed usage-count write must not swallow the answer the user is actually waiting for. NOT LIVE-VERIFIED -- see docs/setup/bot-observability-setup.md.",
+      "notesInFlow": true
     }
   ],
   "connections": {
@@ -960,7 +1026,7 @@
         ],
         [
           {
-            "node": "Check free-text cap",
+            "node": "Compute free-text usage date",
             "type": "main",
             "index": 0
           }
@@ -1088,7 +1154,7 @@
       "main": [
         [
           {
-            "node": "Increment counter and reply",
+            "node": "Upsert free-text usage",
             "type": "main",
             "index": 0
           }
@@ -1118,6 +1184,39 @@
         [
           {
             "node": "Return result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute free-text usage date": {
+      "main": [
+        [
+          {
+            "node": "Read today's usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read today's usage": {
+      "main": [
+        [
+          {
+            "node": "Check free-text cap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert free-text usage": {
+      "main": [
+        [
+          {
+            "node": "Increment counter and reply",
             "type": "main",
             "index": 0
           }

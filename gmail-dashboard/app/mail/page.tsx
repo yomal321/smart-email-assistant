@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -92,7 +92,7 @@ export default function OverviewPage() {
           <h2 className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">
             Today&apos;s priority queue
           </h2>
-          <Link href="/inbox" className="text-xs font-medium text-departure hover:text-departure-field-ink">
+          <Link href="/mail/inbox" className="text-xs font-medium text-departure hover:text-departure-field-ink">
             View all in Inbox
           </Link>
         </div>
@@ -136,11 +136,11 @@ export default function OverviewPage() {
       <div className="flex flex-wrap gap-2 px-4 py-4">
         <Button
           className="rounded-xl"
-          onClick={() => router.push("/inbox")}
+          onClick={() => router.push("/mail/inbox")}
         >
           Triage new mail
         </Button>
-        <Button variant="secondary" className="rounded-xl" onClick={() => router.push("/drafts")}>
+        <Button variant="secondary" className="rounded-xl" onClick={() => router.push("/mail/drafts")}>
           Review drafts
         </Button>
         <Button

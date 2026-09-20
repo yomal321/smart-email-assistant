@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { FileEdit, RefreshCcw } from "lucide-react";
@@ -385,7 +385,7 @@ export default function DraftsPage() {
           heading="No drafts waiting."
           body="Drafts appear here when a message is classified Needs Reply and a reply is generated."
           actionLabel="Go to Needs Reply"
-          actionHref="/inbox?platform=needs-reply"
+          actionHref="/mail/inbox?platform=needs-reply"
         />
       ) : (
         <div className="divide-y" style={{ borderColor: "var(--rule)" }}>

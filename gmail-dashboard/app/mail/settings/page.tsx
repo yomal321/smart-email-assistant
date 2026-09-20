@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 // Full-width settings, following the section tab-bar convention app/guide/page.tsx
 // already established (sticky anchor nav under the header, click-to-scroll, no
@@ -255,7 +255,7 @@ export default function SettingsPage() {
         <Section id="privacy" title="Privacy" note="What the assistant keeps, and how to get rid of it.">
           <div className="space-y-3">
             <Link
-              href="/settings/cleanup"
+              href="/mail/settings/cleanup"
               className="group flex items-center justify-between gap-6 rounded-lg bg-surface-sunk px-4 py-3 transition-colors hover:bg-muted"
             >
               <div className="min-w-0">

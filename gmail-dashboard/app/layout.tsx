@@ -4,8 +4,8 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Smart Gmail Assistant — The Departure Board",
-  description: "Your inbox as a station concourse: every message is a scheduled departure with a platform, a time, and a delay figure.",
+  title: "Smart Email Assistant — The Departure Board",
+  description: "Your inbox and your life as a station concourse: every message and every task is a scheduled departure with a platform, a time, and a delay figure.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
