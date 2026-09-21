@@ -1,0 +1,171 @@
+{
+  "name": "ICS Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "2da81845-307c-4729-b97a-5dee6803025a",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1600, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, name, ics_url FROM sources WHERE ics_url IS NOT NULL",
+        "options": {}
+      },
+      "id": "f5af423d-8a65-4e3f-8684-8de622afd5e1",
+      "name": "Read sources with feeds",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-1360, 300],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "3832fad5-be2d-4484-b959-1301985afdbf",
+      "name": "Loop sources",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [-1100, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.ics_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "08ba5a31-5ce1-49ac-aaed-625300cc5b7d",
+      "name": "Fetch ICS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-840, 460],
+      "onError": "continueRegularOutput",
+      "notes": "A dead or slow feed must not stall the other two sources' sync — continueRegularOutput sends an item with no usable body into Parse ICS events, which the parser below treats as zero events rather than throwing.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Minimal RFC5545 VEVENT parser — no external deps (this n8n instance has\n// no npm access from Code nodes). Does not expand RRULEs; a recurring\n// lecture lands as its one literal VEVENT occurrence. tasks.recurrence_rule\n// (0016_life_load.sql) stays reserved-but-unwritten until that's worth doing.\nconst sourceId = $('Loop sources').item.json.id;\nconst raw = $json.data || $json.body || '';\n\nfunction unfold(text) {\n  return text.replace(/\\r\\n[ \\t]/g, '').replace(/\\n[ \\t]/g, '');\n}\n\nfunction parseDate(value) {\n  if (!value) return null;\n  if (/^\\d{8}$/.test(value)) {\n    const y = value.slice(0, 4), m = value.slice(4, 6), d = value.slice(6, 8);\n    return { iso: `${y}-${m}-${d}T00:00:00`, allDay: true };\n  }\n  const m = value.match(/^(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})(Z)?$/);\n  if (!m) return null;\n  const [, y, mo, d, h, mi, s, z] = m;\n  return { iso: `${y}-${mo}-${d}T${h}:${mi}:${s}${z ? 'Z' : ''}`, allDay: false };\n}\n\nfunction classifyType(summary) {\n  const s = (summary || '').toLowerCase();\n  if (/\\bexam\\b|\\bfinal\\b/.test(s)) return 'exam';\n  if (/\\bquiz\\b/.test(s)) return 'quiz';\n  if (/\\bca\\b|continuous assessment/.test(s)) return 'ca';\n  if (/\\bassignment\\b|\\bsubmission\\b/.test(s)) return 'assignment';\n  if (/\\bmeeting\\b|\\bstandup\\b|\\bsync\\b/.test(s)) return 'meeting';\n  if (/\\bcall\\b/.test(s)) return 'call';\n  return 'task';\n}\n\nconst rawEvents = [];\nif (raw) {\n  const lines = unfold(String(raw)).split(/\\r\\n|\\n/);\n  let cur = null;\n  for (const line of lines) {\n    if (line.startsWith('BEGIN:VEVENT')) { cur = {}; continue; }\n    if (line.startsWith('END:VEVENT')) { if (cur) rawEvents.push(cur); cur = null; continue; }\n    if (!cur) continue;\n    const idx = line.indexOf(':');\n    if (idx === -1) continue;\n    const key = line.slice(0, idx).split(';')[0];\n    const value = line.slice(idx + 1);\n    if (key === 'UID') cur.uid = value;\n    else if (key === 'SUMMARY') cur.summary = value.replace(/\\\\,/g, ',').replace(/\\\\n/gi, ' ');\n    else if (key === 'DTSTART') cur.dtstart = parseDate(value);\n    else if (key === 'DTEND') cur.dtend = parseDate(value);\n  }\n}\n\nconst events = rawEvents\n  .filter((e) => e.uid && e.summary)\n  .map((e) => {\n    const start = e.dtstart;\n    const end = e.dtend || start;\n    const durationMinutes = start && end && !start.allDay\n      ? Math.max(0, Math.round((new Date(end.iso).getTime() - new Date(start.iso).getTime()) / 60000))\n      : null;\n    return {\n      uid: e.uid,\n      summary: e.summary,\n      type: classifyType(e.summary),\n      due_at: end ? end.iso : null,\n      starts_at: start && !start.allDay ? start.iso : null,\n      duration_minutes: durationMinutes,\n    };\n  });\n\nreturn [{ json: { source_id: sourceId, events: JSON.stringify(events) } }];\n"
+      },
+      "id": "a937754f-cd84-4547-8311-92cd18f6ede0",
+      "name": "Parse ICS events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-580, 460]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO tasks (source_id, external_uid, task_text, type, due_at, starts_at, duration_minutes, origin)\nSELECT $1::uuid, e->>'uid', e->>'summary', e->>'type', (e->>'due_at')::timestamptz, (e->>'starts_at')::timestamptz, (e->>'duration_minutes')::int, 'extracted'\nFROM jsonb_array_elements($2::jsonb) AS e\nON CONFLICT (source_id, external_uid) WHERE external_uid IS NOT NULL DO UPDATE SET\n  task_text = EXCLUDED.task_text,\n  type = EXCLUDED.type,\n  due_at = EXCLUDED.due_at,\n  starts_at = EXCLUDED.starts_at,\n  duration_minutes = EXCLUDED.duration_minutes;",
+        "options": {
+          "queryReplacement": "={{ [$json.source_id, $json.events] }}"
+        }
+      },
+      "id": "4c283690-b569-41a6-86a5-210bb238d20d",
+      "name": "Upsert tasks",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-320, 460],
+      "notes": "jsonb_array_elements('[]') yields zero rows, so an empty events array (dead feed, or Fetch ICS failed) is a harmless no-op rather than an error — this is what keeps the loop advancing even on a bad source.",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE sources SET last_synced_at = now() WHERE id = $1::uuid",
+        "options": {
+          "queryReplacement": "={{ [$json.source_id] }}"
+        }
+      },
+      "id": "0b148983-d062-44fd-9442-616c3954e7d5",
+      "name": "Mark source synced",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-60, 460],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE tasks t SET course_id = c.id\nFROM courses c\nWHERE t.course_id IS NULL AND t.source_id = c.source_id AND c.is_active\n  AND t.task_text ILIKE '%' || c.code || '%';",
+        "options": {}
+      },
+      "id": "60b0f7c4-98c0-4467-a7ed-f65d694e8a58",
+      "name": "Link courses",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-1100, 100],
+      "notes": "Naive substring match (ponytail: exact ILIKE, no fuzzy matching or normalisation) — a course code that never appears verbatim in the feed's SUMMARY is left course_id-null rather than guessed at. Upgrade path: normalise whitespace/case once a real feed shows this missing real matches.",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [[{ "node": "Read sources with feeds", "type": "main", "index": 0 }]]
+    },
+    "Read sources with feeds": {
+      "main": [[{ "node": "Loop sources", "type": "main", "index": 0 }]]
+    },
+    "Loop sources": {
+      "main": [
+        [{ "node": "Link courses", "type": "main", "index": 0 }],
+        [{ "node": "Fetch ICS", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch ICS": {
+      "main": [[{ "node": "Parse ICS events", "type": "main", "index": 0 }]]
+    },
+    "Parse ICS events": {
+      "main": [[{ "node": "Upsert tasks", "type": "main", "index": 0 }]]
+    },
+    "Upsert tasks": {
+      "main": [[{ "node": "Mark source synced", "type": "main", "index": 0 }]]
+    },
+    "Mark source synced": {
+      "main": [[{ "node": "Loop sources", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

@@ -1,5 +1,6 @@
-// PATCH /api/sources/:id — rename a source, recolour it, or change its
-// two-letter plate (Settings, spec.md "the user can name their own sources").
+// PATCH /api/sources/:id — rename a source, recolour it, change its
+// two-letter plate, or set its ICS feed URL (Settings, spec.md "the user can
+// name their own sources"; 0019_calendar_ingestion.sql for icsUrl).
 // No POST/DELETE: three sources seeded once by 0016_life_load.sql, renamed in
 // place — adding or removing a life context is a bigger decision (courses,
 // history, the priority weighting) than this screen is scoped to make.
@@ -10,7 +11,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { mapSourceRowToSource, type SourceRow } from "@/lib/data/source-mapping";
 
-const SELECT_COLUMNS = "id, name, kind, color, code";
+const SELECT_COLUMNS = "id, name, kind, color, code, ics_url, last_synced_at";
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -39,9 +40,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     // of what case the settings form was typed in.
     update.code = body.code.trim().toUpperCase();
   }
+  if (body?.icsUrl !== undefined) {
+    if (body.icsUrl !== null && (typeof body.icsUrl !== "string" || body.icsUrl.trim().length === 0)) {
+      return NextResponse.json({ error: "icsUrl must be a non-empty string or null" }, { status: 400 });
+    }
+    update.ics_url = body.icsUrl === null ? null : body.icsUrl.trim();
+  }
 
   if (Object.keys(update).length === 0) {
-    return NextResponse.json({ error: "at least one of name, color, code is required" }, { status: 400 });
+    return NextResponse.json({ error: "at least one of name, color, code, icsUrl is required" }, { status: 400 });
   }
 
   const supabase = getSupabaseServerClient();

@@ -160,6 +160,8 @@ export interface Source {
   kind: "work" | "academic";
   color: string;
   code: string; // two-letter plate label (0017_source_code.sql) — see SourcePlate
+  icsUrl: string | null; // 0019_calendar_ingestion.sql — polled by the ics-sync n8n workflow
+  lastSyncedAt: string | null;
 }
 
 export interface Course {

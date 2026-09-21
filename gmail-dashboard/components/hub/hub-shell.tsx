@@ -9,7 +9,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutDashboard, CheckSquare, Target, StickyNote, Bot, Mail, Moon, Sun, Monitor } from "lucide-react";
+import { Menu, LayoutDashboard, CheckSquare, Target, StickyNote, Bot, Mail, Moon, Sun, Monitor, BookOpen, Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { usePreferences } from "@/components/board/preferences-provider";
@@ -20,7 +20,9 @@ const HUB_ROUTES = [
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/plans", label: "Plans", icon: Target },
   { href: "/notes", label: "Notes", icon: StickyNote },
+  { href: "/courses", label: "Courses", icon: BookOpen },
   { href: "/bot", label: "Bot", icon: Bot },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function HubShell({ children }: { children: React.ReactNode }) {

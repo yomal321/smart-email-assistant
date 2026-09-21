@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { mapSourceRowToSource, type SourceRow } from "@/lib/data/source-mapping";
 
-const SELECT_COLUMNS = "id, name, kind, color, code";
+const SELECT_COLUMNS = "id, name, kind, color, code, ics_url, last_synced_at";
 
 export async function GET() {
   const supabase = getSupabaseServerClient();

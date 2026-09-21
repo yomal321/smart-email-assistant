@@ -9,8 +9,18 @@ export interface SourceRow {
   kind: "work" | "academic";
   color: string;
   code: string; // 0017_source_code.sql
+  ics_url: string | null; // 0019_calendar_ingestion.sql
+  last_synced_at: string | null;
 }
 
 export function mapSourceRowToSource(row: SourceRow): Source {
-  return { id: row.id, name: row.name, kind: row.kind, color: row.color, code: row.code };
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind,
+    color: row.color,
+    code: row.code,
+    icsUrl: row.ics_url,
+    lastSyncedAt: row.last_synced_at,
+  };
 }

@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SourcePlate } from "@/components/hub/source-plate";
 import { StatusPill, type Tone } from "@/components/hub/primitives";
-import type { ActionItem, Source, TaskType } from "@/lib/data/types";
+import type { ActionItem, Course, Source, TaskType } from "@/lib/data/types";
 
 const STATUS_LABEL: Record<ActionItem["status"], string> = {
   todo: "To do",
@@ -45,6 +45,7 @@ const TYPE_LABEL: Record<TaskType, string> = {
 export default function HubTasksPage() {
   const [items, setItems] = React.useState<ActionItem[]>([]);
   const [sources, setSources] = React.useState<Source[]>([]);
+  const [courses, setCourses] = React.useState<Course[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [showDone, setShowDone] = React.useState(false);
 
@@ -62,10 +63,12 @@ export default function HubTasksPage() {
     Promise.all([
       fetch("/api/action-items", { signal: controller.signal }).then((r) => r.json()),
       fetch("/api/sources", { signal: controller.signal }).then((r) => r.json()),
+      fetch("/api/courses", { signal: controller.signal }).then((r) => r.json()),
     ])
-      .then(([taskBody, sourceBody]) => {
+      .then(([taskBody, sourceBody, courseBody]) => {
         setItems(Array.isArray(taskBody) ? taskBody : []);
         setSources(Array.isArray(sourceBody) ? sourceBody : []);
+        setCourses(Array.isArray(courseBody) ? courseBody : []);
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -102,7 +105,7 @@ export default function HubTasksPage() {
         </div>
 
         <div className="card-surface p-4">
-          <CreateTaskForm sources={sources} onCreated={(item) => setItems((prev) => [item, ...prev])} />
+          <CreateTaskForm sources={sources} courses={courses} onCreated={(item) => setItems((prev) => [item, ...prev])} />
         </div>
 
         <div className="card-surface overflow-hidden">
@@ -153,15 +156,34 @@ export default function HubTasksPage() {
   );
 }
 
-function CreateTaskForm({ sources, onCreated }: { sources: Source[]; onCreated: (item: ActionItem) => void }) {
+function CreateTaskForm({
+  sources,
+  courses,
+  onCreated,
+}: {
+  sources: Source[];
+  courses: Course[];
+  onCreated: (item: ActionItem) => void;
+}) {
   const [text, setText] = React.useState("");
   const [type, setType] = React.useState<TaskType>("task");
   const [sourceId, setSourceId] = React.useState<string>("");
+  const [courseId, setCourseId] = React.useState<string>("");
   const [dueAt, setDueAt] = React.useState("");
   const [weight, setWeight] = React.useState("3");
   const [effortMinutes, setEffortMinutes] = React.useState("30");
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Neither university publishes a subscribable calendar — assignment/exam
+  // dates come from portal pages as plain text, so this form (not the ICS
+  // sync, which has nothing to poll for those two sources) is the real entry
+  // point for academic deadlines. Only offer courses that belong to the
+  // selected source, and only active ones.
+  const coursesForSource = React.useMemo(
+    () => courses.filter((c) => c.sourceId === sourceId && c.isActive),
+    [courses, sourceId]
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -175,6 +197,7 @@ function CreateTaskForm({ sources, onCreated }: { sources: Source[]; onCreated: 
         text,
         type,
         sourceId: sourceId || null,
+        courseId: courseId || null,
         dueAt: dueAt ? new Date(dueAt).toISOString() : null,
         weight: Number(weight),
         effortMinutes: Number(effortMinutes),
@@ -190,6 +213,7 @@ function CreateTaskForm({ sources, onCreated }: { sources: Source[]; onCreated: 
     setText("");
     setDueAt("");
     setType("task");
+    setCourseId("");
     setWeight("3");
     setEffortMinutes("30");
   }
@@ -209,7 +233,13 @@ function CreateTaskForm({ sources, onCreated }: { sources: Source[]; onCreated: 
           ))}
         </SelectContent>
       </Select>
-      <Select value={sourceId} onValueChange={setSourceId}>
+      <Select
+        value={sourceId}
+        onValueChange={(v) => {
+          setSourceId(v);
+          setCourseId("");
+        }}
+      >
         <SelectTrigger size="sm" className="h-8 w-36 rounded-lg">
           <SelectValue placeholder="Source…" />
         </SelectTrigger>
@@ -221,6 +251,20 @@ function CreateTaskForm({ sources, onCreated }: { sources: Source[]; onCreated: 
           ))}
         </SelectContent>
       </Select>
+      {coursesForSource.length > 0 && (
+        <Select value={courseId} onValueChange={setCourseId}>
+          <SelectTrigger size="sm" className="h-8 w-32 rounded-lg">
+            <SelectValue placeholder="Course…" />
+          </SelectTrigger>
+          <SelectContent>
+            {coursesForSource.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.code}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className="h-8 rounded-lg" />
       <label className="flex items-center gap-1 text-xs text-ink-secondary">
         Weight
