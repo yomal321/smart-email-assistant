@@ -95,5 +95,36 @@ export async function POST(request: Request) {
   }
 
   const item = mapTaskRowToActionItem(data as unknown as TaskRow);
+  await pushToCalendar(item);
   return NextResponse.json(item);
+}
+
+// Push to push-to-calendar.json (0020_calendar_push.sql) — mirrors POST
+// /api/drafts's proxy-to-n8n shape, but best-effort: a manually added task
+// must save even if the calendar push fails or n8n is down, so failures are
+// swallowed rather than surfaced to the caller. Awaited (not truly
+// fire-and-forget) because an un-awaited fetch can be killed when a Vercel
+// serverless function terminates right after the response is sent. Only
+// fires when there's a time to put on a calendar (n8n also checks this
+// defensively, since its webhook URL is public).
+async function pushToCalendar(item: { id: string; text: string; dueAt: string | null; startsAt: string | null; durationMinutes: number | null }) {
+  const webhookUrl = process.env.N8N_CALENDAR_PUSH_WEBHOOK_URL;
+  const secret = process.env.CALENDAR_PUSH_WEBHOOK_SECRET;
+  if (!webhookUrl || !secret || (!item.dueAt && !item.startsAt)) return;
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-calendar-push-webhook-secret": secret },
+      body: JSON.stringify({
+        task_id: item.id,
+        text: item.text,
+        due_at: item.dueAt,
+        starts_at: item.startsAt,
+        duration_minutes: item.durationMinutes,
+      }),
+    });
+  } catch {
+    // best-effort — the task itself is already saved
+  }
 }

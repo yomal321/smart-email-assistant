@@ -46,7 +46,8 @@ Environment Variables, for both Preview and Production:
 
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`,
 `DASHBOARD_LOGIN_SECRET`, `N8N_DRAFT_WEBHOOK_URL`, `DRAFT_WEBHOOK_SECRET`,
-`N8N_RESYNC_WEBHOOK_URL`, `RESYNC_WEBHOOK_SECRET`.
+`N8N_RESYNC_WEBHOOK_URL`, `RESYNC_WEBHOOK_SECRET`,
+`N8N_CALENDAR_PUSH_WEBHOOK_URL`, `CALENDAR_PUSH_WEBHOOK_SECRET`.
 
 See [`gmail-dashboard/.env.local.example`](../gmail-dashboard/.env.local.example)
 for what each one does. `DRAFT_WEBHOOK_SECRET` and `RESYNC_WEBHOOK_SECRET` each

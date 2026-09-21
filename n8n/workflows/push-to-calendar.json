@@ -1,0 +1,196 @@
+{
+  "name": "Push To Calendar",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "push-to-calendar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4adb271b-b093-4fc2-b3d8-39b353c0902b",
+      "name": "Push Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1400, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Constant-time comparison, mirroring draft-generation.json's \"Verify secret\"\n// node (same threat model: a shared secret over a public n8n webhook).\n// ponytail: skips that node's cooldown/rate-limit escalation -- this\n// endpoint has no LLM-cost abuse vector to guard against, just an\n// unauthenticated write of one calendar event per call. Add a cooldown if\n// this webhook URL ever leaks and gets hammered.\ntry {\n  const crypto = require('crypto');\n  const item = $json || {};\n  const headers = item.headers || {};\n  const providedSecret = headers['x-calendar-push-webhook-secret'] || '';\n  const expectedSecret = $env.CALENDAR_PUSH_WEBHOOK_SECRET || '';\n\n  const providedHash = crypto.createHash('sha256').update(String(providedSecret)).digest();\n  const expectedHash = crypto.createHash('sha256').update(String(expectedSecret)).digest();\n  const isValid = Boolean(expectedSecret) && Boolean(providedSecret) &&\n    crypto.timingSafeEqual(providedHash, expectedHash);\n\n  if (!isValid) {\n    return { json: { authFailed: true } };\n  }\n\n  const body = item.body || {};\n  return {\n    json: {\n      authFailed: false,\n      task_id: body.task_id,\n      text: typeof body.text === 'string' ? body.text : '',\n      due_at: body.due_at || null,\n      starts_at: body.starts_at || null,\n      duration_minutes: Number.isFinite(body.duration_minutes) ? body.duration_minutes : null,\n    },\n  };\n} catch (err) {\n  return { json: { authFailed: true, error: (err && err.message) || 'Unknown auth error' } };\n}"
+      },
+      "id": "6cf04bf5-2fbd-4fd4-b6ba-b2f15a2b3afa",
+      "name": "Verify secret",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1160, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "auth-cond-1",
+              "leftValue": "={{ $json.authFailed }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fdf8b933-566d-40a9-8dfd-120fa2f0f7e8",
+      "name": "Auth ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-920, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"unauthorized\" } }}",
+        "options": { "responseCode": 401 }
+      },
+      "id": "57f63aa7-48c9-4703-bc5f-372bb16aabcc",
+      "name": "Respond 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-920, 500]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Builds the Google Calendar event body. A task always has at least one of\n// due_at/starts_at -- POST /api/action-items only calls this webhook when\n// that's true -- but this stays defensive since the webhook is a public URL.\nconst t = $json;\nconst start = t.starts_at || t.due_at;\nif (!start) {\n  return { json: { skip: true } };\n}\n\nconst startMs = new Date(start).getTime();\n// starts_at (a real scheduled slot) uses its own duration; due_at (a\n// deadline, not a slot) gets a short 15-minute marker rather than a\n// fabricated block of \"work time\" on the calendar.\nconst durationMinutes = t.starts_at ? (t.duration_minutes || 30) : 15;\nconst endMs = startMs + durationMinutes * 60000;\n\nreturn {\n  json: {\n    skip: false,\n    task_id: t.task_id,\n    event: {\n      summary: t.text,\n      start: { dateTime: new Date(startMs).toISOString(), timeZone: 'Asia/Colombo' },\n      end: { dateTime: new Date(endMs).toISOString(), timeZone: 'Asia/Colombo' },\n    },\n  },\n};"
+      },
+      "id": "e8a0d65f-869c-41ac-9e96-bec0b5a80893",
+      "name": "Build event body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-680, 220]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "skip-cond-1",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3de7e261-e0ca-44f5-9c89-2d18f70459fd",
+      "name": "Has a time?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-440, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"skipped\": true } }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "49b7eceb-22a8-4328-aafc-261f76a62b78",
+      "name": "Respond 200 - skipped",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-440, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/{{ encodeURIComponent($env.GOOGLE_CALENDAR_ID) }}/events",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.event) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "options": {}
+      },
+      "id": "e62c3287-1a1a-411e-bcc8-9e8f9ae67b19",
+      "name": "Create calendar event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-200, 100],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_CALENDAR_OAUTH2_CREDENTIAL_ID",
+          "name": "Google Calendar account"
+        }
+      },
+      "notes": "GOOGLE_CALENDAR_ID is the n8n environment variable holding the target calendar's id (Calendar Settings -> Integrate calendar -> Calendar ID; the same one the ICS URL in /settings points at). Needs a Google Calendar OAuth2 credential with calendar write scope, authorized once through n8n's UI -- an API key alone cannot complete that OAuth consent flow.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE tasks SET google_event_id = $1, external_uid = $2 WHERE id = $3::uuid",
+        "options": {
+          "queryReplacement": "={{ [$json.id, $json.iCalUID, $('Build event body').item.json.task_id] }}"
+        }
+      },
+      "id": "a03e5ee9-f4b2-462f-8531-920fc17b8898",
+      "name": "Save event id",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [40, 100],
+      "notes": "Also writes external_uid = the event's iCalUID, not just google_event_id -- so when ICS Sync (0019) polls the same calendar back, ON CONFLICT (source_id, external_uid) matches this exact row and updates it instead of inserting a duplicate task for the event this workflow just created.",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"google_event_id\": $json.id, \"ical_uid\": $json.iCalUID } }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "3fb1a2f0-3aa4-4a56-9e4b-9a3b9c2b2c11",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [40, -60]
+    }
+  ],
+  "connections": {
+    "Push Webhook": { "main": [[{ "node": "Verify secret", "type": "main", "index": 0 }]] },
+    "Verify secret": { "main": [[{ "node": "Auth ok?", "type": "main", "index": 0 }]] },
+    "Auth ok?": {
+      "main": [
+        [{ "node": "Respond 401", "type": "main", "index": 0 }],
+        [{ "node": "Build event body", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build event body": { "main": [[{ "node": "Has a time?", "type": "main", "index": 0 }]] },
+    "Has a time?": {
+      "main": [
+        [{ "node": "Respond 200 - skipped", "type": "main", "index": 0 }],
+        [{ "node": "Create calendar event", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create calendar event": {
+      "main": [
+        [
+          { "node": "Save event id", "type": "main", "index": 0 },
+          { "node": "Respond 200", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}
