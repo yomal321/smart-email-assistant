@@ -122,7 +122,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE tasks t SET course_id = c.id\nFROM courses c\nWHERE t.course_id IS NULL AND t.source_id = c.source_id AND c.is_active\n  AND t.task_text ILIKE '%' || c.code || '%';",
+        "query": "UPDATE tasks t SET course_id = c.id, source_id = c.source_id\nFROM courses c\nWHERE t.course_id IS NULL AND c.is_active\n  AND t.task_text ILIKE '%' || c.code || '%';",
         "options": {}
       },
       "id": "60b0f7c4-98c0-4467-a7ed-f65d694e8a58",
@@ -130,7 +130,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [-1100, 100],
-      "notes": "Naive substring match (ponytail: exact ILIKE, no fuzzy matching or normalisation) — a course code that never appears verbatim in the feed's SUMMARY is left course_id-null rather than guessed at. Upgrade path: normalise whitespace/case once a real feed shows this missing real matches.",
+      "notes": "Naive substring match (ponytail: exact ILIKE, no fuzzy matching or normalisation) — a course code that never appears verbatim in the feed's SUMMARY is left course_id-null rather than guessed at. Upgrade path: normalise whitespace/case once a real feed shows this missing real matches.\n\nAlso rewrites source_id from the matched course, not just course_id — this is what lets ONE Google Calendar (all three sources pointed at the same ics_url, or just one source configured) route each event to the right university by its course code rather than needing a separate calendar per source. An event with no matching course code (most work items) keeps whatever source the feed was configured under.",
       "notesInFlow": true,
       "credentials": {
         "postgres": {
