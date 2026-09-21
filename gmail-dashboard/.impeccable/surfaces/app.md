@@ -7,6 +7,17 @@ related_targets: []
 
 # Surface brief — Smart Gmail Assistant (application shell, all routes)
 
+> **2026-09 status note:** the FORM/OWN-WORLD direction below (The Departure
+> Board — yellow, 2px radius, Archivo) describes the mail module's original
+> approved direction and is still accurate for `/mail/*`. It is **no longer
+> accurate for the hub** (`/`, `/tasks`, `/plans`, `/notes`, `/bot`), which
+> was redesigned against two user-supplied reference dashboards onto the
+> soft indigo/rounded/shadow system `app/globals.css` actually ships (see
+> `DESIGN.md`, rewritten the same day this note was added). This brief
+> needs a real second surface pass — hub vs. mail as two documented worlds,
+> or one reconciled world — not a quiet edit; flagging it here rather than
+> guessing at the reconciliation.
+
 ## Scope and mode
 
 Mode: **Operate.** The whole application — Overview, Smart Inbox, Email Detail, Action Items, Drafts, Follow-ups, Contacts, Analytics, Rules, Settings. One world across all ten; the Smart Inbox is the surface the world is designed around and every other route inherits from it.

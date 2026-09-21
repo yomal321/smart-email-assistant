@@ -32,9 +32,13 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
+  TrendingUp,
+  CalendarRange,
 } from "lucide-react";
 import { EmptyState } from "@/components/board/empty-state";
 import { formatFullDateTime, formatRelativeToNow } from "@/lib/format/relative-time";
+import { StatCard, IconChip, StatusPill, type Tone } from "@/components/hub/primitives";
+import { WorkflowDetailSheet } from "@/components/hub/workflow-detail-sheet";
 
 type NotificationType = "urgent_alert" | "deadline_nudge" | "morning_brief" | "evening_review";
 
@@ -65,6 +69,16 @@ interface WorkflowHealth {
 
 type BotHealth = { available: true; workflows: WorkflowHealth[] } | { available: false; reason?: string };
 
+// Shared by HealthCard's checklist and WorkflowMap's node dots, so the two
+// views of the same health data never silently disagree on what counts as
+// healthy/failing/unknown.
+function workflowTone(w: WorkflowHealth): Tone {
+  if (!w.found) return "neutral";
+  if (w.lastStatus === "success") return "success";
+  if (w.lastStatus === "error") return "danger";
+  return "neutral";
+}
+
 const TYPE_META: Record<NotificationType, { label: string; icon: React.ElementType; iconClass: string }> = {
   urgent_alert: { label: "Urgent/VIP alert", icon: AlertTriangle, iconClass: "text-signal" },
   deadline_nudge: { label: "Deadline nudge", icon: Clock3, iconClass: "text-ink-tertiary" },
@@ -73,18 +87,6 @@ const TYPE_META: Record<NotificationType, { label: string; icon: React.ElementTy
 };
 
 const ALL_TYPES: NotificationType[] = ["urgent_alert", "deadline_nudge", "morning_brief", "evening_review"];
-
-// Command reference (option A1). Sourced from .specclaw/changes/
-// 012-assistant-bot/spec.md FR5/FR6 — not read from anywhere at runtime,
-// since the commands are fixed n8n logic, not data. Update this list by
-// hand if the Brain workflow's command set ever changes.
-const COMMANDS: { command: string; description: string }[] = [
-  { command: "/today", description: "Tasks due today, plus any open commitments (either direction)." },
-  { command: "/urgent", description: "Unhandled emails with priority = urgent." },
-  { command: "/deadlines", description: "Every open task with a deadline, soonest first." },
-  { command: "/vip", description: "Unhandled emails from a contact flagged VIP." },
-  { command: "/help", description: "Lists these commands, from the bot itself." },
-];
 
 // Push schedule (option A2). The four trigger hours below are read directly
 // out of n8n/workflows/assistant-scheduler.json's Schedule Trigger nodes
@@ -108,8 +110,10 @@ export default function HubBotPage() {
   const [activity, setActivity] = React.useState<BotActivity[]>([]);
   const [activityLoading, setActivityLoading] = React.useState(true);
   const [stats, setStats] = React.useState<BotStats | null>(null);
+  const [statsError, setStatsError] = React.useState(false);
   const [health, setHealth] = React.useState<BotHealth | null>(null);
   const [typeFilter, setTypeFilter] = React.useState<NotificationType | null>(null);
+  const [selectedWorkflow, setSelectedWorkflow] = React.useState<string | null>(null);
 
   const loadActivity = React.useCallback((filter: NotificationType | null, signal?: AbortSignal) => {
     const qs = filter ? `?type=${filter}` : "";
@@ -131,10 +135,25 @@ export default function HubBotPage() {
   React.useEffect(() => {
     const controller = new AbortController();
     fetch("/api/hub/bot-stats", { signal: controller.signal })
-      .then((res) => res.json())
-      .then((body) => setStats(body))
+      .then(async (res) => {
+        const body = await res.json();
+        // The route returns { error: string } with a non-2xx status on
+        // failure (a Supabase hiccup, a cold start) — setting that
+        // error-shaped body as `stats` directly was the actual bug here:
+        // BotStatRow's `!stats` guard treats any truthy object as real
+        // data and reads straight into `stats.freeText`, which an error
+        // body doesn't have. Reproduced live via a hard refresh, not
+        // hypothetical.
+        if (!res.ok || !body || typeof body.freeText !== "object") {
+          setStatsError(true);
+          return;
+        }
+        setStats(body);
+        setStatsError(false);
+      })
       .catch((err) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
+        setStatsError(true);
       });
     fetch("/api/hub/bot-health", { signal: controller.signal })
       .then((res) => res.json())
@@ -146,26 +165,34 @@ export default function HubBotPage() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <div className="rule-b px-4 py-3">
-        <h1 className="text-lg font-semibold text-ink">Assistant bot</h1>
-        <p className="text-sm text-ink-secondary">
-          Telegram, reading the same data as everything else. What it can do, what it&apos;s sent, and whether it&apos;s actually running.
-        </p>
+    <div className="flex h-full flex-col overflow-y-auto bg-ground">
+      <div className="rule-b space-y-4 bg-surface px-4 py-3">
+        <div>
+          <h1 className="text-lg font-semibold text-ink">Assistant bot</h1>
+          <p className="text-sm text-ink-secondary">
+            Telegram, reading the same data as everything else. What it&apos;s sent, and whether it&apos;s actually running.
+          </p>
+        </div>
+        <BotStatRow stats={stats} error={statsError} />
       </div>
 
-      <div className="grid gap-4 p-4 lg:grid-cols-2">
-        <CommandReferenceCard />
-        <PushScheduleCard />
+      <div className="space-y-4 p-4">
+        {/* Both columns stretch to the row's tallest (grid default) so the
+            two bottoms land flush. The earlier dead-space problem was a
+            single short card stretching in isolation; now the right column
+            has two cards worth distributing the leftover height *between*
+            (justify-between + gap, so the gap grows rather than either
+            card's own content getting padded out and looking sparse again). */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PushScheduleCard />
+          <div className="flex h-full flex-col justify-between gap-4">
+            <HealthCard health={health} onSelectWorkflow={setSelectedWorkflow} />
+            <BreakdownCard stats={stats} error={statsError} />
+          </div>
+        </div>
       </div>
 
-      <div className="px-4 pb-2">
-        <HealthCard health={health} />
-      </div>
-
-      <div className="px-4 pb-4">
-        <StatsCard stats={stats} />
-      </div>
+      <WorkflowDetailSheet workflowName={selectedWorkflow} onClose={() => setSelectedWorkflow(null)} />
 
       <div className="rule-b flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <h2 className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Activity</h2>
@@ -247,31 +274,6 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
-function CommandReferenceCard() {
-  return (
-    <div className="rounded-xl border border-rule bg-surface p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <MessageCircleQuestion size={15} className="text-ink-tertiary" />
-        <h2 className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Commands</h2>
-      </div>
-      <dl className="space-y-2.5">
-        {COMMANDS.map((c) => (
-          <div key={c.command} className="flex flex-col gap-0.5">
-            <dt className="font-mono text-sm font-medium text-ink">{c.command}</dt>
-            <dd className="text-xs text-ink-secondary">{c.description}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="mt-3 border-t border-rule pt-3">
-        <p className="text-xs text-ink-secondary">
-          Anything else is treated as a free-text question, answered from a shortlist of your own data by one LLM
-          call — capped so it can never starve the triage/extraction pipeline of its own daily quota.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function PushScheduleCard() {
   return (
     <div className="rounded-xl border border-rule bg-surface p-4">
@@ -303,28 +305,50 @@ function PushScheduleCard() {
   );
 }
 
-function StatsCard({ stats }: { stats: BotStats | null }) {
+// The stat bar, split into individual cards (matching the Today page's
+// StatTiles) and shown at the top of the page rather than buried below the
+// static reference cards — these numbers are what you actually open this
+// page to check.
+function BotStatRow({ stats, error }: { stats: BotStats | null; error: boolean }) {
+  if (error) {
+    return <p className="rounded-xl border border-rule bg-surface p-4 text-sm text-ink-secondary">Stats unavailable right now — try refreshing.</p>;
+  }
   if (!stats) {
-    return <div className="rounded-xl border border-rule bg-surface p-4 text-sm text-ink-secondary">Loading stats…</div>;
+    return (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 animate-pulse rounded-2xl bg-surface-sunk" />
+        ))}
+      </div>
+    );
   }
 
   const budgetUsed = stats.freeText.usedToday >= stats.freeText.cap;
 
   return (
-    <div className="rounded-xl border border-rule bg-surface p-4">
-      <h2 className="mb-3 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Stats</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Last 7 days" value={formatCount(stats.total7d)} />
-        <Stat label="Last 30 days" value={formatCount(stats.total30d)} />
-        <Stat label="All time" value={formatCount(stats.totalAllTime)} />
-        <Stat
-          label="Free-text today"
-          value={`${stats.freeText.usedToday} / ${stats.freeText.cap}`}
-          tone={budgetUsed ? "signal" : undefined}
-        />
-      </div>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <StatCard icon={TrendingUp} tone="info" label="Last 7 days" value={formatCount(stats.total7d)} sublabel="alerts and nudges" />
+      <StatCard icon={CalendarRange} tone="neutral" label="Last 30 days" value={formatCount(stats.total30d)} sublabel="alerts and nudges" />
+      <StatCard icon={BotIcon} tone="primary" label="All time" value={formatCount(stats.totalAllTime)} sublabel="alerts and nudges" />
+      <StatCard
+        icon={MessageCircleQuestion}
+        tone={budgetUsed ? "danger" : "neutral"}
+        label="Free-text today"
+        value={`${stats.freeText.usedToday} / ${stats.freeText.cap}`}
+        sublabel={budgetUsed ? "budget used" : "questions asked"}
+      />
+    </div>
+  );
+}
 
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-rule pt-3">
+// The by-type breakdown and busiest day, kept but demoted to a slim
+// secondary card now that the headline numbers above are the stat bar.
+function BreakdownCard({ stats, error }: { stats: BotStats | null; error: boolean }) {
+  if (error || !stats) return null;
+
+  return (
+    <div className="rounded-xl border border-rule bg-surface p-4">
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
         {ALL_TYPES.map((t) => {
           const meta = TYPE_META[t];
           const Icon = meta.icon;
@@ -338,7 +362,7 @@ function StatsCard({ stats }: { stats: BotStats | null }) {
       </div>
 
       {stats.busiestDay && (
-        <p className="mt-3 text-xs text-ink-tertiary">
+        <p className="mt-2 border-t border-rule pt-2 text-xs text-ink-tertiary">
           Busiest day in the last 30: <span className="tabular font-medium text-ink">{stats.busiestDay.day}</span> with{" "}
           <span className="tabular font-medium text-ink">{stats.busiestDay.count}</span> push
           {stats.busiestDay.count === 1 ? "" : "es"}.
@@ -348,16 +372,7 @@ function StatsCard({ stats }: { stats: BotStats | null }) {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "signal" }) {
-  return (
-    <div>
-      <p className={`tabular text-lg font-semibold ${tone === "signal" ? "text-signal" : "text-ink"}`}>{value}</p>
-      <p className="text-xs text-ink-tertiary">{label}</p>
-    </div>
-  );
-}
-
-function HealthCard({ health }: { health: BotHealth | null }) {
+function HealthCard({ health, onSelectWorkflow }: { health: BotHealth | null; onSelectWorkflow: (name: string) => void }) {
   if (!health) {
     return <div className="rounded-xl border border-rule bg-surface p-4 text-sm text-ink-secondary">Checking live status…</div>;
   }
@@ -377,39 +392,60 @@ function HealthCard({ health }: { health: BotHealth | null }) {
     );
   }
 
+  const issueCount = health.workflows.filter((w) => !w.found || w.lastStatus === "error").length;
+  const allHealthy = issueCount === 0;
+
   return (
     <div className="rounded-xl border border-rule bg-surface p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <CheckCircle2 size={15} className="text-cleared" />
-        <h2 className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">
-          Live status — the four bot workflows in n8n
-        </h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 size={15} className="text-accent-success" />
+          <h2 className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">
+            Live status — the four bot workflows in n8n
+          </h2>
+        </div>
+        {/* An overall read at a glance, not just a checklist — this is what
+            justifies the card existing at all, since "fine" should be
+            visible without reading every row. */}
+        <StatusPill tone={allHealthy ? "success" : "danger"}>
+          {allHealthy ? "All operational" : `${issueCount} issue${issueCount === 1 ? "" : "s"}`}
+        </StatusPill>
       </div>
-      <ul className="space-y-2">
-        {health.workflows.map((w) => (
-          <li key={w.name} className="flex items-center justify-between gap-3 text-sm">
-            <span className="flex items-center gap-2 text-ink">
-              {!w.found ? (
-                <HelpCircle size={14} className="shrink-0 text-ink-tertiary" />
-              ) : w.lastStatus === "success" ? (
-                <CheckCircle2 size={14} className="shrink-0 text-cleared" />
-              ) : w.lastStatus === "error" ? (
-                <XCircle size={14} className="shrink-0 text-signal" />
+      <ul className="space-y-1">
+        {health.workflows.map((w) => {
+          const tone = workflowTone(w);
+          const Icon = !w.found ? HelpCircle : w.lastStatus === "success" ? CheckCircle2 : w.lastStatus === "error" ? XCircle : HelpCircle;
+          const content = (
+            <>
+              <span className="flex items-center gap-2.5 text-ink">
+                <IconChip icon={Icon} tone={tone} size="sm" />
+                {w.name}
+                {w.found && w.active === false && (
+                  <span className="rounded-pill bg-surface-sunk px-1.5 py-0.5 text-[10px] font-medium text-ink-tertiary">
+                    inactive
+                  </span>
+                )}
+              </span>
+              <span className="tabular shrink-0 text-xs text-ink-tertiary">
+                {!w.found ? "not found in n8n" : w.lastExecutionAt ? `Last ran ${formatRelativeToNow(w.lastExecutionAt)}` : "No executions yet"}
+              </span>
+            </>
+          );
+          return (
+            <li key={w.name}>
+              {w.found ? (
+                <button
+                  onClick={() => onSelectWorkflow(w.name)}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-1 py-1.5 text-left text-sm transition-colors hover:bg-surface-sunk"
+                >
+                  {content}
+                </button>
               ) : (
-                <HelpCircle size={14} className="shrink-0 text-ink-tertiary" />
+                <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1.5 text-sm">{content}</div>
               )}
-              {w.name}
-              {w.found && w.active === false && (
-                <span className="rounded-pill bg-surface-sunk px-1.5 py-0.5 text-[10px] font-medium text-ink-tertiary">
-                  inactive
-                </span>
-              )}
-            </span>
-            <span className="tabular shrink-0 text-xs text-ink-tertiary">
-              {!w.found ? "not found in n8n" : w.lastExecutionAt ? `Last ran ${formatRelativeToNow(w.lastExecutionAt)}` : "No executions yet"}
-            </span>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

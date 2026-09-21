@@ -16,12 +16,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SourcePlate } from "@/components/hub/source-plate";
+import { StatusPill, type Tone } from "@/components/hub/primitives";
 import type { ActionItem, Source, TaskType } from "@/lib/data/types";
 
 const STATUS_LABEL: Record<ActionItem["status"], string> = {
   todo: "To do",
   "in-progress": "In progress",
   done: "Done",
+};
+
+const STATUS_TONE: Record<ActionItem["status"], Tone> = {
+  todo: "neutral",
+  "in-progress": "info",
+  done: "success",
 };
 
 const TYPE_LABEL: Record<TaskType, string> = {
@@ -81,61 +88,67 @@ export default function HubTasksPage() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <div className="flex flex-wrap items-center justify-between gap-3 rule-b px-4 py-3">
-        <div>
-          <h1 className="text-lg font-semibold text-ink">Tasks</h1>
-          <p className="text-sm text-ink-secondary">Every commitment in the system — work, both degrees, or typed by hand.</p>
+    <div className="flex h-full flex-col overflow-y-auto bg-ground">
+      <div className="space-y-4 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-lg font-semibold text-ink">Tasks</h1>
+            <p className="text-sm text-ink-secondary">Every commitment in the system — work, both degrees, or typed by hand.</p>
+          </div>
+          <label className="flex items-center gap-1.5 text-xs text-ink-secondary">
+            <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="accent-departure" />
+            Show done
+          </label>
         </div>
-        <label className="flex items-center gap-1.5 text-xs text-ink-secondary">
-          <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="accent-departure" />
-          Show done
-        </label>
+
+        <div className="card-surface p-4">
+          <CreateTaskForm sources={sources} onCreated={(item) => setItems((prev) => [item, ...prev])} />
+        </div>
+
+        <div className="card-surface overflow-hidden">
+          {loading && <p className="px-4 py-6 text-sm text-ink-secondary">Loading tasks…</p>}
+
+          {!loading && visible.length === 0 && (
+            <EmptyState icon={CheckSquare} heading="Nothing here." body="Tasks extracted from mail or added above will show up here." />
+          )}
+
+          {!loading &&
+            visible.map((item) => {
+              const source = item.sourceId ? sourceById.get(item.sourceId) : undefined;
+              return (
+                <div key={item.id} className="flex items-center gap-3 rule-b px-4 py-2.5 last:border-b-0">
+                  {item.status !== "done" && (
+                    <label className="-mx-2.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        onChange={() => markDone(item.id)}
+                        className="h-4 w-4 accent-departure"
+                        aria-label="Mark done"
+                      />
+                    </label>
+                  )}
+                  {source && <SourcePlate source={source} />}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-ink">{item.text}</p>
+                    <p className="text-xs text-ink-tertiary">
+                      {TYPE_LABEL[item.type]}
+                      {source && ` · ${source.name}`}
+                      {item.planId && " · in a plan"}
+                      {` · weight ${item.weight} · ${item.effortMinutes}m`}
+                    </p>
+                  </div>
+                  {item.dueAt && (
+                    <span className="tabular shrink-0 text-xs text-ink-tertiary">
+                      {new Date(item.dueAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+                    </span>
+                  )}
+                  <StatusPill tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</StatusPill>
+                </div>
+              );
+            })}
+        </div>
       </div>
-
-      <CreateTaskForm sources={sources} onCreated={(item) => setItems((prev) => [item, ...prev])} />
-
-      {loading && <p className="px-4 py-6 text-sm text-ink-secondary">Loading tasks…</p>}
-
-      {!loading && visible.length === 0 && (
-        <EmptyState icon={CheckSquare} heading="Nothing here." body="Tasks extracted from mail or added above will show up here." />
-      )}
-
-      {!loading &&
-        visible.map((item) => {
-          const source = item.sourceId ? sourceById.get(item.sourceId) : undefined;
-          return (
-            <div key={item.id} className="flex items-center gap-3 rule-b px-4 py-2.5">
-              {item.status !== "done" && (
-                <input
-                  type="checkbox"
-                  checked={false}
-                  onChange={() => markDone(item.id)}
-                  className="accent-departure"
-                  aria-label="Mark done"
-                />
-              )}
-              {source && <SourcePlate source={source} />}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-ink">{item.text}</p>
-                <p className="text-xs text-ink-tertiary">
-                  {TYPE_LABEL[item.type]}
-                  {source && ` · ${source.name}`}
-                  {item.planId && " · in a plan"}
-                  {` · weight ${item.weight} · ${item.effortMinutes}m`}
-                </p>
-              </div>
-              {item.dueAt && (
-                <span className="tabular shrink-0 text-xs text-ink-tertiary">
-                  {new Date(item.dueAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
-                </span>
-              )}
-              <span className="shrink-0 rounded-full bg-surface-sunk px-2 py-0.5 text-[11px] font-medium text-ink-secondary">
-                {STATUS_LABEL[item.status]}
-              </span>
-            </div>
-          );
-        })}
     </div>
   );
 }
@@ -182,7 +195,7 @@ function CreateTaskForm({ sources, onCreated }: { sources: Source[]; onCreated: 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 rule-b px-4 py-3">
+    <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2">
       <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="What needs doing…" className="h-8 min-w-48 flex-1 rounded-lg" />
       <Select value={type} onValueChange={(v) => setType(v as TaskType)}>
         <SelectTrigger size="sm" className="h-8 w-32 rounded-lg">

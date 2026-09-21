@@ -85,7 +85,7 @@ export function ScheduleTimeline({
           return (
             <div
               key={item.id}
-              className="absolute left-8 right-1 overflow-hidden rounded-md border-l-2 bg-surface-raised px-1.5 py-0.5"
+              className="absolute left-8 right-1 overflow-hidden rounded-lg border-l-[3px] bg-surface-raised px-2 py-1 shadow-card"
               style={{
                 top: `${topPct}%`,
                 height: `${heightPct}%`,
@@ -94,7 +94,13 @@ export function ScheduleTimeline({
               title={`${formatClock(item.startsAt!)} · ${item.text}`}
             >
               <p className="truncate text-[11px] font-medium text-ink">{item.text}</p>
-              <p className="tabular truncate text-[10px] text-ink-tertiary">{formatClock(item.startsAt!)}</p>
+              {/* The border carries the source color, but never color alone —
+                  the code is the paired channel (same rule SourcePlate
+                  enforces everywhere else this codebase shows a source). */}
+              <p className="tabular truncate text-[10px] text-ink-tertiary">
+                {formatClock(item.startsAt!)}
+                {source && ` · ${source.code}`}
+              </p>
             </div>
           );
         })}

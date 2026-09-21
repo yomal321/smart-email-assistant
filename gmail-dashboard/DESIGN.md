@@ -1,58 +1,59 @@
 ---
-name: The Departure Board
-description: Smart Gmail Assistant — an inbox rendered as a continental station departure board, where every message is a scheduled arrival with a platform, a time, and a delay figure.
+name: Personal Command Center
+description: Smart Gmail Assistant — a soft, card-based operate-mode system shared by the hub (Today/Tasks/Plans/Notes/Bot) and the mail module, corrected here to match what actually ships in app/globals.css after the hub's 2026-09 redesign.
 colors:
-  ground: "#F2F0EB"
-  surface: "#FAF9F6"
-  surface-sunk: "#E9E6DF"
-  surface-raised: "#FFFFFF"
-  ink: "#14161A"
-  ink-secondary: "#4A4F57"
-  ink-tertiary: "#6E747E"
-  ink-disabled: "#A0A5AD"
-  signal: "#C8102E"
-  signal-field: "#FBE8EA"
-  departure: "#FFCC00"
-  departure-ink: "#14161A"
-  departure-field: "#FFF4CC"
-  cleared: "#1B7F4C"
-  cleared-field: "#E4F2EA"
-  rule: "#D8D4CB"
-  rule-strong: "#B8B3A8"
-  platform-1-needs-reply: "#FFCC00"
-  platform-2-meeting: "#1B5FA8"
-  platform-3-invoice: "#1B7F4C"
-  platform-4-fyi: "#5B6470"
-  platform-5-newsletter: "#8C8578"
-  platform-6-automated: "#3A3F47"
-  platform-7-spam-ish: "#7A3B2E"
+  ground: "#f5f6fa"
+  surface: "#ffffff"
+  surface-sunk: "#eef0f8"
+  surface-raised: "#ffffff"
+  ink: "#14152a"
+  ink-secondary: "#565a72"
+  ink-tertiary: "#82869f"
+  ink-disabled: "#b7bbce"
+  signal: "#e11d48"
+  signal-field: "#fdeaef"
+  departure: "#4f46e5"
+  departure-ink: "#ffffff"
+  departure-field: "#eeecfd"
+  departure-field-ink: "#4338ca"
+  cleared: "#059669"
+  cleared-field: "#e7f7f1"
+  accent-success: "#047857"
+  accent-warning: "#b45309"
+  rule: "#e6e8f2"
+  rule-strong: "#d3d6e6"
+  platform-1-needs-reply: "#f59e0b"
+  platform-2-meeting: "#2563eb"
+  platform-3-invoice: "#059669"
+  platform-4-fyi: "#64748b"
+  platform-5-newsletter: "#8b5cf6"
+  platform-6-automated: "#94a3b8"
+  platform-7-spam-ish: "#fb7185"
 typography:
   display:
-    fontFamily: "Archivo, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "3.5rem"
+    fontFamily: "var(--font-sans)"
+    fontSize: "2.25rem"
     fontWeight: 700
-    lineHeight: 1.0
-    letterSpacing: "-0.03em"
   heading:
-    fontFamily: "Archivo, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 650
-    lineHeight: 1.25
-    letterSpacing: "-0.015em"
+    fontFamily: "var(--font-sans)"
+    fontSize: "1.125rem"
+    fontWeight: 600
   body:
-    fontFamily: "Archivo, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.9375rem"
+    fontFamily: "var(--font-sans)"
+    fontSize: "0.875rem"
     fontWeight: 400
-    lineHeight: 1.55
-    letterSpacing: "normal"
+    lineHeight: 1.5
   label:
-    fontFamily: "Archivo Narrow, Archivo, ui-sans-serif, sans-serif"
-    fontSize: "0.6875rem"
+    fontFamily: "var(--font-narrow)"
+    fontSize: "0.65625rem"
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "0.08em"
 rounded:
-  none: "2px"
+  sm: "10px"
+  md: "14px"
+  lg: "16px"
+  xl: "20px"
   pill: "999px"
 spacing:
   1: "4px"
@@ -65,102 +66,73 @@ components:
   button-primary:
     backgroundColor: "{colors.departure}"
     textColor: "{colors.departure-ink}"
-    rounded: "{rounded.none}"
-  button-secondary:
-    backgroundColor: "{colors.surface-sunk}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.none}"
-  platform-badge:
-    rounded: "{rounded.none}"
-    typography: "{typography.label}"
-  tone-pill:
+    rounded: "{rounded.md}"
+  card-surface:
+    backgroundColor: "{colors.surface-raised}"
+    rounded: "{rounded.xl}"
+    shadow: "shadow-card"
+    border: "1px solid {colors.rule}"
+  status-pill:
     rounded: "{rounded.pill}"
     typography: "{typography.label}"
 ---
 
-## Overview
+## Overview — read this first
 
-**The Departure Board** rejects the reverse-chronological three-pane mail client that every AI-inbox tool ships. Instead, the inbox is a station concourse: every message is a scheduled departure carrying a platform (category), a time, and a delay figure. The board's whole job is to say what is late and what is boarding now.
+**This file was wrong for most of this project's life.** It described "The Departure Board" — a continental-station-timetable direction with departure-yellow (`#FFCC00`), 2px near-square corners, and Archivo — as if that were the shipping design. It was the *approved* direction at one point (the full rationale still lives in `design-spec.md` §1 and `.impeccable/surfaces/app.md`), but the codebase moved to a different system at some point without this file being updated, and no one caught the drift until the 2026-09 hub redesign. `app/globals.css`'s own header comment has said the truth the whole time: *"Modern, soft, rounded system: indigo primary, warm amber accent, diffuse elevation shadows in place of hard rules."*
 
-Direction: continental European station information design — SBB/DB timetable posters, split-flap boards, the Mondaine platform clock. Seed key `4216a3e4`, mode Operate, code-led. Full rationale, all seven challengers weighed, and the raises this direction earned live in [design-spec.md](design-spec.md) §1 and [.impeccable/surfaces/app.md](.impeccable/surfaces/app.md).
+**What's actually true, verified against the running code:**
+- Primary is indigo `#4f46e5` (`--departure`), not yellow. Radius is 16–20px (`--radius`, `--radius-xl`), not 2px.
+- The typeface is **Plus Jakarta Sans**, not Archivo — `app/fonts.ts` imports `Plus_Jakarta_Sans` for both the `archivo` and `archivoNarrow` exports (the variable *names* are a leftover from the old direction; renaming them touches every import site across the app, so they're left as-is here, documented rather than silently misleading).
+- Shadows are soft and diffuse (`--shadow-card`), never the flat "steel rule" hairlines the old doc describes.
+- The mail module's station vocabulary below — PlatformBadge, DelayFigure, split-flap, the platform rail — is still real, current code (`components/station/*`, `components/board/*`) and hasn't been touched by the hub redesign. It just runs on the indigo/rounded/shadow token set, not the yellow/square one this file used to claim.
 
-The memorable moment is the **delay column**: one right-aligned tabular figure per row, blank when on time, `+3d` in signal red when overdue. A clear inbox reads as a column of whitespace.
-
-Stack: Next.js App Router, TypeScript, Tailwind CSS v4, shadcn/ui, Lucide icons, Archivo + Archivo Narrow (self-hosted via `next/font/google`, no runtime CDN).
+Scope of the 2026-09 redesign: **the hub only** (`/`, `/tasks`, `/plans`, `/notes`, `/bot`) — matched to two reference dashboards the user supplied (an ops "Live Agent Map" and a practice-management dashboard). The mail module (`/mail/*`) is unchanged and is the next pass.
 
 ## Colors
 
-**Strategy: Restrained board, Committed balance.** The board itself is Restrained — colour never touches the text field; sender, subject, and AI summary stay achromatic ink on bone. The Overview's balance band is the one Committed surface, where departure yellow owns a full-width region.
+Three rules, unchanged in spirit from the original direction, corrected in value:
+1. **Colour never touches the text field** in dense list rows — sender, subject, task text stay achromatic ink. Colour lives on badges, plates, chips, and fills.
+2. **Signal red (`--signal`) means consequence** — overdue, destructive, failed. Nothing else.
+3. **Indigo (`--departure`) means "this requires you / this is primary"** — the active nav pill, primary buttons, focus rings, the "waiting on you" emphasis.
 
-Three inviolable rules:
-1. **Colour never touches the text field.** Category and priority live on the rail and badge only.
-2. **Signal red means consequence** — overdue, urgent, failed sync, destructive confirmations. Nothing else.
-3. **Departure yellow means "this requires you"** — primary actions, selection, focus ring, the Needs Reply platform, the waiting-on-you field.
+Every category, priority, and status signal is doubled: a colour paired with a code letter (`SourcePlate`), a word (`StatusPill`), or an icon (`IconChip`) — never colour alone. Verified by re-reading each new hub primitive in greyscale intent, not just by convention.
 
-Each of the seven platforms (categories) is an enamel colour **plus** a two-letter code (`NR`, `MT`, `IV`, `FY`, `NL`, `AU`, `SP`) — never colour alone. Priority is a drawn SVG shape (filled triangle / bar / hollow circle), not a colour. Confidence is encoded as the platform badge's edge style (solid ≥85, faint 70–84, dashed 50–69, routes to Review Queue below 50) — state as line form, verified to survive full greyscale rendering.
+**`--accent-success` / `--accent-warning` exist because `--cleared` and `--platform-1` fail WCAG 4.5:1 as text/icon color on a white surface** (3.77:1 and 2.15:1 respectively, measured) — they were tuned for field/badge fills, not for drawing directly on `--surface-raised`. The two new tokens (`#047857`, `#b45309`) pass 4.5:1+ in both directions (as foreground and as a solid background with white/`--departure-ink` text) in both themes. `--cleared`/`--platform-1` keep their existing mail-module uses unchanged — fixing those in place is scoped to the mail-module pass, not done here.
 
-Dark mode is the illuminated concourse board at night (`data-theme="dark"`), not a simple inversion — near-black ground, lifted signal red (`#FF4D63`) for dark-ground contrast, departure yellow warmed slightly (`#FFD11A`).
+Dark mode (`data-theme="dark"`) is a real second palette, not an inversion — see `app/globals.css`'s `:root[data-theme="dark"]` block for every paired value, including `--accent-success`/`--accent-warning`'s dark variants (already the same values as `--cleared`/`--platform-1`'s dark mode, which were already light enough to read on the dark surface — the failure is light-mode-only).
 
 ## Typography
 
-One family throughout: **Archivo**, an information-design grotesque built for small-size, high-density printing — literally the timetable-poster problem. **Archivo Narrow** carries the platform rail, column heads, and platform/tone codes (`font-narrow`), matching how real destination boards set their compressed labels.
+One family, Plus Jakarta Sans, at two weight sets (`--font-sans` body/UI, `--font-narrow` for compressed uppercase labels — same font, just heavier weights available). Tabular numerals (`.tabular`) are mandatory on every quantity: stat-card values, progress percentages, dates, counts — enforced globally and inherited by `html`.
 
-Fixed rem scale (no fluid/clamp sizing — product UI is viewed at consistent DPI): display 3.5rem/700 reserved solely for the two balance-band counts (the largest figures in the product); headings 1.0625–1.5rem/600–650; body 0.9375rem/400; row text 0.875rem; labels 0.6875rem/700, uppercase, tracked +0.08em.
+## Shapes & Elevation
 
-**Tabular numerals are mandatory** (`font-variant-numeric: tabular-nums`) on every quantity: the delay column, counts, confidence, chart axes, currency. This is enforced globally via `.tabular` and inherited by `html`.
+Radius is generous everywhere: `10px` inputs, `14–16px` buttons and small controls, `20px` (`--radius-xl`, via `.card-surface`) on cards and panels, `999px` pills on badges and tab controls. This directly reverses the old doc's "near-zero radius, station hardware" rule — the actual system is soft by design.
 
-Prose and message bodies clamp to a 68ch measure (`.measure`); board rows and data tables run full width — the deliberate exception that makes the board work.
+Shadows are diffuse and layered (`--shadow-card`, `--shadow-sheet`, `--shadow-popover`), never a hard offset. `.card-surface` (white/dark-surface fill + `--shadow-card` + a 1px `--rule` border) is the one card treatment used everywhere — hub and mail both.
 
-## Layout
+## Hub primitives (`components/hub/primitives.tsx`)
 
-Shell: a 56px concourse bar (search, sync clock, density/theme toggles, account) over a flex row of platform rail + main content. The rail is 216px full at ≥1024px (`lg:`), collapses to a 56px icon rail with tooltips at 768–1023px (`md:`), and becomes an off-canvas Sheet drawer below 768px, triggered from a hamburger button in the concourse bar.
+Extracted 2026-09 from two reference dashboards, matching the pattern language shared by both: tinted icon chips, big bold numbers on white cards, thin progress bars, solid-fill pill tabs, soft-tinted status badges.
 
-**The board row reflows structurally, not just visually, below 900px** (`min-[900px]:` breakpoint): the single-line desktop row (aspect · sender · summary · tone · badge · counts · time · delay) becomes two stacked lines — line 1 carries aspect, sender, platform badge, and the delay figure; line 2 carries the AI summary. Per-row hover actions (archive/snooze/done/star/open-in-Gmail) are desktop-only (`min-[900px]:group-hover:flex` etc.) since there is no hover state on touch. The delay column and the AI summary are the two pieces of information that survive at every width down to 320px; everything else moves into the Board Sheet.
+- **`IconChip`** — a small rounded-square icon in one of six tones (`primary`/`danger`/`success`/`warning`/`info`/`neutral`), background auto-tinted from the tone colour via `color-mix()` rather than a hand-picked field colour per tone. No new tokens needed beyond the two accessibility fixes above.
+- **`StatCard`** — the hero-metric pattern: icon chip, a huge bold tabular value, a muted sub-label, an optional `ProgressBar`. `compact` drops the icon for a denser metric-grid tile.
+- **`ProgressBar`** — thin rounded track + tone fill, overflows into `danger` past 100% (the "over capacity" case every load meter in the hub needs).
+- **`PillTabs`** — a segmented pill control, solid indigo active state. Deliberately not tone-configurable: `--departure`/`--departure-ink` is a co-varying pair built for exactly this (dark mode's `--departure` is a light pastel needing dark text, so `--departure-ink` flips too); the other tones have no matching "-ink" partner, so a generic `tone` prop would silently break in dark mode the moment someone used it for a non-primary tab. Scoped to the one verified-safe pairing.
+- **`StatusPill`** — a soft-tinted badge, colour + word always paired, used for task/plan status everywhere in the hub.
 
-**The Board Sheet replaces a third pane.** Rather than a classic filters/list/detail three-pane layout, the focused row's full detail expands as an absolutely-positioned overlay across the board column only (rail and any standing panel stay visible), with a 35%-opacity scrim dimming the rows behind it. This keeps the AI's reasoning at a readable 68ch measure at every viewport instead of squeezing it into a 300–400px pane. The sheet's own header uses `flex-wrap` with the close button pulled out of flow (`absolute`) so long sender names and subjects wrap onto a second line on narrow screens instead of truncating to near-nothing.
+All five read correctly in both themes — verified by computing actual WCAG contrast ratios for every tone against both a white and a dark card surface (`node` one-off scripts, not eyeballed) rather than assumed from the hex values looking "close enough."
 
-Minimum 16px side gutter maintained via padding on the board wrapper, never a shorthand that would zero the sides.
+## Mail module vocabulary (unchanged, still current)
 
-## Elevation & Depth
-
-Elevation is rare — the board is flat by design. Two levels only, both a real offset + soft blur, never a zero-offset "glow":
-
-```
---shadow-sheet:   0 8px 24px -6px rgba(20,22,26,.18), 0 2px 6px -2px rgba(20,22,26,.12)
---shadow-popover: 0 4px 12px -3px rgba(20,22,26,.16), 0 1px 3px rgba(20,22,26,.10)
-```
-
-Dark mode raises the alpha and adds a 1px `--rule` edge, since shadow alone doesn't separate surfaces on a near-black ground.
-
-Separators are **steel rules**, not flat CSS borders — a 1px line plus a 1px highlight beneath it (`.rule-b`), reading as a rolled steel edge catching light. `--rule-strong` marks section/table-head boundaries.
-
-## Shapes
-
-Radius is near-zero everywhere: `2px` on inputs, buttons, badges, panels, cards — station hardware is not rounded. The one exception is `999px` (pill) on tone pills and count chips, the only rounded elements in the system.
-
-Icons: Lucide at 1.5px stroke throughout (16px in rows/buttons, 20px in rail/toolbars). Station-specific vocabulary with no library equivalent — priority aspects, the platform badge, the split-flap character cell, the Mondaine clock face, confidence-edge styling — is authored SVG at the same 1.5px stroke weight.
-
-## Components
-
-- **PlatformBadge** — a 76×20px enamel plate: platform number in an inset block + two-letter code. Confidence is the badge's own edge (solid/faint/dashed), never a separate colour.
-- **PriorityAspect** — 10px authored SVG shape (filled triangle / bar / hollow circle), placed left of the sender name. Never colour alone.
-- **DelayFigure** — the memorable moment. 64px, right-aligned, tabular, blank when on time. Uses `Flap` to animate only on a genuine value change.
-- **Flap** — the one authored motion moment. Per-character `rotateX` split-flap, 180ms with a 12ms stagger, firing only when its underlying value changed (never on load, navigation, or filter). `prefers-reduced-motion` collapses it to an instant swap via the global reduced-motion rule.
-- **BalanceBand** — the Committed colour surface. Two full-width fields (`WAITING ON YOU` in departure yellow, `WAITING ON THEM` in bone), each a `<Link>`, carrying the two largest figures in the product (`display` token).
-- **BoardRow** — the core list item; see Layout for its two-line mobile reflow.
-- **BoardSheet** — the detail overlay; see Layout.
-- **SyncClock** — an authored SVG Mondaine clock. Its second hand sweeps during `syncing` and holds at 12 the moment a sync completes — the pause is the confirmation, not decoration.
-- **UndoBar** — a bottom-anchored ink-on-bone bar, 8-second auto-dismiss with a draining progress rule, pausable on hover/focus. Every destructive action routes through it.
-- **EmptyState** — centred, ≤44ch, one heading + one sentence + one action, no illustration, no icon over 24px. Each one names *why* it's empty and what would change it (see [board/empty-state.tsx](components/board/empty-state.tsx) call sites).
-- **Charts** (`components/charts/*`) — flat fills, square corners, ruled gridlines, tabular axis labels, a `Show data` table fallback on every chart. Each chart SVG sets its CSS `aspect-ratio` to exactly match its own `viewBox` ratio and omits `preserveAspectRatio="none"` — text and bars must scale uniformly, or axis labels render as illegible non-uniformly-stretched glyphs (a real bug hit and fixed during this build). Platforms 4/5/6 (Fyi/Newsletter/Automated), being close neutrals, additionally carry a pattern fill (diagonal hatch / dot / cross-hatch) so category is never colour-only in a chart either.
+**PlatformBadge** — an enamel-style plate: platform number + two-letter code, confidence encoded as the badge's own edge style (solid/faint/dashed). **PriorityAspect** — an authored SVG shape, never colour alone. **DelayFigure** — right-aligned tabular figure, blank when on time, `+3d` in signal red when overdue, animated via **Flap** (split-flap, fires only on a genuine value change, collapses to an instant swap under `prefers-reduced-motion`). **BalanceBand**, **BoardRow**, **BoardSheet**, **SyncClock**, **UndoBar**, **EmptyState**, and the flat-fill/square-corner **Charts** family are all still exactly as built — see `components/station/*`, `components/board/*`, `components/charts/*`. None of this changed in the hub redesign; it's documented here so the next pass has an accurate starting point instead of the old yellow/2px description.
 
 ## Do's and Don'ts
 
-- **Do** keep the delay column present, right-aligned, and non-collapsing at every width down to 320px — it is the one thing a user should be able to scan without reading a row.
-- **Do** encode every category, priority, tone, and confidence signal in at least two channels (colour + code / shape / edge style / word) — verified by rendering the board in greyscale.
-- **Do** animate the split-flap only on a genuine value change. A flap firing on page load or on a filter change is a defect, not a flourish — it breaks the rule that made the motion meaningful in the first place.
-- **Do** give every SVG chart a `viewBox`-matched CSS `aspect-ratio` and default `preserveAspectRatio`. Never pair `preserveAspectRatio="none"` with a viewBox whose aspect differs from the rendered box — it stretches text non-uniformly into illegible glyphs.
-- **Don't** let colour alone carry meaning anywhere — category, priority, tone, confidence, and chart series all require a non-colour channel too.
-- **Don't** round station hardware. `2px` radius is the system default; reaching for a soft `rounded-lg`/`rounded-xl` card is the category default this system explicitly refuses.
-- **Don't** silently drop a message the classifier can't parse. Route it to the Review Queue with its failure reason intact — the queue is always visible in the rail, even at zero.
-- **Don't** reintroduce a three-pane list/detail layout. The Board Sheet overlay (full reasoning at a 68ch measure, board dimmed behind it) is the considered replacement; see [design-spec.md](design-spec.md) §3.3 for why.
+- **Do** keep every status/category/priority signal doubled (colour + code/word/icon) — this is the one rule that survived the whole redesign unchanged.
+- **Do** compute real contrast ratios for any new tone before shipping it as text or an icon colour on a light or tinted surface — `--cleared`/`--platform-1` are the cautionary example.
+- **Do** use `.card-surface` for any new panel — one elevation system, hub and mail both.
+- **Don't** trust a stale `-ink`/tone pairing across themes without checking both directions (colour-on-surface and white-on-colour) — see `PillTabs`' deliberately narrow `tone` scope.
+- **Don't** reach for `--cleared`/`--platform-1` as a text or icon colour in new hub code — use `--accent-success`/`--accent-warning` instead.
+- **Don't** assume this file is current without cross-checking `app/globals.css` — that file is the ground truth; this one is a description of it that has drifted before and can drift again.

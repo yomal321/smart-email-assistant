@@ -3,6 +3,7 @@
 // worked on today, so mixing them into the daily list buries them
 // (personal-dashboard-spec §7 C2).
 import { SourcePlate } from "@/components/hub/source-plate";
+import { StatusPill } from "@/components/hub/primitives";
 import type { ActionItem, Source } from "@/lib/data/types";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -46,16 +47,16 @@ export function UpcomingAssessments({
         return (
           <div
             key={item.id}
-            className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 ${highlighted ? "border border-departure bg-departure-field" : "border border-transparent"}`}
+            className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 ${highlighted ? "bg-departure-field" : ""}`}
           >
             {source && <SourcePlate source={source} />}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-ink">{item.text}</p>
               <p className="text-xs text-ink-tertiary">{TYPE_LABEL[item.type] ?? item.type}</p>
             </div>
-            <span className={`tabular shrink-0 text-xs font-medium ${overdue ? "text-signal" : "text-ink-secondary"}`}>
+            <StatusPill tone={overdue ? "danger" : remaining === 0 ? "warning" : "neutral"}>
               {overdue ? `overdue ${Math.abs(remaining)}d` : remaining === 0 ? "today" : `in ${remaining}d`}
-            </span>
+            </StatusPill>
           </div>
         );
       })}

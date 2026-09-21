@@ -1,9 +1,11 @@
 // Zone A — four numbers that answer the questions actually asked in the
 // morning, before reading any list (personal-dashboard-spec §7 Zone A).
-// Div/CSS idiom, same track/pill classes as load-rule.tsx's bar, not the
-// whole component — this tile only needs a single unsegmented bar.
-import { TriangleAlert } from "lucide-react";
+// Restyled onto the StatCard primitive (icon chip + huge number + progress
+// bar) extracted from the two reference dashboards — see components/hub/
+// primitives.tsx and DESIGN.md.
+import { Gauge, TriangleAlert, Clock3, CalendarClock } from "lucide-react";
 import { formatRelativeToNow } from "@/lib/format/relative-time";
+import { StatCard } from "@/components/hub/primitives";
 
 export interface HubStats {
   plannedMinutes: number;
@@ -32,54 +34,50 @@ export function StatTiles({
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <div className="card-surface px-3.5 py-3">
-        <p className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Today&apos;s load</p>
-        <p className="tabular mt-1 text-lg font-semibold text-ink">
-          {formatMinutes(stats.plannedMinutes)} <span className="text-sm font-normal text-ink-tertiary">/ {formatMinutes(stats.capacityMinutes)}</span>
-        </p>
-        <div className="relative mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-surface-sunk">
-          <div
-            className={`h-full rounded-pill ${loadPct > 100 ? "bg-signal" : "bg-departure"}`}
-            style={{ width: `${Math.min(100, loadPct)}%` }}
-          />
-        </div>
-        <p className="tabular mt-1 text-xs text-ink-tertiary">{loadPct}%</p>
-      </div>
+      <StatCard
+        icon={Gauge}
+        tone={loadPct > 100 ? "danger" : "primary"}
+        label="Today's load"
+        value={formatMinutes(stats.plannedMinutes)}
+        sublabel={`of ${formatMinutes(stats.capacityMinutes)} capacity · ${loadPct}%`}
+        progressPct={loadPct}
+      />
 
-      <button
+      <StatCard
+        icon={TriangleAlert}
+        tone={stats.overdueCount > 0 ? "danger" : "neutral"}
+        label="Overdue"
+        value={stats.overdueCount}
+        sublabel={stats.overdueCount > 0 ? "needs attention" : "all clear"}
         onClick={() => onFilter?.(stats.overdueCount > 0 ? "overdue" : null)}
         disabled={stats.overdueCount === 0}
-        className="card-surface px-3.5 py-3 text-left disabled:cursor-default"
-      >
-        <p className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Overdue</p>
-        <p className={`tabular mt-1 flex items-center gap-1.5 text-lg font-semibold ${stats.overdueCount > 0 ? "text-signal" : "text-ink"}`}>
-          {stats.overdueCount > 0 && <TriangleAlert size={15} aria-hidden="true" />}
-          {stats.overdueCount}
-        </p>
-      </button>
+      />
 
-      <button
+      <StatCard
+        icon={Clock3}
+        tone={stats.dueIn48hCount > 0 ? "warning" : "neutral"}
+        label="Due in 48h"
+        value={stats.dueIn48hCount}
+        sublabel={stats.dueIn48hCount > 0 ? "coming up fast" : "nothing imminent"}
         onClick={() => onFilter?.(stats.dueIn48hCount > 0 ? "due48h" : null)}
         disabled={stats.dueIn48hCount === 0}
-        className="card-surface px-3.5 py-3 text-left disabled:cursor-default"
-      >
-        <p className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Due in 48h</p>
-        <p className="tabular mt-1 text-lg font-semibold text-ink">{stats.dueIn48hCount}</p>
-      </button>
+      />
 
-      <div className="card-surface px-3.5 py-3">
-        <p className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Next deadline</p>
-        {stats.nextDeadline ? (
-          <>
-            <p className="mt-1 truncate text-sm font-semibold text-ink" title={stats.nextDeadline.text}>
+      <StatCard
+        icon={CalendarClock}
+        tone="info"
+        label="Next deadline"
+        value={stats.nextDeadline ? formatRelativeToNow(stats.nextDeadline.dueAt) : "—"}
+        sublabel={
+          stats.nextDeadline ? (
+            <span className="block truncate" title={stats.nextDeadline.text}>
               {stats.nextDeadline.text}
-            </p>
-            <p className="tabular text-xs text-ink-tertiary">{formatRelativeToNow(stats.nextDeadline.dueAt)}</p>
-          </>
-        ) : (
-          <p className="mt-1 text-sm text-ink-tertiary">Nothing scheduled</p>
-        )}
-      </div>
+            </span>
+          ) : (
+            "Nothing scheduled"
+          )
+        }
+      />
     </div>
   );
 }

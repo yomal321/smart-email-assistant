@@ -9,7 +9,6 @@
 // than three, and the plan file for why the zones are laid out this way.
 
 import * as React from "react";
-import { CalendarClock } from "lucide-react";
 import { dayKey } from "@/lib/day-key";
 import { HubUndoBar } from "@/components/hub/hub-undo-bar";
 import { SourcePlate } from "@/components/hub/source-plate";
@@ -20,6 +19,7 @@ import { SourceBreakdown, type SourceBreakdownRow } from "@/components/hub/sourc
 import { FortnightChart, type DayLoad } from "@/components/hub/fortnight-chart";
 import { UpcomingAssessments } from "@/components/hub/upcoming-assessments";
 import { OverviewStrip, type HubOverview } from "@/components/hub/overview-strip";
+import { PillTabs } from "@/components/hub/primitives";
 import type { ActionItem, Source } from "@/lib/data/types";
 
 interface HubSummary {
@@ -67,6 +67,7 @@ export default function HubHomePage() {
     return new URLSearchParams(window.location.search).get("day");
   });
   const [statFilter, setStatFilter] = React.useState<StatFilter>(null);
+  const [queueTab, setQueueTab] = React.useState<"today" | "week">("today");
   const [nowMinutes, setNowMinutes] = React.useState<number | null>(null);
   const [nowMs, setNowMs] = React.useState<number>(() => Date.now());
   const undoTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -202,99 +203,46 @@ export default function HubHomePage() {
     .filter((group) => group.items.length > 0);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div className="flex h-full flex-col overflow-y-auto bg-ground">
       {loading && (
-        <div className="space-y-3 p-4">
-          <div className="h-16 animate-pulse rounded-xl bg-surface-sunk" />
+        <div className="space-y-4 p-4">
+          <div className="h-24 animate-pulse rounded-2xl bg-surface-sunk" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl bg-surface-sunk" />
+              <div key={i} className="h-28 animate-pulse rounded-2xl bg-surface-sunk" />
             ))}
           </div>
-          <div className="h-64 animate-pulse rounded-xl bg-surface-sunk" />
+          <div className="h-80 animate-pulse rounded-2xl bg-surface-sunk" />
         </div>
       )}
 
       {!loading && summary && (
-        <>
+        <div className="space-y-4 p-4">
           {/* Zone A — status bar */}
-          <div className="rule-b space-y-3 px-4 py-3">
-            <CollisionAlert collision={summary.collision} onSelect={selectDay} />
-            <StatTiles stats={summary.stats} onFilter={(f) => setStatFilter((prev) => (prev === f ? null : f))} />
-            {statFilter && (
-              <button onClick={() => setStatFilter(null)} className="text-xs text-departure hover:underline">
-                Clear filter ({statFilter === "overdue" ? "overdue" : "due in 48h"})
-              </button>
-            )}
+          <CollisionAlert collision={summary.collision} onSelect={selectDay} />
+          <StatTiles stats={summary.stats} onFilter={(f) => setStatFilter((prev) => (prev === f ? null : f))} />
+          {statFilter && (
+            <button onClick={() => setStatFilter(null)} className="-mt-2 text-xs text-departure hover:underline">
+              Clear filter ({statFilter === "overdue" ? "overdue" : "due in 48h"})
+            </button>
+          )}
+
+          {/* Zone D — everything, at a glance. Moved to 2nd, right after the
+              stat tiles, for the same reason Zone C sits high: a cross-module
+              status check shouldn't require scrolling past the whole board. */}
+          <div>
+            <h2 className="mb-2 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Everything</h2>
+            <OverviewStrip overview={summary.overview} />
           </div>
 
-          {/* Zone B — priority queue / schedule / source breakdown */}
-          <div className="rule-b grid grid-cols-1 lg:grid-cols-12 lg:divide-x lg:divide-rule">
-            <div className="lg:col-span-5">
-              {summary.scheduledToday.length > 0 && !statFilter && (
-                <Section title="Scheduled today">
-                  {summary.scheduledToday.map((item) => (
-                    <Row key={item.id} item={item} source={item.sourceId ? sourceById.get(item.sourceId) : undefined}>
-                      <span className="tabular shrink-0 text-xs text-ink-tertiary">{formatClock(item.startsAt!)}</span>
-                    </Row>
-                  ))}
-                </Section>
-              )}
-
-              <Section title="Do today" count={filteredDoToday.length} empty="Nothing ranked for today.">
-                {filteredDoToday.map((item) => (
-                  <Row
-                    key={item.id}
-                    item={item}
-                    source={item.sourceId ? sourceById.get(item.sourceId) : undefined}
-                    completed={completedIds.has(item.id)}
-                    onComplete={() => complete(item)}
-                  >
-                    <DueBadge dueAt={item.dueAt} />
-                  </Row>
-                ))}
-              </Section>
-
-              {filteredThisWeek.length > 0 && (
-                <Section title="This week">
-                  {filteredThisWeek.map((group) => (
-                    <div key={group.day}>
-                      <div className="bg-surface px-4 py-1 font-narrow text-[10px] font-bold uppercase tracking-wider text-ink-tertiary">
-                        {group.label}
-                      </div>
-                      {group.items.map((item) => (
-                        <Row
-                          key={item.id}
-                          item={item}
-                          source={item.sourceId ? sourceById.get(item.sourceId) : undefined}
-                          completed={completedIds.has(item.id)}
-                          onComplete={() => complete(item)}
-                        >
-                          <DueBadge dueAt={item.dueAt} />
-                        </Row>
-                      ))}
-                    </div>
-                  ))}
-                </Section>
-              )}
-            </div>
-
-            <div className="rule-t px-4 py-3 lg:col-span-4 lg:border-t-0">
-              <h2 className="mb-2 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Today&apos;s schedule</h2>
-              <ScheduleTimeline items={summary.scheduledToday} sourceById={sourceById} nowMinutes={nowMinutes} />
-            </div>
-
-            <div className="rule-t px-4 py-3 lg:border-t-0 lg:col-span-3">
-              <h2 className="mb-2 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">By source</h2>
-              <SourceBreakdown rows={sourceBreakdownRows} />
-            </div>
-          </div>
-
-          {/* Zone C — forward view */}
-          <div className="rule-b grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-rule">
-            <div className="px-4 py-3">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Next 14 days</h2>
+          {/* Zone C — forward view. Kept 3rd on the page: the 14-day chart is
+              "the most valuable panel in the app" (personal-dashboard-spec
+              §7 C1) and was getting buried below the priority queue/
+              timeline/source-breakdown row. */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="card-surface p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-ink">Next 14 days</h2>
                 {selectedDay && (
                   <button onClick={() => selectDay(null)} className="text-xs text-departure hover:underline">
                     Clear day
@@ -310,18 +258,97 @@ export default function HubHomePage() {
               />
             </div>
 
-            <div className="rule-t px-4 py-3 lg:border-t-0">
-              <h2 className="mb-2 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Exams &amp; major assessments</h2>
+            <div className="card-surface p-4">
+              <h2 className="mb-3 text-sm font-semibold text-ink">Exams &amp; major assessments</h2>
               <UpcomingAssessments items={summary.upcomingAssessments} sourceById={sourceById} today={dayKey(new Date().toISOString(), summary.timeZone)} />
             </div>
           </div>
 
-          {/* Zone D — everything, at a glance */}
-          <div className="px-4 py-4">
-            <h2 className="mb-2 font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">Everything</h2>
-            <OverviewStrip overview={summary.overview} />
+          {/* Zone B — priority queue / schedule / source breakdown */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="card-surface p-4 lg:col-span-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-ink">Priority queue</h2>
+                <PillTabs
+                  tabs={[
+                    { key: "today", label: "Do today", count: filteredDoToday.length },
+                    { key: "week", label: "This week", count: filteredThisWeek.reduce((n, g) => n + g.items.length, 0) },
+                  ]}
+                  active={queueTab}
+                  onChange={(k) => setQueueTab(k as "today" | "week")}
+                />
+              </div>
+
+              {summary.scheduledToday.length > 0 && !statFilter && (
+                <div className="mb-3 rounded-xl bg-surface-sunk p-2">
+                  <p className="mb-1 px-1 font-narrow text-[10.5px] font-bold uppercase tracking-wider text-ink-tertiary">
+                    Scheduled today
+                  </p>
+                  {summary.scheduledToday.map((item) => (
+                    <Row key={item.id} item={item} source={item.sourceId ? sourceById.get(item.sourceId) : undefined}>
+                      <span className="tabular shrink-0 text-xs text-ink-tertiary">{formatClock(item.startsAt!)}</span>
+                    </Row>
+                  ))}
+                </div>
+              )}
+
+              {queueTab === "today" &&
+                (filteredDoToday.length === 0 ? (
+                  <p className="px-1 py-6 text-center text-sm text-ink-tertiary">Nothing ranked for today.</p>
+                ) : (
+                  <div className="-mx-1">
+                    {filteredDoToday.map((item) => (
+                      <Row
+                        key={item.id}
+                        item={item}
+                        source={item.sourceId ? sourceById.get(item.sourceId) : undefined}
+                        completed={completedIds.has(item.id)}
+                        onComplete={() => complete(item)}
+                      >
+                        <DueBadge dueAt={item.dueAt} />
+                      </Row>
+                    ))}
+                  </div>
+                ))}
+
+              {queueTab === "week" &&
+                (filteredThisWeek.length === 0 ? (
+                  <p className="px-1 py-6 text-center text-sm text-ink-tertiary">Nothing due this week.</p>
+                ) : (
+                  <div className="-mx-1">
+                    {filteredThisWeek.map((group) => (
+                      <div key={group.day}>
+                        <p className="mt-2 px-1 font-narrow text-[10px] font-bold uppercase tracking-wider text-ink-tertiary first:mt-0">
+                          {group.label}
+                        </p>
+                        {group.items.map((item) => (
+                          <Row
+                            key={item.id}
+                            item={item}
+                            source={item.sourceId ? sourceById.get(item.sourceId) : undefined}
+                            completed={completedIds.has(item.id)}
+                            onComplete={() => complete(item)}
+                          >
+                            <DueBadge dueAt={item.dueAt} />
+                          </Row>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+            </div>
+
+            <div className="card-surface p-4 lg:col-span-4">
+              <h2 className="mb-3 text-sm font-semibold text-ink">Today&apos;s schedule</h2>
+              <ScheduleTimeline items={summary.scheduledToday} sourceById={sourceById} nowMinutes={nowMinutes} />
+            </div>
+
+            <div className="card-surface p-4 lg:col-span-3">
+              <h2 className="mb-3 text-sm font-semibold text-ink">By source</h2>
+              <SourceBreakdown rows={sourceBreakdownRows} />
+            </div>
           </div>
-        </>
+        </div>
       )}
 
       {pendingUndo && <HubUndoBar label={pendingUndo.label} onUndo={undoComplete} onDismiss={() => setPendingUndo(null)} />}
@@ -331,31 +358,6 @@ export default function HubHomePage() {
 
 function formatClock(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-function Section({
-  title,
-  count,
-  empty,
-  children,
-}: {
-  title: string;
-  count?: number;
-  empty?: string;
-  children: React.ReactNode;
-}) {
-  const isEmpty = count === 0;
-  return (
-    <div className="rule-b">
-      <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
-        <CalendarClock size={13} className="text-ink-tertiary" />
-        <h2 className="font-narrow text-[11px] font-bold uppercase tracking-wider text-ink-tertiary">
-          {title} {count !== undefined && count > 0 && <span className="tabular">· {count}</span>}
-        </h2>
-      </div>
-      {isEmpty && empty ? <p className="px-4 pb-3 text-sm text-ink-tertiary">{empty}</p> : children}
-    </div>
-  );
 }
 
 function Row({
@@ -380,13 +382,20 @@ function Row({
       <div className="overflow-hidden">
         <div className="flex items-center gap-3 px-4 py-2">
           {onComplete && (
-            <input
-              type="checkbox"
-              checked={!!completed}
-              onChange={onComplete}
-              className="h-4 w-4 shrink-0 accent-departure"
-              aria-label={`Mark "${item.text}" done`}
-            />
+            // The visual box stays 16px (matching the row's own scale), but
+            // the label pads it out to a real tap target — a compromise
+            // between the 44px touch-target guideline and this list's own
+            // density requirement (a full 44px would overlap neighboring
+            // rows in a list this tightly stacked).
+            <label className="-mx-2.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center">
+              <input
+                type="checkbox"
+                checked={!!completed}
+                onChange={onComplete}
+                className="h-4 w-4 accent-departure"
+                aria-label={`Mark "${item.text}" done`}
+              />
+            </label>
           )}
           {source && <SourcePlate source={source} />}
           <div className="min-w-0 flex-1">

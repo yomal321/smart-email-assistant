@@ -33,6 +33,18 @@
   --cleared: #059669;
   --cleared-field: #e7f7f1;
 
+  /* Text/icon-safe success + warning — deliberately distinct from --cleared
+     (3.77:1 on white) and --platform-1 (2.15:1 on white), which are tuned
+     for field/badge fills, not for drawing text or an icon glyph directly
+     on a light surface. Both pass 4.5:1 in both directions (as this color
+     and as white-on-this-color), so components/hub/primitives.tsx's
+     StatusPill, IconChip and PillTabs can use one tone consistently.
+     Scoped to hub work for now — --cleared/--platform-1's own text-context
+     uses elsewhere (components/station/*, mail module) are a pre-existing
+     gap, not introduced here, and are tracked for the mail-module pass. */
+  --accent-success: #047857;
+  --accent-warning: #b45309;
+
   /* Soft rules — a quiet 1px separator, no bevel */
   --rule: #e6e8f2;
   --rule-highlight: transparent;
@@ -146,6 +158,8 @@
   --color-departure-field: var(--departure-field);
   --color-cleared: var(--cleared);
   --color-cleared-field: var(--cleared-field);
+  --color-accent-success: var(--accent-success);
+  --color-accent-warning: var(--accent-warning);
 
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);

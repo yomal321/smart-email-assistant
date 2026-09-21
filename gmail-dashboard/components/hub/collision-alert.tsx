@@ -9,6 +9,7 @@
 // is never the only signal — see components/station/priority-aspect.tsx for
 // the same rule applied elsewhere in this codebase).
 import { TriangleAlert } from "lucide-react";
+import { IconChip } from "@/components/hub/primitives";
 
 export interface Collision {
   startDay: string;
@@ -30,10 +31,11 @@ export function CollisionAlert({ collision, onSelect }: { collision: Collision |
   return (
     <button
       onClick={() => onSelect?.(collision.startDay)}
-      className="flex w-full items-start gap-2.5 rounded-xl border border-signal bg-signal-field px-3.5 py-2.5 text-left transition-opacity hover:opacity-90"
+      className="card-surface flex w-full items-start gap-3 p-4 text-left transition-shadow hover:shadow-popover"
+      style={{ background: "color-mix(in srgb, var(--signal) 6%, var(--surface-raised))" }}
     >
-      <TriangleAlert size={16} className="mt-0.5 shrink-0 text-signal" aria-hidden="true" />
-      <p className="text-sm text-ink">
+      <IconChip icon={TriangleAlert} tone="danger" />
+      <p className="pt-0.5 text-sm text-ink">
         <span className="font-semibold">Heavy week ahead — {collision.label}.</span>{" "}
         <span className="tabular text-ink-secondary">
           {hours(collision.totalMinutes)} of work

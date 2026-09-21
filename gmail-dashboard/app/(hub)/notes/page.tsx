@@ -18,36 +18,36 @@ export default function NotesPage() {
   const { data: notes, loading, create, update, remove } = useNotes(query);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <div className="rule-b px-4 py-3">
-        <h1 className="text-lg font-semibold text-ink">Notes</h1>
-        <p className="text-sm text-ink-secondary">Quick capture for anything that isn&apos;t an email.</p>
-      </div>
+    <div className="flex h-full flex-col overflow-y-auto bg-ground">
+      <div className="space-y-4 p-4">
+        <div>
+          <h1 className="text-lg font-semibold text-ink">Notes</h1>
+          <p className="text-sm text-ink-secondary">Quick capture for anything that isn&apos;t an email.</p>
+        </div>
 
-      <CaptureForm onCreate={create} />
+        <div className="card-surface space-y-3 p-4">
+          <CaptureForm onCreate={create} />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search notes…"
+            className="h-8 rounded-lg"
+          />
+        </div>
 
-      <div className="rule-b px-4 py-2">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search notes…"
-          className="h-8 rounded-lg"
-        />
-      </div>
+        <div className="card-surface overflow-hidden">
+          {loading && <p className="px-4 py-6 text-sm text-ink-secondary">Loading notes…</p>}
 
-      {loading && <p className="px-4 py-6 text-sm text-ink-secondary">Loading notes…</p>}
+          {!loading && notes.length === 0 && (
+            <EmptyState
+              icon={StickyNote}
+              heading={query ? "No notes match." : "Nothing captured yet."}
+              body={query ? "Try a different search term." : "An idea, a decision, a piece of reference material — capture it above."}
+            />
+          )}
 
-      {!loading && notes.length === 0 && (
-        <EmptyState
-          icon={StickyNote}
-          heading={query ? "No notes match." : "Nothing captured yet."}
-          body={query ? "Try a different search term." : "An idea, a decision, a piece of reference material — capture it above."}
-        />
-      )}
-
-      <div>
-        {!loading &&
-          notes.map((note) => <NoteRow key={note.id} note={note} onUpdate={update} onDelete={remove} />)}
+          {!loading && notes.map((note) => <NoteRow key={note.id} note={note} onUpdate={update} onDelete={remove} />)}
+        </div>
       </div>
     </div>
   );
@@ -71,7 +71,7 @@ function CaptureForm({ onCreate }: { onCreate: ReturnType<typeof useNotes>["crea
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 rule-b px-4 py-3">
+    <form onSubmit={handleSubmit} className="space-y-2">
       <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" className="h-8 rounded-lg" />
       <Textarea
         value={body}
@@ -103,7 +103,7 @@ function NoteRow({
 
   if (editing) {
     return (
-      <div className="space-y-2 rule-b px-4 py-3">
+      <div className="space-y-2 rule-b px-4 py-3 last:border-b-0">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-8 rounded-lg" placeholder="Title (optional)" />
         <Textarea value={body} onChange={(e) => setBody(e.target.value)} className="min-h-16 rounded-lg text-sm" />
         <div className="flex justify-end gap-2">
@@ -126,7 +126,7 @@ function NoteRow({
   }
 
   return (
-    <div className="flex items-start gap-3 rule-b px-4 py-3 cursor-pointer hover:bg-surface-sunk" onClick={() => setEditing(true)}>
+    <div className="flex items-start gap-3 rule-b px-4 py-3 last:border-b-0 cursor-pointer hover:bg-surface-sunk" onClick={() => setEditing(true)}>
       <div className="min-w-0 flex-1">
         {note.title && <p className="truncate text-sm font-medium text-ink">{note.title}</p>}
         <p className="line-clamp-2 text-sm text-ink-secondary">{note.body}</p>
