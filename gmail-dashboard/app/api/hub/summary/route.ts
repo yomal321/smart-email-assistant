@@ -111,7 +111,14 @@ export async function GET() {
   const today = dayKey(now.toISOString(), timeZone);
   const dailyCapacityMinutes = settingsRow?.daily_capacity_minutes ?? 300;
 
-  const items = ((taskRows ?? []) as unknown as TaskRow[]).map(mapTaskRowToActionItem);
+  // Phase 7 Wave 2 — 'capture' rows are undecided items with no due
+  // date/weight/effort judgement made yet; ranking or workload-charting
+  // them would inject noise into both. Split them out once, here, so every
+  // computation below (ranking, fortnight load, collision detection, stat
+  // counts) stays untouched and simply never sees them.
+  const allItems = ((taskRows ?? []) as unknown as TaskRow[]).map(mapTaskRowToActionItem);
+  const captureItems = allItems.filter((i) => i.type === "capture");
+  const items = allItems.filter((i) => i.type !== "capture");
 
   const scheduledToday = items
     .filter((i) => i.startsAt !== null && dayKey(i.startsAt, timeZone) === today)
@@ -303,6 +310,7 @@ export async function GET() {
 
   return NextResponse.json({
     timeZone,
+    captureItems,
     scheduledToday,
     doToday,
     thisWeek,

@@ -2,7 +2,7 @@
 // resource, one mapper — mirrors task-mapping.ts's convention rather than a
 // shared "resource mapper" abstraction (design.md Key Decisions).
 import "server-only";
-import type { Plan, PlanStatus } from "@/lib/data/types";
+import type { Plan, PlanCategory, PlanStatus } from "@/lib/data/types";
 
 export interface PlanRow {
   id: string;
@@ -10,6 +10,7 @@ export interface PlanRow {
   description: string | null;
   status: PlanStatus;
   target_date: string | null;
+  category: PlanCategory | null; // 0021_life_layer.sql
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +29,7 @@ export function mapPlanRowToPlan(row: PlanRow, tasks: PlanTaskRow[]): Plan {
     description: row.description,
     status: row.status,
     targetDate: row.target_date,
+    category: row.category,
     taskCount: tasks.length,
     doneCount: tasks.filter((t) => t.status === "done").length,
     createdAt: row.created_at,

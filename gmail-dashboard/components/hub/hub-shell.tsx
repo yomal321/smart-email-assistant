@@ -9,21 +9,53 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutDashboard, CheckSquare, CalendarDays, Target, StickyNote, Bot, Mail, Moon, Sun, Monitor, BookOpen, Settings } from "lucide-react";
+import { Menu, LayoutDashboard, CheckSquare, CalendarDays, Target, StickyNote, Bot, Mail, Moon, Sun, Monitor, BookOpen, Settings, Flame, Award, ClipboardCheck } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { usePreferences } from "@/components/board/preferences-provider";
 import { cn } from "@/lib/utils";
 
-const HUB_ROUTES = [
-  { href: "/", label: "Today", icon: LayoutDashboard },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/plans", label: "Plans", icon: Target },
-  { href: "/notes", label: "Notes", icon: StickyNote },
-  { href: "/courses", label: "Courses", icon: BookOpen },
-  { href: "/bot", label: "Bot", icon: Bot },
-  { href: "/settings", label: "Settings", icon: Settings },
+// Grouped by domain, not one flat list of 10 — same boundary the hub
+// already tracks internally (work/academic sources, plans-as-goals,
+// education vs. career). `label: null` renders with no header, for Today
+// (the home screen, not a category member). Hierarchy comes from
+// typography and whitespace only — no per-group color. This app has one
+// accent color (--departure) and it means exactly one thing, "selected";
+// spending five more hues on section labels would blur that and fight the
+// monochrome-sidebar convention (structure via weight/spacing/dividers,
+// not hue) rather than reinforce it.
+const HUB_ROUTES: { label: string | null; routes: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
+  { label: null, routes: [{ href: "/", label: "Today", icon: LayoutDashboard }] },
+  {
+    label: "Plan",
+    routes: [
+      { href: "/tasks", label: "Tasks", icon: CheckSquare },
+      { href: "/calendar", label: "Calendar", icon: CalendarDays },
+    ],
+  },
+  {
+    label: "Life",
+    routes: [
+      { href: "/plans", label: "Plans", icon: Target },
+      { href: "/notes", label: "Notes", icon: StickyNote },
+      { href: "/habits", label: "Habits", icon: Flame },
+    ],
+  },
+  {
+    label: "Education & Career",
+    routes: [
+      { href: "/courses", label: "Courses", icon: BookOpen },
+      { href: "/certifications", label: "Certifications", icon: Award },
+    ],
+  },
+  { label: "Insights", routes: [{ href: "/review", label: "Review", icon: ClipboardCheck }] },
+  {
+    label: "System",
+    routes: [
+      { href: "/bot", label: "Bot", icon: Bot },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export function HubShell({ children }: { children: React.ReactNode }) {
@@ -93,35 +125,45 @@ function HubRail({ onNavigate }: { onNavigate?: () => void }) {
       className="flex h-full w-56 flex-col overflow-y-auto scrollbar-none border-r border-rule bg-surface-sunk px-3 py-4"
       aria-label="Primary"
     >
-      <div className="flex flex-col gap-1">
-        {HUB_ROUTES.map((r) => {
-          const active = pathname === r.href;
-          return (
-            <Link
-              key={r.href}
-              href={r.href}
-              onClick={onNavigate}
-              className={cn(
-                "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors",
-                active
-                  ? "bg-departure-field font-semibold text-departure-field-ink"
-                  : "text-ink-secondary hover:bg-surface-raised hover:text-ink"
-              )}
-            >
-              {active && (
-                <span
-                  className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full"
-                  style={{ background: "var(--departure)" }}
-                />
-              )}
-              <r.icon
-                size={17}
-                className={cn("shrink-0", active ? "text-departure" : "text-ink-tertiary group-hover:text-ink")}
-              />
-              <span className="flex-1 truncate">{r.label}</span>
-            </Link>
-          );
-        })}
+      <div className="flex flex-col gap-4">
+        {HUB_ROUTES.map((group) => (
+          <div key={group.label ?? "home"} className="flex flex-col gap-1">
+            {group.label && (
+              <p className="mx-1 mb-0.5 flex items-center gap-1.5 px-1.5 font-narrow text-[10.5px] font-extrabold uppercase tracking-widest text-ink-secondary">
+                <span className="h-2.5 w-0.5 shrink-0 rounded-full bg-ink-tertiary" aria-hidden="true" />
+                {group.label}
+              </p>
+            )}
+            {group.routes.map((r) => {
+              const active = pathname === r.href;
+              return (
+                <Link
+                  key={r.href}
+                  href={r.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition-colors",
+                    active
+                      ? "bg-departure-field font-semibold text-departure-field-ink"
+                      : "text-ink-secondary hover:bg-surface-raised hover:text-ink"
+                  )}
+                >
+                  {active && (
+                    <span
+                      className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full"
+                      style={{ background: "var(--departure)" }}
+                    />
+                  )}
+                  <r.icon
+                    size={17}
+                    className={cn("shrink-0", active ? "text-departure" : "text-ink-tertiary group-hover:text-ink")}
+                  />
+                  <span className="flex-1 truncate">{r.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <div className="my-3 border-t border-rule" />

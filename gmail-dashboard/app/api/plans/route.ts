@@ -10,7 +10,9 @@ import { mapPlanRowToPlan, type PlanRow, type PlanTaskRow } from "@/lib/data/pla
 
 // Mirrors PlanRow's field list exactly (lib/data/plan-mapping.ts) — never
 // `select("*")` (field-minimization convention, NFR6).
-const SELECT_COLUMNS = "id, title, description, status, target_date, created_at, updated_at";
+const SELECT_COLUMNS = "id, title, description, status, target_date, category, created_at, updated_at";
+
+const PLAN_CATEGORIES = ["education", "career", "financial", "personal", "technical", "fitness", "projects"];
 
 export async function GET() {
   const supabase = getSupabaseServerClient();
@@ -45,6 +47,7 @@ export async function POST(request: Request) {
   const title: unknown = body?.title;
   const description: unknown = body?.description ?? null;
   const targetDate: unknown = body?.targetDate ?? null;
+  const category: unknown = body?.category ?? null; // 0021_life_layer.sql
 
   if (typeof title !== "string" || title.trim().length === 0) {
     return NextResponse.json({ error: "title must be a non-empty string" }, { status: 400 });
@@ -54,6 +57,9 @@ export async function POST(request: Request) {
   }
   if (targetDate !== null && typeof targetDate !== "string") {
     return NextResponse.json({ error: "targetDate must be a string or null" }, { status: 400 });
+  }
+  if (category !== null && !PLAN_CATEGORIES.includes(category as string)) {
+    return NextResponse.json({ error: `category must be null or one of ${PLAN_CATEGORIES.join(", ")}` }, { status: 400 });
   }
 
   const supabase = getSupabaseServerClient();
@@ -69,6 +75,7 @@ export async function POST(request: Request) {
       title,
       description,
       target_date: targetDate,
+      category,
     })
     .select(SELECT_COLUMNS)
     .single();

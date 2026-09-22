@@ -10,8 +10,9 @@ import { usePlans } from "@/lib/data/use-plans";
 import { EmptyState } from "@/components/board/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill, ProgressBar, type Tone } from "@/components/hub/primitives";
-import type { Plan, PlanStatus } from "@/lib/data/types";
+import type { Plan, PlanCategory, PlanStatus } from "@/lib/data/types";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
   active: "Active",
@@ -19,6 +20,21 @@ const STATUS_LABEL: Record<PlanStatus, string> = {
   done: "Done",
   archived: "Archived",
 };
+
+// 0021_life_layer.sql — the spec's Goal categories, optional.
+const CATEGORY_LABEL: Record<PlanCategory, string> = {
+  education: "Education",
+  career: "Career",
+  financial: "Financial",
+  personal: "Personal",
+  technical: "Technical",
+  fitness: "Fitness",
+  projects: "Projects",
+};
+
+// Radix Select rejects an empty-string item value — "none" stands in for
+// "no category" and is translated back to null at the call site.
+const NO_CATEGORY = "none";
 
 const STATUS_FILTERS: Array<PlanStatus | "all"> = ["all", "active", "paused", "done", "archived"];
 
@@ -97,6 +113,7 @@ function PlanRow({ plan }: { plan: Plan }) {
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium text-ink">{plan.title}</p>
           <StatusPill tone={STATUS_TONE[plan.status]}>{STATUS_LABEL[plan.status]}</StatusPill>
+          {plan.category && <StatusPill tone="neutral">{CATEGORY_LABEL[plan.category]}</StatusPill>}
         </div>
         {plan.description && <p className="mt-0.5 truncate text-xs text-ink-tertiary">{plan.description}</p>}
       </div>
@@ -119,6 +136,7 @@ function PlanRow({ plan }: { plan: Plan }) {
 
 function CreatePlanForm({ onCreate }: { onCreate: ReturnType<typeof usePlans>["create"] }) {
   const [title, setTitle] = React.useState("");
+  const [category, setCategory] = React.useState<string>(NO_CATEGORY);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -127,10 +145,14 @@ function CreatePlanForm({ onCreate }: { onCreate: ReturnType<typeof usePlans>["c
     if (!title.trim()) return;
     setSaving(true);
     setError(null);
-    const result = await onCreate({ title });
+    const result = await onCreate({
+      title,
+      category: category === NO_CATEGORY ? null : (category as PlanCategory),
+    });
     setSaving(false);
     if (result.ok) {
       setTitle("");
+      setCategory(NO_CATEGORY);
     } else {
       setError(result.error ?? "failed to create plan");
     }
@@ -144,6 +166,19 @@ function CreatePlanForm({ onCreate }: { onCreate: ReturnType<typeof usePlans>["c
         placeholder="New plan title…"
         className="h-8 flex-1 rounded-lg"
       />
+      <Select value={category} onValueChange={setCategory}>
+        <SelectTrigger size="sm" className="h-8 w-36 rounded-lg">
+          <SelectValue placeholder="Category" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_CATEGORY}>No category</SelectItem>
+          {(Object.keys(CATEGORY_LABEL) as PlanCategory[]).map((c) => (
+            <SelectItem key={c} value={c}>
+              {CATEGORY_LABEL[c]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button type="submit" size="sm" className="h-8 rounded-lg" disabled={!title.trim() || saving}>
         {saving ? "Creating…" : "+ New plan"}
       </Button>

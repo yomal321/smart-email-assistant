@@ -5,7 +5,7 @@
 // optimistic update with rollback on failure (design.md "Technical Approach").
 
 import { useEffect, useState } from "react";
-import type { Plan, PlanStatus } from "./types";
+import type { Plan, PlanCategory, PlanStatus } from "./types";
 
 export interface UsePlansResult {
   data: Plan[];
@@ -15,10 +15,17 @@ export interface UsePlansResult {
     title: string;
     description?: string | null;
     targetDate?: string | null;
+    category?: PlanCategory | null;
   }) => Promise<{ ok: boolean; error?: string }>;
   update: (
     id: string,
-    patch: { title?: string; description?: string | null; status?: PlanStatus; targetDate?: string | null }
+    patch: {
+      title?: string;
+      description?: string | null;
+      status?: PlanStatus;
+      targetDate?: string | null;
+      category?: PlanCategory | null;
+    }
   ) => Promise<{ ok: boolean; error?: string }>;
   remove: (id: string) => Promise<{ ok: boolean; error?: string }>;
 }
@@ -56,7 +63,12 @@ export function usePlans(): UsePlansResult {
     return () => controller.abort();
   }, []);
 
-  async function create(input: { title: string; description?: string | null; targetDate?: string | null }) {
+  async function create(input: {
+    title: string;
+    description?: string | null;
+    targetDate?: string | null;
+    category?: PlanCategory | null;
+  }) {
     try {
       const res = await fetch("/api/plans", {
         method: "POST",
@@ -74,7 +86,13 @@ export function usePlans(): UsePlansResult {
 
   async function update(
     id: string,
-    patch: { title?: string; description?: string | null; status?: PlanStatus; targetDate?: string | null }
+    patch: {
+      title?: string;
+      description?: string | null;
+      status?: PlanStatus;
+      targetDate?: string | null;
+      category?: PlanCategory | null;
+    }
   ) {
     const previous = data;
     setData((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));

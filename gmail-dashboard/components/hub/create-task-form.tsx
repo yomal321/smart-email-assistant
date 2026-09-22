@@ -19,6 +19,9 @@ export const TYPE_LABEL: Record<TaskType, string> = {
   ca: "CA",
   exam: "Exam",
   admin: "Admin",
+  // 0021_life_layer.sql — normally created only via the quick-capture strip
+  // (components/hub/quick-capture.tsx), but a manual pick here is harmless.
+  capture: "Capture",
 };
 
 export function CreateTaskForm({

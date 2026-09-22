@@ -9,7 +9,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { mapPlanRowToPlan, type PlanRow } from "@/lib/data/plan-mapping";
 import { mapTaskRowToActionItem, type TaskRow } from "@/lib/data/task-mapping";
 
-const SELECT_COLUMNS = "id, title, description, status, target_date, created_at, updated_at";
+const SELECT_COLUMNS = "id, title, description, status, target_date, category, created_at, updated_at";
 
 // Mirrors TaskRow's field list exactly (lib/data/task-mapping.ts) — never
 // `select("*")`.
@@ -51,6 +51,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (body?.description !== undefined) update.description = body.description;
   if (body?.status !== undefined) update.status = body.status;
   if (body?.targetDate !== undefined) update.target_date = body.targetDate;
+  if (body?.category !== undefined) update.category = body.category; // 0021_life_layer.sql
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json(

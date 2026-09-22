@@ -129,7 +129,9 @@ export interface Message {
 // email-extracted or manually-typed item is 'task'; the rest come from a
 // source/course the user assigns by hand (see project_personal_dashboard_spec
 // in project memory for why this is one discriminated table, not six).
-export type TaskType = "task" | "meeting" | "call" | "assignment" | "quiz" | "ca" | "exam" | "admin";
+// 'capture' (0021_life_layer.sql) is the odd one out — an undecided item with
+// no type judgement made yet; GET /api/hub/summary excludes it from ranking.
+export type TaskType = "task" | "meeting" | "call" | "assignment" | "quiz" | "ca" | "exam" | "admin" | "capture";
 
 export interface ActionItem {
   id: string;
@@ -175,12 +177,19 @@ export interface Course {
 
 export type PlanStatus = "active" | "paused" | "done" | "archived";
 
+// 0021_life_layer.sql — the spec's Goal categories. A plan already is a
+// goal (title/target/status/derived progress); this is just the one field
+// that shape had and plans didn't. Optional, so every pre-Phase-7 plan is
+// simply uncategorized.
+export type PlanCategory = "education" | "career" | "financial" | "personal" | "technical" | "fitness" | "projects";
+
 export interface Plan {
   id: string;
   title: string;
   description: string | null;
   status: PlanStatus;
   targetDate: string | null;
+  category: PlanCategory | null;
   // Derived at read time from this plan's tasks, never stored (spec.md FR5).
   taskCount: number;
   doneCount: number;
@@ -304,4 +313,40 @@ export interface SearchResult {
   id: string;
   title: string;
   subtitle: string;
+}
+
+// 0021_life_layer.sql (Phase 7, Wave 3) — kept thin per spec.md's own
+// warning against overbuilding a habit tracker: no per-habit reminders, no
+// stats page, just a name/cadence and the log rows that back it.
+export type HabitCadence = "daily" | "weekly";
+
+export interface Habit {
+  id: string;
+  name: string;
+  cadence: HabitCadence;
+  archivedAt: string | null;
+  createdAt: string;
+  // Day-keys (lib/day-key.ts format) logged within whatever window
+  // GET /api/habits fetched — currently the last 14 days. Streak is derived
+  // from this at read time (lib/streak.ts), never stored.
+  loggedDays: string[];
+}
+
+// 0021_life_layer.sql (Phase 7, Wave 4) — cert-specific facts only; the prep
+// work is a Plan (category='career') linked via planId, not a second
+// milestone system.
+export type CertificationStatus = "planned" | "studying" | "scheduled" | "passed" | "failed" | "expired";
+
+export interface Certification {
+  id: string;
+  planId: string | null;
+  name: string;
+  provider: string | null;
+  status: CertificationStatus;
+  examDate: string | null;
+  expiryDate: string | null;
+  cost: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

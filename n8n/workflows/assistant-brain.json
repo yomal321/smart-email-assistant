@@ -63,7 +63,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "// FR5 (+/add, added later): recognizes six slash commands; anything else (including an\n// unrecognized slash command, per spec.md Edge Cases) falls through to the\n// free-text path further down this workflow.\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst settings = $json || {};\nconst chatId = trigger.chat_id;\nconst rawText = trigger.text === null || trigger.text === undefined ? '' : String(trigger.text);\nconst text = rawText.trim();\nconst timezone = settings.timezone || 'Asia/Colombo';\n\nconst KNOWN_COMMANDS = ['/today', '/urgent', '/deadlines', '/vip', '/help', '/add'];\nconst firstWord = text.split(/\\s+/)[0].toLowerCase();\nconst command = KNOWN_COMMANDS.includes(firstWord) ? firstWord : null;\n\nreturn { json: { chat_id: chatId, text, command, timezone } };\n"
+        "jsCode": "// FR5 (+/add, /week, added later): recognizes seven slash commands; anything else (including an\n// unrecognized slash command, per spec.md Edge Cases) falls through to the\n// free-text path further down this workflow.\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst settings = $json || {};\nconst chatId = trigger.chat_id;\nconst rawText = trigger.text === null || trigger.text === undefined ? '' : String(trigger.text);\nconst text = rawText.trim();\nconst timezone = settings.timezone || 'Asia/Colombo';\n\nconst KNOWN_COMMANDS = ['/today', '/urgent', '/deadlines', '/vip', '/help', '/add', '/week'];\nconst firstWord = text.split(/\\s+/)[0].toLowerCase();\nconst command = KNOWN_COMMANDS.includes(firstWord) ? firstWord : null;\n\nreturn { json: { chat_id: chatId, text, command, timezone } };\n"
       },
       "notes": "Reads chat_id/text from the trigger by node-name reference (this node sits two steps downstream of it) and timezone from $json (Read settings' pass-through). Every downstream node in this workflow reads chat_id/text/timezone from THIS node by name, not from the trigger directly."
     },
@@ -413,7 +413,7 @@
         },
         "options": {}
       },
-      "notes": "Reached on '/vip?' false. True (index 0) -> Format /help reply. False (index 1) -> /add? -- checked before the free-text path takes over (added later; see /add?'s own notes)."
+      "notes": "Reached on '/vip?' false. True (index 0) -> Format /help reply. False (index 1) -> /week? (added later, ahead of /add? and the free-text path)."
     },
     {
       "id": "b1a2c3d4-0012-4a1a-9c1a-000000000012",
@@ -427,7 +427,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "const chatId = $json.chat_id;\nconst reply = '<b>Commands</b>\\n\\n/today - tasks due today + open commitments\\n/urgent - unhandled urgent emails\\n/deadlines - open tasks with a deadline, soonest first\\n/vip - unhandled emails from VIP contacts\\n/help - this message\\n\\nAnything else is treated as a free-text question (limited per day).';\nreturn { json: { chat_id: chatId, reply_text: reply } };\n"
+        "jsCode": "const chatId = $json.chat_id;\nconst reply = '<b>Commands</b>\\n\\n/today - tasks due today + open commitments\\n/urgent - unhandled urgent emails\\n/deadlines - open tasks with a deadline, soonest first\\n/vip - unhandled emails from VIP contacts\\n/week - completed/missed this week + next deadline\\n/add <text> [today|tomorrow] - add a task\\n/help - this message\\n\\nAnything else is treated as a free-text question (limited per day).';\nreturn { json: { chat_id: chatId, reply_text: reply } };\n"
       },
       "notes": "FR5 /help. No DB read needed -- $json here is still 'Detect slash command's output, passed straight through by the IF node."
     },
@@ -721,7 +721,7 @@
         -200
       ],
       "parameters": {
-        "content": "## Assistant Brain\n\nChannel-agnostic: { chat_id, text } in, { reply_text } out. Five slash commands (/today, /urgent, /deadlines, /vip, /help) each run one fixed parameterized query -- zero LLM cost. Anything else is a free-text question: an independent daily cap (workflow static data, FR8), then a search_vector + tasks + commitments shortlist, a delimited prompt (FR7, same convention as 006-draft-generation), and exactly one LLM Gateway call (FR9, unmodified). Every branch converges on 'Return result' before the trigger returns (FR10, L29's convergence lesson).\n\nSee .specclaw/changes/012-assistant-bot/spec.md (FR1, FR5-FR10) and design.md (Architecture, Key Decisions).",
+        "content": "## Assistant Brain\n\nChannel-agnostic: { chat_id, text } in, { reply_text } out. Seven slash commands (/today, /urgent, /deadlines, /vip, /week, /help, /add) each run one fixed parameterized query (or, for /add, one dashboard API call) -- zero LLM cost. Anything else is a free-text question: an independent daily cap (workflow static data, FR8), then a search_vector + tasks + commitments shortlist, a delimited prompt (FR7, same convention as 006-draft-generation), and exactly one LLM Gateway call (FR9, unmodified). Every branch converges on 'Return result' before the trigger returns (FR10, L29's convergence lesson).\n\n/week added later (Phase 7, PHASE-7-IMPLEMENTATION-PLAN.md Wave 5) -- read-only, mirrors GET /api/hub/weekly-review's completed/missed/next-deadline numbers without calling the dashboard.\n\nSee .specclaw/changes/012-assistant-bot/spec.md (FR1, FR5-FR10) and design.md (Architecture, Key Decisions).",
         "height": 300,
         "width": 620,
         "color": 4
@@ -840,7 +840,7 @@
         },
         "options": {}
       },
-      "notes": "Reached on '/help?' false, ahead of the free-text path -- so /add is checked before anything falls through to the LLM. True (index 0) -> Parse /add. False (index 1) -> Compute free-text usage date, same target /help?'s false used to point at directly."
+      "notes": "Reached on '/week?' false, ahead of the free-text path -- so /add is checked before anything falls through to the LLM. True (index 0) -> Parse /add. False (index 1) -> Compute free-text usage date, same target /help?'s false used to point at directly before /week? was inserted ahead of this node."
     },
     {
       "id": "b1a2c3d4-0021-4a1a-9c1a-000000000021",
@@ -949,6 +949,80 @@
         "mode": "runOnceForAllItems",
         "language": "javaScript",
         "jsCode": "// Mirrors telegram-send.json's 'Parse send result' -- check response.error\n// first (the HTTP node itself failed, e.g. network/timeout), then the\n// status code (the API rejected the request, e.g. empty text).\nconst response = $json || {};\nconst chatId = $('Detect slash command').first().json.chat_id;\n\nif (response.error) {\n  const message = (response.error && response.error.message) || String(response.error);\n  return { json: { chat_id: chatId, reply_text: `Couldn't add that -- ${message}` } };\n}\n\nconst statusCode = response.statusCode;\nconst body = response.body || {};\nif (!statusCode || statusCode < 200 || statusCode >= 300) {\n  const message = body.error || `request failed (HTTP ${statusCode})`;\n  return { json: { chat_id: chatId, reply_text: `Couldn't add that -- ${message}` } };\n}\n\nconst dueLabel = body.dueDate ? ` (due ${body.dueDate})` : '';\nreturn { json: { chat_id: chatId, reply_text: `Added: ${body.text}${dueLabel}` } };\n"
+      }
+    },
+    {
+      "id": "b1a2c3d4-0033-4a1a-9c1a-000000000033",
+      "name": "/week?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1450,
+        730
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1a2c3d4-cond-week",
+              "leftValue": "={{ $json.command }}",
+              "rightValue": "/week",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "Phase 7 Wave 5 -- reached on '/help?' false. True (index 0) -> Read week stats. False (index 1) -> /add?, same target '/help?'s false pointed at directly before this node was inserted."
+    },
+    {
+      "id": "b1a2c3d4-0034-4a1a-9c1a-000000000034",
+      "name": "Read week stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1200,
+        730
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  (SELECT count(*) FROM tasks WHERE status = 'done' AND completed_at > now() - interval '7 days') AS completed_count,\n  (SELECT count(*) FROM tasks WHERE status IN ('todo','in-progress') AND deadline IS NOT NULL AND deadline < (now() AT TIME ZONE $1)::date) AS missed_count,\n  (SELECT task_text FROM tasks WHERE status IN ('todo','in-progress') AND deadline IS NOT NULL ORDER BY deadline ASC LIMIT 1) AS next_task_text,\n  (SELECT deadline FROM tasks WHERE status IN ('todo','in-progress') AND deadline IS NOT NULL ORDER BY deadline ASC LIMIT 1) AS next_deadline;",
+        "options": {
+          "queryReplacement": "={{ [$('Detect slash command').first().json.timezone] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "notes": "Phase 7 Wave 5 -- mirrors GET /api/hub/weekly-review's completed-this-week / missed / next-deadline numbers, read-only, zero LLM cost, same fixed-parameterized-query convention as /today's 'Read tasks due today'. All three scalar subqueries share one FROM-less SELECT so this always returns exactly one row (no executeOnce needed on the next node, same reasoning 'Read today's usage' relies on implicitly). Uses $('Detect slash command') for timezone rather than $json -- this node has no upstream postgres read to inherit pass-through from, but named-reference is the documented convention for every node past the first hop off an IF branch.",
+      "notesInFlow": true
+    },
+    {
+      "id": "b1a2c3d4-0035-4a1a-9c1a-000000000035",
+      "name": "Format /week reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -950,
+        730
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const row = $('Read week stats').first().json;\nconst chatId = $('Detect slash command').first().json.chat_id;\n\nconst completed = row.completed_count || 0;\nconst missed = row.missed_count || 0;\nconst nextLine = row.next_task_text\n  ? `${row.next_task_text}${row.next_deadline ? ` (due ${String(row.next_deadline).slice(0, 10)})` : ''}`\n  : '(none)';\n\nconst reply = `<b>This week</b>\\n\\nCompleted (last 7 days): ${completed}\\nMissed / overdue: ${missed}\\nNext deadline: ${nextLine}`;\nreturn { json: { chat_id: chatId, reply_text: reply } };\n"
       }
     }
   ],
@@ -1168,7 +1242,47 @@
         ],
         [
           {
+            "node": "/week?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "/week?": {
+      "main": [
+        [
+          {
+            "node": "Read week stats",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "/add?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read week stats": {
+      "main": [
+        [
+          {
+            "node": "Format /week reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format /week reply": {
+      "main": [
+        [
+          {
+            "node": "Return result",
             "type": "main",
             "index": 0
           }

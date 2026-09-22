@@ -15,7 +15,7 @@ import { mapTaskRowToActionItem, type TaskRow } from "@/lib/data/task-mapping";
 const SELECT_COLUMNS =
   "id, email_id, task_text, deadline, status, owner_name, owner_email, priority, origin, confidence, plan_id, type, source_id, course_id, due_at, starts_at, duration_minutes, effort_minutes, weight";
 
-const TASK_TYPES = ["task", "meeting", "call", "assignment", "quiz", "ca", "exam", "admin"];
+const TASK_TYPES = ["task", "meeting", "call", "assignment", "quiz", "ca", "exam", "admin", "capture"];
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

@@ -11,6 +11,7 @@
 import * as React from "react";
 import { dayKey } from "@/lib/day-key";
 import { HubUndoBar } from "@/components/hub/hub-undo-bar";
+import { QuickCapture } from "@/components/hub/quick-capture";
 import { SourcePlate } from "@/components/hub/source-plate";
 import { CollisionAlert, type Collision } from "@/components/hub/collision-alert";
 import { StatTiles, type HubStats } from "@/components/hub/stat-tiles";
@@ -24,6 +25,7 @@ import type { ActionItem, Source } from "@/lib/data/types";
 
 interface HubSummary {
   timeZone: string;
+  captureItems: ActionItem[];
   scheduledToday: ActionItem[];
   doToday: ActionItem[];
   thisWeek: { day: string; label: string; items: ActionItem[] }[];
@@ -224,6 +226,10 @@ export default function HubHomePage() {
 
       {!loading && summary && (
         <div className="space-y-4 p-4">
+          {/* Quick capture — front and center, above even Zone A, per
+              spec.md's "under 10 seconds or the app dies" (Phase 7 Wave 2). */}
+          <QuickCapture items={summary.captureItems} onChange={load} />
+
           {/* Zone A — status bar */}
           <CollisionAlert collision={summary.collision} onSelect={selectDay} />
           <StatTiles stats={summary.stats} onFilter={(f) => setStatFilter((prev) => (prev === f ? null : f))} />

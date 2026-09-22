@@ -24,8 +24,10 @@ sub-workflow is called by another (n8n requires the callee published first).
 
 ## 2. Set the new environment variable
 
-- [ ] In your n8n instance's environment variables, add `DASHBOARD_BASE_URL` — the deployed dashboard's reachable base URL (e.g. `https://your-app.vercel.app`). Same convention as `rule-engine.json`'s existing `SELF_BASE_URL`.
-- [ ] Confirm `DASHBOARD_LOGIN_SECRET` is already set in n8n's environment and matches `gmail-dashboard/.env.local`'s value exactly — **Retention Sweep**'s **Login** node depends on it.
+- [x] In your n8n instance's environment variables, add `DASHBOARD_BASE_URL` — the deployed dashboard's reachable base URL (e.g. `https://your-app.vercel.app`). Same convention as `rule-engine.json`'s existing `SELF_BASE_URL`.
+  - Applied 2026-09-22 to `~/n8n-stack/docker-compose.yml`'s `n8n` service on `n8n-host` (`51.21.242.189`), value `https://gmail-dashboard-tau.vercel.app`. **Neither var was actually set before this** — confirmed live: `Retention Sweep`'s (and, once added, `Assistant Brain`'s `/add`) `Login` node failed with `Invalid URL: /api/auth/login` until both lines existed.
+- [x] Confirm `DASHBOARD_LOGIN_SECRET` is already set in n8n's environment and matches `gmail-dashboard/.env.local`'s value exactly — **Retention Sweep**'s **Login** node depends on it.
+  - Set alongside `DASHBOARD_BASE_URL` above, same deploy.
 
 ## 3. Import the Gmail-side filters
 
