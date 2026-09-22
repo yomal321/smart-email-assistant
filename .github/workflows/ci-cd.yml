@@ -85,6 +85,12 @@ jobs:
       - name: Validate workflow exports
         run: node scripts/ci/check-n8n-workflows.mjs
 
+      - name: Check bot intent routing
+        run: node scripts/ci/check-bot-intents.mjs
+
+      - name: Check bot action resolution
+        run: node scripts/ci/check-bot-actions.mjs
+
   preview:
     name: Deploy preview
     needs: [dashboard, migrations, n8n]
