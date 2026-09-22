@@ -31,6 +31,7 @@ interface HubSummary {
   collision: Collision | null;
   sourceBreakdown: { sourceId: string; openCount: number; totalEffortMinutes: number }[];
   fortnightLoad: DayLoad[];
+  startByDay: Record<string, string>;
   upcomingAssessments: ActionItem[];
   sources: Source[];
   overview: HubOverview;
@@ -143,6 +144,11 @@ export default function HubHomePage() {
   const sourceById = React.useMemo(
     () => new Map((summary?.sources ?? []).map((s) => [s.id, s])),
     [summary?.sources]
+  );
+
+  const todayKey = React.useMemo(
+    () => (summary ? dayKey(new Date().toISOString(), summary.timeZone) : null),
+    [summary]
   );
 
   const sourceBreakdownRows: SourceBreakdownRow[] = React.useMemo(
@@ -260,7 +266,7 @@ export default function HubHomePage() {
 
             <div className="card-surface p-4">
               <h2 className="mb-3 text-sm font-semibold text-ink">Exams &amp; major assessments</h2>
-              <UpcomingAssessments items={summary.upcomingAssessments} sourceById={sourceById} today={dayKey(new Date().toISOString(), summary.timeZone)} />
+              <UpcomingAssessments items={summary.upcomingAssessments} sourceById={sourceById} today={todayKey!} />
             </div>
           </div>
 
@@ -305,7 +311,10 @@ export default function HubHomePage() {
                         completed={completedIds.has(item.id)}
                         onComplete={() => complete(item)}
                       >
-                        <DueBadge dueAt={item.dueAt} />
+                        <div className="flex shrink-0 items-center gap-2">
+                          <StartByBadge startBy={summary.startByDay[item.id]} today={todayKey!} />
+                          <DueBadge dueAt={item.dueAt} />
+                        </div>
                       </Row>
                     ))}
                   </div>
@@ -329,7 +338,10 @@ export default function HubHomePage() {
                             completed={completedIds.has(item.id)}
                             onComplete={() => complete(item)}
                           >
-                            <DueBadge dueAt={item.dueAt} />
+                            <div className="flex shrink-0 items-center gap-2">
+                              <StartByBadge startBy={summary.startByDay[item.id]} today={todayKey!} />
+                              <DueBadge dueAt={item.dueAt} />
+                            </div>
                           </Row>
                         ))}
                       </div>
@@ -432,4 +444,26 @@ function DueBadge({ dueAt }: { dueAt: string | null }) {
       {label}
     </span>
   );
+}
+
+// The last day this can be started and still make its deadline, given
+// everything else already committed between now and then (lib/priority.ts
+// computeStartBy, run over the fortnight window in /api/hub/summary). Absent
+// whenever the API left it out — no due date, already overdue, or beyond the
+// 14-day window it's computed over.
+function StartByBadge({ startBy, today }: { startBy: string | undefined; today: string }) {
+  if (!startBy) return null;
+  const isToday = startBy === today;
+  return (
+    <span className={`tabular shrink-0 text-xs ${isToday ? "font-medium text-departure" : "text-ink-tertiary"}`}>
+      {isToday ? "start today" : `start ${weekdayShort(startBy)}`}
+    </span>
+  );
+}
+
+function weekdayShort(key: string): string {
+  // Noon-UTC anchor, same trick as lib/day-key.ts's formatDayLabel — the key
+  // is already the right calendar day in the user's timezone; this just has
+  // to render it back without crossing a UTC day boundary.
+  return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(new Date(`${key}T12:00:00Z`));
 }

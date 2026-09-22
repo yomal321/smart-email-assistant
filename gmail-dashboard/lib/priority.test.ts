@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byPriority, effortFactor, score, urgency, weightFactor } from "./priority";
+import { byPriority, computeStartBy, effortFactor, score, urgency, weightFactor } from "./priority";
 
 const NOW = new Date("2026-09-20T12:00:00.000Z");
 
@@ -106,5 +106,44 @@ describe("byPriority", () => {
     const original = [...items];
     byPriority(items, NOW);
     expect(items).toEqual(original);
+  });
+});
+
+describe("computeStartBy", () => {
+  // A 14-day window anchored "today", matching what route.ts builds for the
+  // fortnight chart — d0 = today, d13 = 13 days out.
+  const DAYS = Array.from({ length: 14 }, (_, i) => `d${i}`);
+
+  it("starts on the due day itself when that day alone has room", () => {
+    const committed = new Map([["d3", 60]]); // includes the item's own 90min
+    expect(computeStartBy(90, "d3", DAYS, committed, 300)).toBe("d3");
+  });
+
+  it("walks backward across days that are already full", () => {
+    // d3 (due day) has no spare room once its own 240min is excluded;
+    // d2 and d1 are fully booked by other work; d0 has room.
+    const committed = new Map([
+      ["d3", 240 + 240], // this item's 240 + 240 of other work = day full
+      ["d2", 300],
+      ["d1", 300],
+      ["d0", 100],
+    ]);
+    expect(computeStartBy(240, "d3", DAYS, committed, 300)).toBe("d0");
+  });
+
+  it("returns the window's first day when the item doesn't fit even starting today", () => {
+    // Every day already fully committed by other work — d5 carries this
+    // item's own 120min on top of 300 of other work, everywhere else 300.
+    const committed = new Map(DAYS.map((d) => [d, 300]));
+    committed.set("d5", 420);
+    expect(computeStartBy(120, "d5", DAYS, committed, 300)).toBe("d0");
+  });
+
+  it("returns null when the due day is outside the given window", () => {
+    expect(computeStartBy(30, "d99", DAYS, new Map(), 300)).toBeNull();
+  });
+
+  it("ignores days with no recorded load", () => {
+    expect(computeStartBy(30, "d5", DAYS, new Map(), 300)).toBe("d5");
   });
 });

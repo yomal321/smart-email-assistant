@@ -63,6 +63,49 @@ export function byPriority<T extends Scoreable>(items: T[], now: Date): T[] {
   });
 }
 
+// The last day you can start this and still make the deadline, given
+// everything else already committed on the days between now and due. Walks
+// backward from the due day, spending each day's leftover capacity
+// (dailyCapacityMinutes minus what's already committed that day) against
+// the item's effort until it's covered.
+//
+// `days` must be the chronological window this was computed over (today..N
+// days out) and `committedMinutesByDay` the total load per day across every
+// item, keyed the same way — both produced by the caller (route.ts already
+// builds this window for the fortnight chart). Kept as plain string keys
+// and a Map rather than importing dayKey/Date-tz logic here, so this file
+// stays free of any timezone dependency, same as the rest of it.
+//
+// Returns null when the due day isn't in `days` at all (no due date,
+// already overdue, or beyond the window — ponytail: fixed to the caller's
+// window, currently 14 days; widen if items routinely land further out)
+// or, degenerate but valid, the effort doesn't fit even starting today —
+// callers should read that as "start now," not "no answer."
+export function computeStartBy(
+  effortMinutes: number,
+  dueDay: string,
+  days: string[],
+  committedMinutesByDay: Map<string, number>,
+  dailyCapacityMinutes: number
+): string | null {
+  const dueIndex = days.indexOf(dueDay);
+  if (dueIndex === -1) return null;
+
+  let remaining = effortMinutes;
+  for (let i = dueIndex; i >= 0; i--) {
+    const day = days[i];
+    const committedRaw = committedMinutesByDay.get(day) ?? 0;
+    // The due day's own committed total includes this item's own effort
+    // (it's anchored there) — exclude it so the item doesn't count as
+    // competition against itself.
+    const committed = day === dueDay ? Math.max(0, committedRaw - effortMinutes) : committedRaw;
+    const available = Math.max(0, dailyCapacityMinutes - committed);
+    remaining -= available;
+    if (remaining <= 0) return day;
+  }
+  return days[0];
+}
+
 function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), max);
 }

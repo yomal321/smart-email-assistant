@@ -12,7 +12,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getAccountId } from "@/lib/supabase/account";
 import { mapTaskRowToActionItem, type TaskRow } from "@/lib/data/task-mapping";
 import { mapSourceRowToSource, type SourceRow } from "@/lib/data/source-mapping";
-import { byPriority } from "@/lib/priority";
+import { byPriority, computeStartBy } from "@/lib/priority";
 import { dayKey, formatDayLabel, DEFAULT_TIME_ZONE } from "@/lib/day-key";
 import type { ActionItem } from "@/lib/data/types";
 
@@ -158,6 +158,10 @@ export async function GET() {
 
   const loadByDayAndSource = new Map<string, Map<string, number>>();
   const itemsByDay = new Map<string, ActionItem[]>();
+  // Total load per day across every item regardless of source — bySource
+  // above only counts sourced items (it feeds a per-source chart), but
+  // computeStartBy needs everything actually competing for the day.
+  const loadByDay = new Map<string, number>();
   for (const item of items) {
     const anchor = item.startsAt ?? item.dueAt;
     if (!anchor) continue;
@@ -168,11 +172,25 @@ export async function GET() {
     dayItems.push(item);
     itemsByDay.set(key, dayItems);
 
-    if (!item.sourceId) continue;
     const minutes = item.durationMinutes ?? item.effortMinutes;
+    loadByDay.set(key, (loadByDay.get(key) ?? 0) + minutes);
+
+    if (!item.sourceId) continue;
     const bySource = loadByDayAndSource.get(key) ?? new Map<string, number>();
     bySource.set(item.sourceId, (bySource.get(item.sourceId) ?? 0) + minutes);
     loadByDayAndSource.set(key, bySource);
+  }
+
+  // Start-by dates — the last day each item can be started and still make
+  // its deadline, given everything else already committed between now and
+  // then (lib/priority.ts computeStartBy). Skipped for items with no due
+  // date; null for anything outside the fortnight window.
+  const startByDay: Record<string, string> = {};
+  for (const item of items) {
+    if (!item.dueAt) continue;
+    const dueDay = dayKey(item.dueAt, timeZone);
+    const startBy = computeStartBy(item.effortMinutes, dueDay, fortnightDays, loadByDay, dailyCapacityMinutes);
+    if (startBy) startByDay[item.id] = startBy;
   }
 
   const fortnightLoad = fortnightDays.map((day) => ({
@@ -298,6 +316,7 @@ export async function GET() {
     collision,
     sourceBreakdown,
     fortnightLoad,
+    startByDay,
     upcomingAssessments,
     sources,
     overview: {

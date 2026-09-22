@@ -14,7 +14,9 @@
 // Date.now() in here — see lib/day-key.ts's own rationale for why this
 // codebase treats raw local-time reads as a bug class.
 import * as React from "react";
+import { TriangleAlert } from "lucide-react";
 import { SourcePlate } from "@/components/hub/source-plate";
+import { findOverlappingIds } from "@/lib/schedule-overlap";
 import type { ActionItem, Source } from "@/lib/data/types";
 
 // Exported for calendar-week.tsx, which draws the same hourly window as a
@@ -55,6 +57,17 @@ export function ScheduleTimeline({
     return <p className="text-sm text-ink-tertiary">Nothing scheduled today.</p>;
   }
 
+  // A time collision, not the hub's workload collision (CollisionAlert) —
+  // this is two things claiming the same clock slot today, which the
+  // fortnight-load math never looks closely enough at a single day to see.
+  const overlappingIds = findOverlappingIds(
+    scheduled.map((i) => ({
+      id: i.id,
+      startsAt: i.startsAt!,
+      durationMinutes: i.durationMinutes ?? i.effortMinutes ?? 30,
+    }))
+  );
+
   const showNowLine = nowMinutes !== null && nowMinutes >= WINDOW_START_MIN && nowMinutes <= WINDOW_END_MIN;
 
   return (
@@ -84,6 +97,7 @@ export function ScheduleTimeline({
           const topPct = clampToWindowPct(start);
           const heightPct = Math.max(MIN_BLOCK_PCT, (duration / WINDOW_SPAN_MIN) * 100);
           const source = item.sourceId ? sourceById.get(item.sourceId) : undefined;
+          const overlaps = overlappingIds.has(item.id);
 
           return (
             <div
@@ -94,9 +108,19 @@ export function ScheduleTimeline({
                 height: `${heightPct}%`,
                 borderLeftColor: source?.color ?? "var(--ink-tertiary)",
               }}
-              title={`${formatClock(item.startsAt!)} · ${item.text}`}
+              title={
+                overlaps
+                  ? `${formatClock(item.startsAt!)} · ${item.text} — overlaps another scheduled item`
+                  : `${formatClock(item.startsAt!)} · ${item.text}`
+              }
             >
-              <p className="truncate text-[11px] font-medium text-ink">{item.text}</p>
+              {overlaps && (
+                // Icon, not colour alone — same "colour is never the only
+                // signal" rule CollisionAlert follows for the workload
+                // version of this warning.
+                <TriangleAlert size={11} className="absolute right-1 top-1 shrink-0 text-signal" aria-label="Time conflict" />
+              )}
+              <p className="truncate pr-3 text-[11px] font-medium text-ink">{item.text}</p>
               {/* The border carries the source color, but never color alone —
                   the code is the paired channel (same rule SourcePlate
                   enforces everywhere else this codebase shows a source). */}

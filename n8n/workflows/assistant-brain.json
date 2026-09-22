@@ -63,7 +63,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "// FR5: recognizes exactly five slash commands; anything else (including an\n// unrecognized slash command, per spec.md Edge Cases) falls through to the\n// free-text path further down this workflow.\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst settings = $json || {};\nconst chatId = trigger.chat_id;\nconst rawText = trigger.text === null || trigger.text === undefined ? '' : String(trigger.text);\nconst text = rawText.trim();\nconst timezone = settings.timezone || 'Asia/Colombo';\n\nconst KNOWN_COMMANDS = ['/today', '/urgent', '/deadlines', '/vip', '/help'];\nconst firstWord = text.split(/\\s+/)[0].toLowerCase();\nconst command = KNOWN_COMMANDS.includes(firstWord) ? firstWord : null;\n\nreturn { json: { chat_id: chatId, text, command, timezone } };\n"
+        "jsCode": "// FR5 (+/add, added later): recognizes six slash commands; anything else (including an\n// unrecognized slash command, per spec.md Edge Cases) falls through to the\n// free-text path further down this workflow.\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst settings = $json || {};\nconst chatId = trigger.chat_id;\nconst rawText = trigger.text === null || trigger.text === undefined ? '' : String(trigger.text);\nconst text = rawText.trim();\nconst timezone = settings.timezone || 'Asia/Colombo';\n\nconst KNOWN_COMMANDS = ['/today', '/urgent', '/deadlines', '/vip', '/help', '/add'];\nconst firstWord = text.split(/\\s+/)[0].toLowerCase();\nconst command = KNOWN_COMMANDS.includes(firstWord) ? firstWord : null;\n\nreturn { json: { chat_id: chatId, text, command, timezone } };\n"
       },
       "notes": "Reads chat_id/text from the trigger by node-name reference (this node sits two steps downstream of it) and timezone from $json (Read settings' pass-through). Every downstream node in this workflow reads chat_id/text/timezone from THIS node by name, not from the trigger directly."
     },
@@ -413,7 +413,7 @@
         },
         "options": {}
       },
-      "notes": "Reached on '/vip?' false. True (index 0) -> Format /help reply. False (index 1) -> free-text path -- no recognized slash command matched (includes an unrecognized slash command, per spec.md Edge Cases)."
+      "notes": "Reached on '/vip?' false. True (index 0) -> Format /help reply. False (index 1) -> /add? -- checked before the free-text path takes over (added later; see /add?'s own notes)."
     },
     {
       "id": "b1a2c3d4-0012-4a1a-9c1a-000000000012",
@@ -808,6 +808,148 @@
       },
       "notes": "0018_bot_observability.sql, option B2: counted on SUCCESS only (unchanged FR8 reasoning), now persisted instead of workflow static data so it survives an n8n cold start and GET /api/hub/bot-stats can read remaining budget. onError=continueRegularOutput (L28 pattern): a failed usage-count write must not swallow the answer the user is actually waiting for. NOT LIVE-VERIFIED -- see docs/setup/bot-observability-setup.md.",
       "notesInFlow": true
+    },
+    {
+      "id": "b1a2c3d4-0020-4a1a-9c1a-000000000020",
+      "name": "/add?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1450,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1a2c3d4-cond-add",
+              "leftValue": "={{ $json.command }}",
+              "rightValue": "/add",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "Reached on '/help?' false, ahead of the free-text path -- so /add is checked before anything falls through to the LLM. True (index 0) -> Parse /add. False (index 1) -> Compute free-text usage date, same target /help?'s false used to point at directly."
+    },
+    {
+      "id": "b1a2c3d4-0021-4a1a-9c1a-000000000021",
+      "name": "Parse /add",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// v1: recognizes a trailing \"today\"/\"tomorrow\" (case-insensitive) and\n// nothing else -- no weekday names, no explicit dates.\n// ponytail: extend here when that stops covering real usage. An\n// inline-button due-day picker needs telegram-adapter.json to handle\n// callback_query first (it only branches on update.message today) --\n// a separate piece of work, not a parsing change.\nconst raw = ($json.text || '').replace(/^\\/add\\s*/i, '').trim();\nconst words = raw.split(/\\s+/).filter(Boolean);\nconst last = (words[words.length - 1] || '').toLowerCase();\n\nlet dueDate = null;\nlet textWords = words;\nif (last === 'today' || last === 'tomorrow') {\n  textWords = words.slice(0, -1);\n  const timeZone = $json.timezone || 'Asia/Colombo';\n  const offsetDays = last === 'tomorrow' ? 1 : 0;\n  const target = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);\n  dueDate = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(target);\n}\n\nconst text = textWords.join(' ').trim();\nreturn { json: { text, dueDate } };\n"
+      },
+      "notes": "Reads the full command text from Detect slash command ($json.text, passed through unchanged by the If node) -- POST /api/action-items validates a non-empty text itself, so an empty result here (bare '/add' or '/add today') is left to fail there and surface through Format /add reply's error path rather than being special-cased twice."
+    },
+    {
+      "id": "b1a2c3d4-0022-4a1a-9c1a-000000000022",
+      "name": "Login (add)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -950,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DASHBOARD_BASE_URL }}/api/auth/login",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { password: $env.DASHBOARD_LOGIN_SECRET } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "notes": "Same DASHBOARD_BASE_URL/DASHBOARD_LOGIN_SECRET env vars retention-sweep.json's 'Login' already uses -- no new secret, no new auth mechanism. Named '(add)' only because n8n requires unique node names within a workflow.",
+      "notesInFlow": true
+    },
+    {
+      "id": "b1a2c3d4-0023-4a1a-9c1a-000000000023",
+      "name": "Extract session cookie (add)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Same extraction as retention-sweep.json's 'Extract session cookie' --\n// set-cookie can be a single string or an array depending on the HTTP\n// client layer, handle both.\nconst headers = $json.headers || {};\nconst raw = headers['set-cookie'];\nconst setCookie = Array.isArray(raw) ? raw[0] : raw;\nif (!setCookie) {\n  throw new Error('login did not return a session cookie -- check DASHBOARD_LOGIN_SECRET and DASHBOARD_BASE_URL');\n}\nconst cookie = setCookie.split(';')[0];\nconst parsed = $('Parse /add').first().json;\nreturn { json: { cookie, text: parsed.text, dueDate: parsed.dueDate } };\n"
+      }
+    },
+    {
+      "id": "b1a2c3d4-0024-4a1a-9c1a-000000000024",
+      "name": "Call action-items API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -450,
+        460
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DASHBOARD_BASE_URL }}/api/action-items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { text: $json.text, dueDate: $json.dueDate } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": false
+            }
+          }
+        }
+      },
+      "notes": "onError: continueRegularOutput (same as telegram-send.json's 'Call sendMessage') so a validation failure -- empty text, expired cookie -- becomes response data for Format /add reply to read, not a halted workflow. POST /api/action-items already defaults type='task', weight=3, effort_minutes=30 and pushes the created task to Google Calendar when it has a due date -- nothing extra to pass for v1.",
+      "notesInFlow": true
+    },
+    {
+      "id": "b1a2c3d4-0025-4a1a-9c1a-000000000025",
+      "name": "Format /add reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        460
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Mirrors telegram-send.json's 'Parse send result' -- check response.error\n// first (the HTTP node itself failed, e.g. network/timeout), then the\n// status code (the API rejected the request, e.g. empty text).\nconst response = $json || {};\nconst chatId = $('Detect slash command').first().json.chat_id;\n\nif (response.error) {\n  const message = (response.error && response.error.message) || String(response.error);\n  return { json: { chat_id: chatId, reply_text: `Couldn't add that -- ${message}` } };\n}\n\nconst statusCode = response.statusCode;\nconst body = response.body || {};\nif (!statusCode || statusCode < 200 || statusCode >= 300) {\n  const message = body.error || `request failed (HTTP ${statusCode})`;\n  return { json: { chat_id: chatId, reply_text: `Couldn't add that -- ${message}` } };\n}\n\nconst dueLabel = body.dueDate ? ` (due ${body.dueDate})` : '';\nreturn { json: { chat_id: chatId, reply_text: `Added: ${body.text}${dueLabel}` } };\n"
+      }
     }
   ],
   "connections": {
@@ -1026,7 +1168,7 @@
         ],
         [
           {
-            "node": "Compute free-text usage date",
+            "node": "/add?",
             "type": "main",
             "index": 0
           }
@@ -1217,6 +1359,79 @@
         [
           {
             "node": "Increment counter and reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "/add?": {
+      "main": [
+        [
+          {
+            "node": "Parse /add",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Compute free-text usage date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse /add": {
+      "main": [
+        [
+          {
+            "node": "Login (add)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login (add)": {
+      "main": [
+        [
+          {
+            "node": "Extract session cookie (add)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract session cookie (add)": {
+      "main": [
+        [
+          {
+            "node": "Call action-items API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call action-items API": {
+      "main": [
+        [
+          {
+            "node": "Format /add reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format /add reply": {
+      "main": [
+        [
+          {
+            "node": "Return result",
             "type": "main",
             "index": 0
           }
