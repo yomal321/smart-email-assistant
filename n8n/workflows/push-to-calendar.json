@@ -124,7 +124,7 @@
       "position": [-200, 100],
       "credentials": {
         "googleCalendarOAuth2Api": {
-          "id": "REPLACE_WITH_GOOGLE_CALENDAR_OAUTH2_CREDENTIAL_ID",
+          "id": "SZTuA7LNmN83k7Lc",
           "name": "Google Calendar account"
         }
       },
@@ -148,7 +148,7 @@
       "notesInFlow": true,
       "credentials": {
         "postgres": {
-          "id": "REPLACE_WITH_SUPABASE_POSTGRES_CREDENTIAL_ID",
+          "id": "5JIQ0EMwvsNWFJ0h",
           "name": "Supabase Postgres"
         }
       }

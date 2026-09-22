@@ -9,7 +9,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutDashboard, CheckSquare, Target, StickyNote, Bot, Mail, Moon, Sun, Monitor, BookOpen, Settings } from "lucide-react";
+import { Menu, LayoutDashboard, CheckSquare, CalendarDays, Target, StickyNote, Bot, Mail, Moon, Sun, Monitor, BookOpen, Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { usePreferences } from "@/components/board/preferences-provider";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 const HUB_ROUTES = [
   { href: "/", label: "Today", icon: LayoutDashboard },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/plans", label: "Plans", icon: Target },
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/courses", label: "Courses", icon: BookOpen },

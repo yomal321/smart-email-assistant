@@ -17,22 +17,25 @@ import * as React from "react";
 import { SourcePlate } from "@/components/hub/source-plate";
 import type { ActionItem, Source } from "@/lib/data/types";
 
-const WINDOW_START_MIN = 7 * 60; // 07:00
-const WINDOW_END_MIN = 22 * 60; // 22:00
+// Exported for calendar-week.tsx, which draws the same hourly window as a
+// 7-column grid instead of one track — same percentage-of-track scaling,
+// just reused rather than reimplemented.
+export const WINDOW_START_MIN = 7 * 60; // 07:00
+export const WINDOW_END_MIN = 22 * 60; // 22:00
 const WINDOW_SPAN_MIN = WINDOW_END_MIN - WINDOW_START_MIN;
-const HOUR_MARKS = [7, 10, 13, 16, 19, 22];
-const MIN_BLOCK_PCT = 3.5; // a 15-minute standup must still be clickable
+export const HOUR_MARKS = [7, 10, 13, 16, 19, 22];
+export const MIN_BLOCK_PCT = 3.5; // a 15-minute standup must still be clickable
 
 function minutesOfDay(iso: string): number {
   const d = new Date(iso);
   return d.getHours() * 60 + d.getMinutes();
 }
 
-function clampToWindowPct(minutes: number): number {
+export function clampToWindowPct(minutes: number): number {
   return Math.min(100, Math.max(0, ((minutes - WINDOW_START_MIN) / WINDOW_SPAN_MIN) * 100));
 }
 
-function formatClock(iso: string): string {
+export function formatClock(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
